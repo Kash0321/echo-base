@@ -33,6 +33,19 @@ public interface IReservationRepository
     /// <summary>Obtiene el código de un puesto de trabajo por su identificador.</summary>
     Task<string?> GetDockCodeAsync(Guid dockId, CancellationToken ct = default);
 
+    /// <summary>
+    /// Obtiene todas las reservas de un usuario, incluyendo las propiedades de navegación Dock,
+    /// ordenadas por fecha descendente.
+    /// </summary>
+    Task<List<Reservation>> GetUserReservationsAsync(Guid userId, CancellationToken ct = default);
+
+    /// <summary>
+    /// Obtiene todas las reservas activas cuya fecha coincide con la indicada,
+    /// incluyendo las propiedades de navegación Dock y User.
+    /// Se usa para enviar recordatorios automáticos.
+    /// </summary>
+    Task<List<Reservation>> GetActiveReservationsForDateAsync(DateOnly date, CancellationToken ct = default);
+
     /// <summary>Persiste los cambios pendientes en la base de datos.</summary>
     Task SaveChangesAsync(CancellationToken ct = default);
 }

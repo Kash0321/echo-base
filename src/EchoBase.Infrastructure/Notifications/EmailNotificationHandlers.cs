@@ -90,3 +90,46 @@ internal sealed class ReservationCancelledEmailHandler(
         _ => slot.ToString()
     };
 }
+
+/// <summary>
+/// Envía un correo electrónico de recordatorio cuando una reserva está próxima.
+/// </summary>
+internal sealed class ReservationReminderEmailHandler(
+    IEmailService emailService,
+    IUserRepository userRepository,
+    ILogger<ReservationReminderEmailHandler> logger)
+    : INotificationHandler<ReservationReminderNotification>
+{
+    public async Task Handle(ReservationReminderNotification notification, CancellationToken cancellationToken)
+    {
+        var contact = await userRepository.GetContactInfoAsync(notification.UserId, cancellationToken);
+        if (contact is null)
+        {
+            logger.LogWarning("No se encontró contacto para el usuario {UserId}", notification.UserId);
+            return;
+        }
+
+        var subject = $"Recordatorio de reserva — {notification.DockCode} el {notification.Date:dd/MM/yyyy}";
+        var body = $"""
+            <h2>Recordatorio de reserva</h2>
+            <p>Hola {contact.Name},</p>
+            <p>Te recordamos que tienes una reserva próxima:</p>
+            <ul>
+                <li><strong>Puesto:</strong> {notification.DockCode}</li>
+                <li><strong>Fecha:</strong> {notification.Date:dd/MM/yyyy}</li>
+                <li><strong>Franja:</strong> {FormatSlot(notification.TimeSlot)}</li>
+            </ul>
+            <p>Puedes modificar o cancelar tu reserva desde la sección <em>Mis reservas</em> en EchoBase.</p>
+            """;
+
+        await emailService.SendAsync(contact.Email, subject, body, cancellationToken);
+    }
+
+    private static string FormatSlot(TimeSlot slot) => slot switch
+    {
+        TimeSlot.Morning => "Mañana",
+        TimeSlot.Afternoon => "Tarde",
+        TimeSlot.Both => "Mañana y Tarde",
+        _ => slot.ToString()
+    };
+}

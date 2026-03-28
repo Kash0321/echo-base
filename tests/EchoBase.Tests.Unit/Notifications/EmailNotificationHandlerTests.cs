@@ -136,4 +136,77 @@ public class EmailNotificationHandlerTests
         await _emailService.DidNotReceive().SendAsync(
             Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>());
     }
+
+    // ──────────────────────────────────────────────────────────────
+    // ReservationReminder → Email
+    // ──────────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task ReservationReminder_SendsReminderEmailToUser()
+    {
+        _userRepository.GetContactInfoAsync(UserId, Arg.Any<CancellationToken>())
+            .Returns(new UserContactInfo("user@test.com", "Test User"));
+
+        var handler = new ReservationReminderEmailHandler(
+            _emailService,
+            _userRepository,
+            NullLogger<ReservationReminderEmailHandler>.Instance);
+
+        var notification = new ReservationReminderNotification(
+            ReservationId, UserId, "N-A01", TestDate, TimeSlot.Both);
+
+        await handler.Handle(notification, CancellationToken.None);
+
+        await _emailService.Received(1).SendAsync(
+            "user@test.com",
+            Arg.Is<string>(s => s.Contains("Recordatorio") && s.Contains("N-A01")),
+            Arg.Is<string>(s => s.Contains("Mañana y Tarde") && s.Contains("Test User") && s.Contains("Mis reservas")),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task ReservationReminder_UserNotFound_DoesNotSendEmail()
+    {
+        _userRepository.GetContactInfoAsync(UserId, Arg.Any<CancellationToken>())
+            .Returns((UserContactInfo?)null);
+
+        var handler = new ReservationReminderEmailHandler(
+            _emailService,
+            _userRepository,
+            NullLogger<ReservationReminderEmailHandler>.Instance);
+
+        var notification = new ReservationReminderNotification(
+            ReservationId, UserId, "N-A01", TestDate, TimeSlot.Morning);
+
+        await handler.Handle(notification, CancellationToken.None);
+
+        await _emailService.DidNotReceive().SendAsync(
+            Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>());
+    }
+
+    [Theory]
+    [InlineData(TimeSlot.Morning, "Mañana")]
+    [InlineData(TimeSlot.Afternoon, "Tarde")]
+    [InlineData(TimeSlot.Both, "Mañana y Tarde")]
+    public async Task ReservationReminder_IncludesCorrectSlotText(TimeSlot slot, string expectedText)
+    {
+        _userRepository.GetContactInfoAsync(UserId, Arg.Any<CancellationToken>())
+            .Returns(new UserContactInfo("user@test.com", "Test User"));
+
+        var handler = new ReservationReminderEmailHandler(
+            _emailService,
+            _userRepository,
+            NullLogger<ReservationReminderEmailHandler>.Instance);
+
+        var notification = new ReservationReminderNotification(
+            ReservationId, UserId, "N-A01", TestDate, slot);
+
+        await handler.Handle(notification, CancellationToken.None);
+
+        await _emailService.Received(1).SendAsync(
+            Arg.Any<string>(),
+            Arg.Any<string>(),
+            Arg.Is<string>(s => s.Contains(expectedText)),
+            Arg.Any<CancellationToken>());
+    }
 }

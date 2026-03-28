@@ -71,6 +71,8 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddSingleton(TimeProvider.System);
 
+        services.AddHostedService<ReservationReminderService>();
+
         return services;
     }
 

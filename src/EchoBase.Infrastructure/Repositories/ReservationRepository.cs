@@ -45,6 +45,25 @@ internal sealed class ReservationRepository(EchoBaseDbContext context) : IReserv
             .FirstOrDefaultAsync(ct);
 
     /// <inheritdoc />
+    public Task<List<Reservation>> GetUserReservationsAsync(Guid userId, CancellationToken ct = default) =>
+        context.Reservations
+            .Include(r => r.Dock)
+            .Where(r => r.UserId == userId)
+            .OrderByDescending(r => r.Date)
+            .ThenByDescending(r => r.Status)
+            .AsNoTracking()
+            .ToListAsync(ct);
+
+    /// <inheritdoc />
+    public Task<List<Reservation>> GetActiveReservationsForDateAsync(DateOnly date, CancellationToken ct = default) =>
+        context.Reservations
+            .Include(r => r.Dock)
+            .Include(r => r.User)
+            .Where(r => r.Date == date && r.Status == ReservationStatus.Active)
+            .AsNoTracking()
+            .ToListAsync(ct);
+
+    /// <inheritdoc />
     public Task SaveChangesAsync(CancellationToken ct = default) =>
         context.SaveChangesAsync(ct);
 }

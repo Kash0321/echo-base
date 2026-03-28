@@ -85,3 +85,45 @@ internal sealed class ReservationCancelledTeamsHandler(
         _ => slot.ToString()
     };
 }
+
+/// <summary>
+/// Envía un mensaje de Teams como recordatorio de una reserva próxima.
+/// </summary>
+internal sealed class ReservationReminderTeamsHandler(
+    ITeamsNotificationService teamsService,
+    ILogger<ReservationReminderTeamsHandler> logger)
+    : INotificationHandler<ReservationReminderNotification>
+{
+    public async Task Handle(ReservationReminderNotification notification, CancellationToken cancellationToken)
+    {
+        var message = $"""
+            <b>🔔 Recordatorio de reserva</b><br/>
+            <b>Puesto:</b> {notification.DockCode}<br/>
+            <b>Fecha:</b> {notification.Date:dd/MM/yyyy}<br/>
+            <b>Franja:</b> {FormatSlot(notification.TimeSlot)}<br/>
+            <br/>
+            Puedes modificar o cancelar tu reserva desde <em>Mis reservas</em> en EchoBase.
+            """;
+
+        try
+        {
+            await teamsService.SendChatMessageAsync(
+                notification.UserId.ToString(),
+                message,
+                cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error al enviar recordatorio de Teams para reserva {ReservationId}",
+                notification.ReservationId);
+        }
+    }
+
+    private static string FormatSlot(TimeSlot slot) => slot switch
+    {
+        TimeSlot.Morning => "Mañana",
+        TimeSlot.Afternoon => "Tarde",
+        TimeSlot.Both => "Mañana y Tarde",
+        _ => slot.ToString()
+    };
+}

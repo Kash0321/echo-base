@@ -115,4 +115,64 @@ public class TeamsNotificationHandlerTests
         // Should not throw
         await handler.Handle(notification, CancellationToken.None);
     }
+
+    // ──────────────────────────────────────────────────────────────
+    // ReservationReminder → Teams
+    // ──────────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task ReservationReminder_SendsTeamsMessage()
+    {
+        var handler = new ReservationReminderTeamsHandler(
+            _teamsService,
+            NullLogger<ReservationReminderTeamsHandler>.Instance);
+
+        var notification = new ReservationReminderNotification(
+            ReservationId, UserId, "N-A01", TestDate, TimeSlot.Morning);
+
+        await handler.Handle(notification, CancellationToken.None);
+
+        await _teamsService.Received(1).SendChatMessageAsync(
+            UserId.ToString(),
+            Arg.Is<string>(s => s.Contains("N-A01") && s.Contains("Recordatorio") && s.Contains("Mañana")),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Theory]
+    [InlineData(TimeSlot.Morning, "Mañana")]
+    [InlineData(TimeSlot.Afternoon, "Tarde")]
+    [InlineData(TimeSlot.Both, "Mañana y Tarde")]
+    public async Task ReservationReminder_IncludesCorrectSlotText(TimeSlot slot, string expectedText)
+    {
+        var handler = new ReservationReminderTeamsHandler(
+            _teamsService,
+            NullLogger<ReservationReminderTeamsHandler>.Instance);
+
+        var notification = new ReservationReminderNotification(
+            ReservationId, UserId, "N-A01", TestDate, slot);
+
+        await handler.Handle(notification, CancellationToken.None);
+
+        await _teamsService.Received(1).SendChatMessageAsync(
+            Arg.Any<string>(),
+            Arg.Is<string>(s => s.Contains(expectedText)),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task ReservationReminder_ServiceThrows_DoesNotPropagate()
+    {
+        _teamsService.SendChatMessageAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .ThrowsAsync(new InvalidOperationException("Teams API down"));
+
+        var handler = new ReservationReminderTeamsHandler(
+            _teamsService,
+            NullLogger<ReservationReminderTeamsHandler>.Instance);
+
+        var notification = new ReservationReminderNotification(
+            ReservationId, UserId, "N-A01", TestDate, TimeSlot.Morning);
+
+        // Should not throw
+        await handler.Handle(notification, CancellationToken.None);
+    }
 }

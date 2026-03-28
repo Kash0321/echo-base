@@ -58,8 +58,8 @@ public class GetDockMapHandlerTests
         var result = await _handler.Handle(Query(), CancellationToken.None);
 
         Assert.Equal(2, result.Zones.Count);
-        Assert.Equal("Derelict", result.Zones[0].Name);
-        Assert.Equal("Nostromo", result.Zones[1].Name);
+        Assert.Equal("Nostromo", result.Zones[0].Name);
+        Assert.Equal("Derelict", result.Zones[1].Name);
     }
 
     [Fact]
