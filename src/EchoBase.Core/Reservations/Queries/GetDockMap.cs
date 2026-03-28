@@ -106,7 +106,7 @@ internal sealed class GetDockMapHandler(IDockMapRepository repository)
             .ToDictionary(g => g.Key, g => g.ToList());
 
         var zoneDtos = zones
-            .OrderBy(z => z.Name)
+            .OrderBy(z => z.Id)
             .Select(z => BuildZoneDto(z, blockedSet, reservationsByDock))
             .ToList();
 
