@@ -1,0 +1,122 @@
+############################################
+# SISTEMA OPERATIVO
+############################################
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Linux
+*~
+
+############################################
+# VISUAL STUDIO CODE
+############################################
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+# Logs y backups
+*.log
+
+############################################
+# .NET / DOTNET SDK (incluye .NET 10)
+############################################
+# Binarios de compilación
+bin/
+obj/
+
+# Resultados de pruebas
+TestResults/
+
+# Archivos de cobertura
+coverage/
+*.coverage
+*.coveragexml
+
+# Archivos temporales de MSBuild
+*.tmp
+*.temp
+
+############################################
+# BLazor / Web
+############################################
+# Publicaciones
+publish/
+wwwroot/_framework/
+wwwroot/service-worker-assets.js
+
+# Archivos generados por bundlers
+node_modules/
+dist/
+build/
+
+############################################
+# NUGET
+############################################
+# Paquetes recuperables desde restore
+/packages/
+
+# Caché local (normalmente no se versiona)
+# Si usas cache compartida, puedes comentar esta línea
+~/.nuget/packages/
+
+############################################
+# AZURE / SECRETOS / CONFIGURACIÓN
+############################################
+# Secretos de desarrollo
+secrets.json
+appsettings.Development.json
+appsettings.Local.json
+.env
+.env.*
+
+# Credenciales
+*.pfx
+*.snk
+
+############################################
+# LOGS Y ARCHIVOS DE EJECUCIÓN
+############################################
+logs/
+*.log
+crashdump*
+*.dmp
+
+############################################
+# DOCKER
+############################################
+# Overrides locales
+docker-compose.override.yml
+
+############################################
+# GITHUB COPILOT
+############################################
+# Copilot no genera archivos versionables
+# (no hay nada específico que ignorar)
+# Mantener comentarios del prompt es decisión del equipo
+
+############################################
+# HERRAMIENTAS DE ANÁLISIS / PERFILADO
+############################################
+# Rider / ReSharper / VS
+.idea/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+############################################
+# ARCHIVOS DE PUBLICACIÓN
+############################################
+*.publishsettings
+*.pubxml
+*.pubxml.user

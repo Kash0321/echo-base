@@ -1,0 +1,11 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/EchoBase.Core/EchoBase.Core.csproj" />
+    <Project Path="src/EchoBase.Infrastructure/EchoBase.Infrastructure.csproj" />
+    <Project Path="src/EchoBase.Web/EchoBase.Web.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/EchoBase.Tests.Integration/EchoBase.Tests.Integration.csproj" />
+    <Project Path="tests/EchoBase.Tests.Unit/EchoBase.Tests.Unit.csproj" />
+  </Folder>
+</Solution>
