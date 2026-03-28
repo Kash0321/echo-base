@@ -1,4 +1,7 @@
+using EchoBase.Core.Interfaces;
+using EchoBase.Core.Reservations.Commands;
 using EchoBase.Infrastructure.Data;
+using EchoBase.Infrastructure.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -40,6 +43,23 @@ public static class ServiceCollectionExtensions
             else
                 options.UseSqlServer(connectionString);
         });
+
+        return services;
+    }
+
+    /// <summary>
+    /// Registra MediatR, repositorios y servicios transversales de la aplicación.
+    /// </summary>
+    /// <param name="services">Colección de servicios de la aplicación.</param>
+    /// <returns>La misma <paramref name="services"/> para encadenamiento fluido.</returns>
+    public static IServiceCollection AddEchoBaseServices(
+        this IServiceCollection services)
+    {
+        services.AddMediatR(cfg =>
+            cfg.RegisterServicesFromAssembly(typeof(CreateReservationCommand).Assembly));
+
+        services.AddScoped<IReservationRepository, ReservationRepository>();
+        services.AddSingleton(TimeProvider.System);
 
         return services;
     }

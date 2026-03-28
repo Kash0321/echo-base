@@ -13,6 +13,7 @@ var connectionString = builder.Configuration.GetConnectionString("EchoBase")
 var useSqlite = builder.Configuration.GetValue("Database:UseSqlite", defaultValue: true);
 
 builder.Services.AddEchoBaseDatabase(connectionString, useSqlite);
+builder.Services.AddEchoBaseServices();
 
 var app = builder.Build();
 
