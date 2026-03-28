@@ -9,6 +9,16 @@ App interna para que 70 empleados reserven 24 puestos físicos, permitiendo cada
 - Estilo: Tailwind CSS o MudBlazor (UI Components)
 - Persistencia: Entity Framework Core con SQLite (Local) / Azure SQL (Prod)
 
+## Convenciones de implementación
+*   Usa Clean Code y sigue las convenciones de estilo de C#.
+*   Aplica principios SOLID y patrones de diseño cuando sea apropiado.
+*   Documenta con XML comments y mantén el código legible.
+*   Escribe tests para cada nueva funcionalidad o cambio significativo.
+*   Utiliza GitHub Copilot Pro para generar código boilerplate, pero siempre revisa y ajusta según el contexto específico del proyecto.
+*   Mantén los archivos `spec.md` actualizados para que la IA tenga el contexto necesario para generar código relevante.
+*   Clean Architecture: Mantén una separación clara entre las capas de dominio, infraestructura y presentación para facilitar la mantenibilidad y escalabilidad del proyecto.
+*   Usa Microsoft.Identity.Web para Blazor Server y Blazor WebAssembly para implementar autenticación y autorización con Azure AD, asegurando que solo los usuarios autorizados puedan acceder a la aplicación y sus funcionalidades.
+
 ## Modelo de datos
 1. **User** (Empleado que reserva espacio): Id, Nombre, Email, Línea de negocio (Core, Energía, Scrap/Waste, Transversal).
 2. **Dock** (Puesto de trabajo): Id, Código (ej: A-01), Ubicación, Equipamiento (Monitor doble, etc.).
