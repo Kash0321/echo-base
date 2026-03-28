@@ -1,3 +1,4 @@
+using EchoBase.Core.Entities;
 using EchoBase.Core.Interfaces;
 using EchoBase.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
@@ -16,5 +17,17 @@ internal sealed class UserRepository(EchoBaseDbContext context) : IUserRepositor
             .Where(u => u.Id == userId)
             .Select(u => new UserContactInfo(u.Email, u.Name))
             .FirstOrDefaultAsync(ct);
+    }
+
+    /// <inheritdoc />
+    public async Task EnsureUserAsync(Guid userId, string name, string email, CancellationToken ct = default)
+    {
+        bool exists = await context.Users.AnyAsync(u => u.Id == userId, ct);
+        if (!exists)
+        {
+            var user = new User(userId) { Name = name, Email = email };
+            context.Users.Add(user);
+            await context.SaveChangesAsync(ct);
+        }
     }
 }

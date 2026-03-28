@@ -8,7 +8,9 @@ namespace EchoBase.Web.Services;
 /// Implementación de <see cref="ICurrentUserService"/> para Blazor Server
 /// que lee los claims del usuario autenticado vía Azure AD.
 /// </summary>
-internal sealed class BlazorCurrentUserService(AuthenticationStateProvider authStateProvider)
+internal sealed class BlazorCurrentUserService(
+    AuthenticationStateProvider authStateProvider,
+    IUserRepository userRepository)
     : ICurrentUserService
 {
     private ClaimsPrincipal? _user;
@@ -28,12 +30,18 @@ internal sealed class BlazorCurrentUserService(AuthenticationStateProvider authS
     public bool IsAuthenticated => _user?.Identity?.IsAuthenticated ?? false;
 
     /// <summary>
-    /// Carga los claims del usuario autenticado. Debe invocarse una vez por ciclo de vida del componente.
+    /// Carga los claims del usuario autenticado y garantiza que exista en la base de datos.
+    /// Debe invocarse una vez por ciclo de vida del componente.
     /// </summary>
     public async Task InitializeAsync()
     {
         var state = await authStateProvider.GetAuthenticationStateAsync();
         _user = state.User;
+
+        if (IsAuthenticated && UserId != Guid.Empty)
+        {
+            await userRepository.EnsureUserAsync(UserId, UserName, Email);
+        }
     }
 
     private Guid? GetClaimAsGuid(string claimType)
