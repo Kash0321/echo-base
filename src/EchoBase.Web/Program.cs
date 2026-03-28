@@ -2,14 +2,25 @@ using EchoBase.Core.Interfaces;
 using EchoBase.Infrastructure;
 using EchoBase.Web.Components;
 using EchoBase.Web.Services;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.Identity.Web;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Autenticación Azure AD
-builder.Services.AddAuthentication(OpenIdConnectDefaults.AuthenticationScheme)
-    .AddMicrosoftIdentityWebApp(builder.Configuration.GetSection("AzureAd"));
+// Autenticación: Azure AD en producción, esquema fake en desarrollo
+if (builder.Environment.IsDevelopment()
+    && builder.Configuration.GetValue("Authentication:UseDevelopmentStub", false))
+{
+    builder.Services
+        .AddAuthentication(DevAuthHandler.SchemeName)
+        .AddScheme<AuthenticationSchemeOptions, DevAuthHandler>(DevAuthHandler.SchemeName, _ => { });
+}
+else
+{
+    builder.Services.AddAuthentication(OpenIdConnectDefaults.AuthenticationScheme)
+        .AddMicrosoftIdentityWebApp(builder.Configuration.GetSection("AzureAd"));
+}
 builder.Services.AddAuthorization();
 builder.Services.AddCascadingAuthenticationState();
 

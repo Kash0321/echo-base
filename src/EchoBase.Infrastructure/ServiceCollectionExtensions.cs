@@ -84,11 +84,21 @@ public static class ServiceCollectionExtensions
         this IServiceCollection services,
         IConfiguration configuration)
     {
-        services.Configure<SmtpSettings>(configuration.GetSection(SmtpSettings.SectionName));
-        services.AddScoped<IEmailService, SmtpEmailService>();
+        var useStubs = configuration.GetValue("Notifications:UseDevelopmentStubs", false);
 
-        services.Configure<GraphSettings>(configuration.GetSection(GraphSettings.SectionName));
-        services.AddScoped<ITeamsNotificationService, GraphTeamsNotificationService>();
+        if (useStubs)
+        {
+            services.AddScoped<IEmailService, LogEmailService>();
+            services.AddScoped<ITeamsNotificationService, LogTeamsNotificationService>();
+        }
+        else
+        {
+            services.Configure<SmtpSettings>(configuration.GetSection(SmtpSettings.SectionName));
+            services.AddScoped<IEmailService, SmtpEmailService>();
+
+            services.Configure<GraphSettings>(configuration.GetSection(GraphSettings.SectionName));
+            services.AddScoped<ITeamsNotificationService, GraphTeamsNotificationService>();
+        }
 
         return services;
     }
