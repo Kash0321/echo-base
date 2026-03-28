@@ -16,7 +16,6 @@
 
 **Echo-Base** es una aplicación satelital diseñada para gestionar la logística de puestos de trabajo en un entorno de modelo híbrido. Su misión principal es coordinar el acceso a recursos físicos limitados mediante un flujo de trabajo de **Spec-Driven Development (SDD)** asistido por Inteligencia Artificial.
 
-
 ## 🌌 ¿Por qué "Echo-Base"?
 
 El nombre no es solo una referencia a Star Wars; es una metáfora de nuestra realidad operativa:
