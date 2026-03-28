@@ -120,3 +120,6 @@ docker-compose.override.yml
 *.publishsettings
 *.pubxml
 *.pubxml.user
+src/EchoBase.Web/echobase-dev.db-shm
+src/EchoBase.Web/echobase-dev.db-wal
+src/EchoBase.Web/echobase-dev.db
