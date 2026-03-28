@@ -120,6 +120,11 @@ docker-compose.override.yml
 *.publishsettings
 *.pubxml
 *.pubxml.user
+
+
+############################################
+# BASE DE DATOS LOCAL
+############################################
 src/EchoBase.Web/echobase-dev.db-shm
 src/EchoBase.Web/echobase-dev.db-wal
 src/EchoBase.Web/echobase-dev.db
