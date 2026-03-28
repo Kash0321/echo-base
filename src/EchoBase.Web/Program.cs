@@ -1,3 +1,4 @@
+using EchoBase.Infrastructure;
 using EchoBase.Web.Components;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -5,6 +6,13 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container.
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
+
+var connectionString = builder.Configuration.GetConnectionString("EchoBase")
+    ?? throw new InvalidOperationException("Connection string 'EchoBase' not found.");
+
+var useSqlite = builder.Configuration.GetValue("Database:UseSqlite", defaultValue: true);
+
+builder.Services.AddEchoBaseDatabase(connectionString, useSqlite);
 
 var app = builder.Build();
 
@@ -23,5 +31,8 @@ app.UseAntiforgery();
 app.MapStaticAssets();
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
+
+// Aplicar migraciones pendientes e inicializar datos maestros al arrancar
+await DatabaseInitializer.InitializeAsync(app.Services);
 
 app.Run();
