@@ -59,6 +59,7 @@ public static class ServiceCollectionExtensions
             cfg.RegisterServicesFromAssembly(typeof(CreateReservationCommand).Assembly));
 
         services.AddScoped<IReservationRepository, ReservationRepository>();
+        services.AddScoped<IBlockedDockRepository, BlockedDockRepository>();
         services.AddSingleton(TimeProvider.System);
 
         return services;

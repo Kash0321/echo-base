@@ -2,6 +2,7 @@ using EchoBase.Core.Common;
 using EchoBase.Core.Entities;
 using EchoBase.Core.Entities.Enums;
 using EchoBase.Core.Interfaces;
+using EchoBase.Core.Reservations;
 using MediatR;
 
 namespace EchoBase.Core.Reservations.Commands;
@@ -35,6 +36,7 @@ public sealed record CreateReservationCommand(
 /// </remarks>
 public sealed class CreateReservationHandler(
     IReservationRepository repository,
+    IBlockedDockRepository blockedDockRepository,
     TimeProvider timeProvider) : IRequestHandler<CreateReservationCommand, Result<Guid>>
 {
     private const int MaxAdvanceDays = 7;
@@ -56,6 +58,10 @@ public sealed class CreateReservationHandler(
         // 3. El puesto debe existir
         if (!await repository.DockExistsAsync(request.DockId, cancellationToken))
             return Result<Guid>.Failure(ReservationErrors.DockNotFound);
+
+        // 3b. El puesto no puede estar bloqueado para la fecha solicitada
+        if (await blockedDockRepository.IsDockBlockedAsync(request.DockId, request.Date, cancellationToken))
+            return Result<Guid>.Failure(ReservationErrors.DockBlocked);
 
         // 4. Disponibilidad del puesto: no puede haber franjas solapadas en la misma fecha
         var dockReservations = await repository.GetActiveDockReservationsAsync(

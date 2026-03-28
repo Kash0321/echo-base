@@ -15,6 +15,7 @@ public class CreateReservationHandlerTests
     private static readonly Guid DockId = Guid.NewGuid();
 
     private readonly IReservationRepository _repository = Substitute.For<IReservationRepository>();
+    private readonly IBlockedDockRepository _blockedDockRepository = Substitute.For<IBlockedDockRepository>();
     private readonly TimeProvider _timeProvider = Substitute.For<TimeProvider>();
     private readonly CreateReservationHandler _handler;
 
@@ -26,7 +27,9 @@ public class CreateReservationHandlerTests
             .Returns([]);
         _repository.GetActiveUserReservationsAsync(Arg.Any<Guid>(), Arg.Any<DateOnly>(), Arg.Any<CancellationToken>())
             .Returns([]);
-        _handler = new(_repository, _timeProvider);
+        _blockedDockRepository.IsDockBlockedAsync(Arg.Any<Guid>(), Arg.Any<DateOnly>(), Arg.Any<CancellationToken>())
+            .Returns(false);
+        _handler = new(_repository, _blockedDockRepository, _timeProvider);
     }
 
     private static CreateReservationCommand Cmd(
@@ -243,6 +246,35 @@ public class CreateReservationHandlerTests
         var result = await _handler.Handle(Cmd(timeSlot: TimeSlot.Afternoon), CancellationToken.None);
 
         Assert.True(result.IsSuccess);
+    }
+
+    // ──────────────────────────────────────────────────────────────
+    // Blocked dock
+    // ──────────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task Handle_DockBlocked_ReturnsDockBlocked()
+    {
+        _blockedDockRepository.IsDockBlockedAsync(DockId, Today, Arg.Any<CancellationToken>())
+            .Returns(true);
+
+        var result = await _handler.Handle(Cmd(), CancellationToken.None);
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(ReservationErrors.DockBlocked, result.Error);
+    }
+
+    [Fact]
+    public async Task Handle_DockBlockedDoesNotQueryReservations()
+    {
+        _blockedDockRepository.IsDockBlockedAsync(DockId, Today, Arg.Any<CancellationToken>())
+            .Returns(true);
+
+        await _handler.Handle(Cmd(), CancellationToken.None);
+
+        // Si el dock está bloqueado no debería consultar reservas
+        await _repository.DidNotReceive()
+            .GetActiveDockReservationsAsync(Arg.Any<Guid>(), Arg.Any<DateOnly>(), Arg.Any<CancellationToken>());
     }
 
     // ──────────────────────────────────────────────────────────────

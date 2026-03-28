@@ -15,6 +15,9 @@ public static class ReservationErrors
     /// <summary>La fecha de la reserva supera el máximo de 7 días de antelación.</summary>
     public const string DateTooFarAhead = "DATE_TOO_FAR_AHEAD";
 
+    /// <summary>El puesto está bloqueado por un Manager para la fecha solicitada.</summary>
+    public const string DockBlocked = "DOCK_BLOCKED";
+
     /// <summary>El puesto ya está reservado para la franja horaria solicitada en esa fecha.</summary>
     public const string DockNotAvailable = "DOCK_NOT_AVAILABLE";
 

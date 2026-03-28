@@ -27,6 +27,9 @@ public sealed class EchoBaseDbContext(DbContextOptions<EchoBaseDbContext> option
     /// <summary>Reservas de puestos realizadas por los usuarios.</summary>
     public DbSet<Reservation> Reservations => Set<Reservation>();
 
+    /// <summary>Bloqueos de puestos de trabajo realizados por Managers.</summary>
+    public DbSet<BlockedDock> BlockedDocks => Set<BlockedDock>();
+
     /// <inheritdoc />
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
