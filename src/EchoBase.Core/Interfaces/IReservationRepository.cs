@@ -30,6 +30,9 @@ public interface IReservationRepository
     /// <summary>Agrega una nueva reserva al contexto de persistencia.</summary>
     Task AddAsync(Reservation reservation, CancellationToken ct = default);
 
+    /// <summary>Obtiene el código de un puesto de trabajo por su identificador.</summary>
+    Task<string?> GetDockCodeAsync(Guid dockId, CancellationToken ct = default);
+
     /// <summary>Persiste los cambios pendientes en la base de datos.</summary>
     Task SaveChangesAsync(CancellationToken ct = default);
 }

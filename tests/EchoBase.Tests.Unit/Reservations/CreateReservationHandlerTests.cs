@@ -4,6 +4,7 @@ using EchoBase.Core.Entities.Enums;
 using EchoBase.Core.Interfaces;
 using EchoBase.Core.Reservations;
 using EchoBase.Core.Reservations.Commands;
+using MediatR;
 using NSubstitute;
 
 namespace EchoBase.Tests.Unit.Reservations;
@@ -17,6 +18,7 @@ public class CreateReservationHandlerTests
     private readonly IReservationRepository _repository = Substitute.For<IReservationRepository>();
     private readonly IBlockedDockRepository _blockedDockRepository = Substitute.For<IBlockedDockRepository>();
     private readonly TimeProvider _timeProvider = Substitute.For<TimeProvider>();
+    private readonly IPublisher _publisher = Substitute.For<IPublisher>();
     private readonly CreateReservationHandler _handler;
 
     public CreateReservationHandlerTests()
@@ -29,7 +31,7 @@ public class CreateReservationHandlerTests
             .Returns([]);
         _blockedDockRepository.IsDockBlockedAsync(Arg.Any<Guid>(), Arg.Any<DateOnly>(), Arg.Any<CancellationToken>())
             .Returns(false);
-        _handler = new(_repository, _blockedDockRepository, _timeProvider);
+        _handler = new(_repository, _blockedDockRepository, _timeProvider, _publisher);
     }
 
     private static CreateReservationCommand Cmd(

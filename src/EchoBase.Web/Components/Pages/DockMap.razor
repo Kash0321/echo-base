@@ -1,0 +1,324 @@
+@page "/reservas"
+@attribute [Authorize]
+@rendermode InteractiveServer
+
+@using EchoBase.Core.Common
+@using EchoBase.Core.Entities.Enums
+@using EchoBase.Core.Reservations.Commands
+@using EchoBase.Core.Reservations.Queries
+@using EchoBase.Web.Services
+@using MediatR
+
+@inject IMediator Mediator
+@inject BlazorCurrentUserService CurrentUser
+
+<PageTitle>Reserva de puestos</PageTitle>
+
+<h1 class="mb-3">Mapa de puestos</h1>
+
+<!-- Selector de fecha -->
+<div class="row mb-4">
+    <div class="col-auto">
+        <label for="selectedDate" class="form-label fw-semibold">Fecha</label>
+        <input type="date" id="selectedDate" class="form-control"
+               value="@_selectedDate.ToString("yyyy-MM-dd")"
+               min="@_today.ToString("yyyy-MM-dd")"
+               max="@_today.AddDays(7).ToString("yyyy-MM-dd")"
+               @onchange="OnDateChanged" />
+    </div>
+    <div class="col-auto d-flex align-items-end">
+        <span class="badge bg-success me-2">Libre</span>
+        <span class="badge bg-warning text-dark me-2">Parcial</span>
+        <span class="badge bg-danger me-2">Completo</span>
+        <span class="badge bg-secondary me-2">Bloqueado</span>
+    </div>
+</div>
+
+@if (_loading)
+{
+    <div class="d-flex justify-content-center my-5">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Cargando...</span>
+        </div>
+    </div>
+}
+else if (_dockMap is not null)
+{
+    @foreach (var zone in _dockMap.Zones)
+    {
+        <div class="card mb-4">
+            <div class="card-header">
+                <h4 class="mb-0">@zone.Name</h4>
+                @if (!string.IsNullOrEmpty(zone.Description))
+                {
+                    <small class="text-muted">@zone.Description</small>
+                }
+            </div>
+            <div class="card-body">
+                @foreach (var table in zone.Tables)
+                {
+                    <div class="mb-3">
+                        <h6 class="text-muted">@table.Name</h6>
+                        <div class="dock-table">
+                            <div class="dock-side d-flex gap-2 mb-1">
+                                @foreach (var seat in table.SideA)
+                                {
+                                    <button class="btn @GetBtnClass(seat) dock-seat"
+                                            disabled="@(seat.Status is DockStatus.FullyBooked or DockStatus.Blocked)"
+                                            title="@GetTooltip(seat)"
+                                            @onclick="() => OnSeatClicked(seat)">
+                                        @seat.Code
+                                    </button>
+                                }
+                            </div>
+                            <hr class="dock-divider my-1" />
+                            <div class="dock-side d-flex gap-2">
+                                @foreach (var seat in table.SideB)
+                                {
+                                    <button class="btn @GetBtnClass(seat) dock-seat"
+                                            disabled="@(seat.Status is DockStatus.FullyBooked or DockStatus.Blocked)"
+                                            title="@GetTooltip(seat)"
+                                            @onclick="() => OnSeatClicked(seat)">
+                                        @seat.Code
+                                    </button>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    }
+}
+
+<!-- Panel de reserva -->
+@if (_selectedSeat is not null)
+{
+    <div class="modal d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Reservar puesto @_selectedSeat.Code</h5>
+                    <button type="button" class="btn-close" @onclick="ClosePanel"></button>
+                </div>
+                <div class="modal-body">
+                    <p><strong>Fecha:</strong> @_selectedDate.ToString("dd/MM/yyyy")</p>
+
+                    @if (_selectedSeat.Status == DockStatus.PartiallyBooked)
+                    {
+                        <div class="alert alert-info">
+                            Franja <strong>@FormatSlot(_selectedSeat.BookedSlot!.Value)</strong> ya reservada.
+                        </div>
+                    }
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Franja horaria</label>
+                        @foreach (var slot in GetAvailableSlots(_selectedSeat))
+                        {
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="timeSlot"
+                                       id="@($"slot-{slot}")"
+                                       checked="@(_selectedSlot == slot)"
+                                       @onchange="() => _selectedSlot = slot" />
+                                <label class="form-check-label" for="@($"slot-{slot}")">
+                                    @FormatSlot(slot)
+                                </label>
+                            </div>
+                        }
+                    </div>
+
+                    @if (_reservationError is not null)
+                    {
+                        <div class="alert alert-danger">@_reservationError</div>
+                    }
+
+                    @if (_reservationSuccess)
+                    {
+                        <div class="alert alert-success">
+                            Reserva confirmada correctamente.
+                        </div>
+                    }
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="ClosePanel">Cerrar</button>
+                    @if (!_reservationSuccess)
+                    {
+                        <button type="button" class="btn btn-primary"
+                                disabled="@(_selectedSlot is null || _submitting)"
+                                @onclick="ConfirmReservation">
+                            @if (_submitting)
+                            {
+                                <span class="spinner-border spinner-border-sm me-1"></span>
+                            }
+                            Confirmar reserva
+                        </button>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<style>
+    .dock-table {
+        background: #f8f9fa;
+        border: 2px solid #dee2e6;
+        border-radius: 0.5rem;
+        padding: 0.75rem;
+        display: inline-block;
+    }
+
+    .dock-seat {
+        min-width: 5.5rem;
+        font-weight: 600;
+        font-size: 0.85rem;
+    }
+
+    .dock-divider {
+        border-top: 3px solid #adb5bd;
+    }
+</style>
+
+@code {
+    private DateOnly _today;
+    private DateOnly _selectedDate;
+    private DockMapDto? _dockMap;
+    private bool _loading = true;
+
+    // Panel de reserva
+    private DockSeatDto? _selectedSeat;
+    private TimeSlot? _selectedSlot;
+    private string? _reservationError;
+    private bool _reservationSuccess;
+    private bool _submitting;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CurrentUser.InitializeAsync();
+        _today = DateOnly.FromDateTime(DateTime.UtcNow);
+        _selectedDate = _today;
+        await LoadMapAsync();
+    }
+
+    private async Task OnDateChanged(ChangeEventArgs e)
+    {
+        if (DateOnly.TryParse(e.Value?.ToString(), out var date))
+        {
+            _selectedDate = date;
+            await LoadMapAsync();
+        }
+    }
+
+    private async Task LoadMapAsync()
+    {
+        _loading = true;
+        _dockMap = await Mediator.Send(new GetDockMapQuery(_selectedDate));
+        _loading = false;
+    }
+
+    private void OnSeatClicked(DockSeatDto seat)
+    {
+        if (seat.Status is DockStatus.FullyBooked or DockStatus.Blocked) return;
+
+        _selectedSeat = seat;
+        _selectedSlot = null;
+        _reservationError = null;
+        _reservationSuccess = false;
+
+        // Si el puesto está libre, preseleccionar "Ambas"
+        if (seat.Status == DockStatus.Free)
+            _selectedSlot = TimeSlot.Both;
+    }
+
+    private void ClosePanel()
+    {
+        _selectedSeat = null;
+        _selectedSlot = null;
+        _reservationError = null;
+        _reservationSuccess = false;
+    }
+
+    private async Task ConfirmReservation()
+    {
+        if (_selectedSeat is null || _selectedSlot is null) return;
+
+        _submitting = true;
+        _reservationError = null;
+
+        var command = new CreateReservationCommand(
+            CurrentUser.UserId,
+            _selectedSeat.Id,
+            _selectedDate,
+            _selectedSlot.Value);
+
+        var result = await Mediator.Send(command);
+
+        if (result.IsSuccess)
+        {
+            _reservationSuccess = true;
+            // Recargar mapa para reflejar el nuevo estado
+            await LoadMapAsync();
+        }
+        else
+        {
+            _reservationError = MapError(result.Error!);
+        }
+
+        _submitting = false;
+    }
+
+    private static string GetBtnClass(DockSeatDto seat) => seat.Status switch
+    {
+        DockStatus.Free => "btn-success",
+        DockStatus.PartiallyBooked => "btn-warning",
+        DockStatus.FullyBooked => "btn-danger",
+        DockStatus.Blocked => "btn-secondary",
+        _ => "btn-outline-secondary"
+    };
+
+    private static string GetTooltip(DockSeatDto seat) => seat.Status switch
+    {
+        DockStatus.Free => "Libre — haz clic para reservar",
+        DockStatus.PartiallyBooked => $"Parcial — {FormatSlot(seat.BookedSlot!.Value)} ocupada",
+        DockStatus.FullyBooked => "Completo",
+        DockStatus.Blocked => "Bloqueado por administración",
+        _ => seat.Code
+    };
+
+    private static IEnumerable<TimeSlot> GetAvailableSlots(DockSeatDto seat)
+    {
+        if (seat.Status == DockStatus.Free)
+        {
+            yield return TimeSlot.Morning;
+            yield return TimeSlot.Afternoon;
+            yield return TimeSlot.Both;
+        }
+        else if (seat.Status == DockStatus.PartiallyBooked && seat.BookedSlot is not null)
+        {
+            // Solo ofrecer la franja libre
+            yield return seat.BookedSlot.Value == TimeSlot.Morning
+                ? TimeSlot.Afternoon
+                : TimeSlot.Morning;
+        }
+    }
+
+    private static string FormatSlot(TimeSlot slot) => slot switch
+    {
+        TimeSlot.Morning => "Mañana",
+        TimeSlot.Afternoon => "Tarde",
+        TimeSlot.Both => "Mañana y Tarde",
+        _ => slot.ToString()
+    };
+
+    private static string MapError(string error) => error switch
+    {
+        "DATE_IN_THE_PAST" => "La fecha seleccionada ya ha pasado.",
+        "DATE_TOO_FAR_AHEAD" => "No se puede reservar con más de 7 días de antelación.",
+        "DOCK_NOT_FOUND" => "El puesto no existe.",
+        "DOCK_BLOCKED" => "El puesto está bloqueado por administración.",
+        "DOCK_NOT_AVAILABLE" => "La franja horaria seleccionada ya no está disponible.",
+        "USER_MAX_SLOTS_EXCEEDED" => "Ya tienes el máximo de 2 franjas reservadas para este día.",
+        "USER_SLOT_CONFLICT" => "Ya tienes una reserva que se solapa con esta franja horaria.",
+        _ => $"Error inesperado: {error}"
+    };
+}

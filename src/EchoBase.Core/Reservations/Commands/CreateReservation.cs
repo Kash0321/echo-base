@@ -3,6 +3,7 @@ using EchoBase.Core.Entities;
 using EchoBase.Core.Entities.Enums;
 using EchoBase.Core.Interfaces;
 using EchoBase.Core.Reservations;
+using EchoBase.Core.Reservations.Notifications;
 using MediatR;
 
 namespace EchoBase.Core.Reservations.Commands;
@@ -37,7 +38,8 @@ public sealed record CreateReservationCommand(
 public sealed class CreateReservationHandler(
     IReservationRepository repository,
     IBlockedDockRepository blockedDockRepository,
-    TimeProvider timeProvider) : IRequestHandler<CreateReservationCommand, Result<Guid>>
+    TimeProvider timeProvider,
+    IPublisher publisher) : IRequestHandler<CreateReservationCommand, Result<Guid>>
 {
     private const int MaxAdvanceDays = 7;
     private const int MaxDailySlots = 2;
@@ -95,6 +97,13 @@ public sealed class CreateReservationHandler(
 
         await repository.AddAsync(reservation, cancellationToken);
         await repository.SaveChangesAsync(cancellationToken);
+
+        // Publicar notificación para email y Teams (fire-and-forget dentro del scope)
+        var dockCode = await repository.GetDockCodeAsync(request.DockId, cancellationToken) ?? request.DockId.ToString();
+        await publisher.Publish(
+            new ReservationCreatedNotification(
+                reservation.Id, request.UserId, dockCode, request.Date, request.TimeSlot),
+            cancellationToken);
 
         return Result<Guid>.Success(reservation.Id);
     }

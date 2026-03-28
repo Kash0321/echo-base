@@ -4,6 +4,7 @@ using EchoBase.Core.Entities.Enums;
 using EchoBase.Core.Interfaces;
 using EchoBase.Core.Reservations;
 using EchoBase.Core.Reservations.Commands;
+using MediatR;
 using NSubstitute;
 
 namespace EchoBase.Tests.Unit.Reservations;
@@ -17,13 +18,14 @@ public class CancelReservationHandlerTests
 
     private readonly IReservationRepository _repository = Substitute.For<IReservationRepository>();
     private readonly TimeProvider _timeProvider = Substitute.For<TimeProvider>();
+    private readonly IPublisher _publisher = Substitute.For<IPublisher>();
     private readonly CancelReservationHandler _handler;
 
     public CancelReservationHandlerTests()
     {
         // Current time: 2026-03-28 10:00 UTC → 38h before FutureDate (March 30 00:00)
         _timeProvider.GetUtcNow().Returns(new DateTimeOffset(2026, 3, 28, 10, 0, 0, TimeSpan.Zero));
-        _handler = new(_repository, _timeProvider);
+        _handler = new(_repository, _timeProvider, _publisher);
     }
 
     private static Reservation MakeActiveReservation(DateOnly? date = null, Guid? userId = null) =>

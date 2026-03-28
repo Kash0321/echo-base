@@ -17,6 +17,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\EchoBase.Core\EchoBase.Core.csproj" />
+    <ProjectReference Include="..\..\src\EchoBase.Infrastructure\EchoBase.Infrastructure.csproj" />
   </ItemGroup>
 
   <ItemGroup>

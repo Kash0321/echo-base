@@ -1,6 +1,7 @@
 using EchoBase.Core.Common;
 using EchoBase.Core.Entities.Enums;
 using EchoBase.Core.Interfaces;
+using EchoBase.Core.Reservations.Notifications;
 using MediatR;
 
 namespace EchoBase.Core.Reservations.Commands;
@@ -28,7 +29,8 @@ public sealed record CancelReservationCommand(
 /// </remarks>
 public sealed class CancelReservationHandler(
     IReservationRepository repository,
-    TimeProvider timeProvider) : IRequestHandler<CancelReservationCommand, Result>
+    TimeProvider timeProvider,
+    IPublisher publisher) : IRequestHandler<CancelReservationCommand, Result>
 {
     private static readonly TimeSpan MinCancellationAdvance = TimeSpan.FromHours(24);
 
@@ -54,6 +56,12 @@ public sealed class CancelReservationHandler(
 
         reservation.Cancel();
         await repository.SaveChangesAsync(cancellationToken);
+
+        var dockCode = await repository.GetDockCodeAsync(reservation.DockId, cancellationToken) ?? reservation.DockId.ToString();
+        await publisher.Publish(
+            new ReservationCancelledNotification(
+                reservation.Id, reservation.UserId, dockCode, reservation.Date, reservation.TimeSlot),
+            cancellationToken);
 
         return Result.Success();
     }

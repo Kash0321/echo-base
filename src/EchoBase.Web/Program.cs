@@ -1,7 +1,17 @@
+using EchoBase.Core.Interfaces;
 using EchoBase.Infrastructure;
 using EchoBase.Web.Components;
+using EchoBase.Web.Services;
+using Microsoft.AspNetCore.Authentication.OpenIdConnect;
+using Microsoft.Identity.Web;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Autenticación Azure AD
+builder.Services.AddAuthentication(OpenIdConnectDefaults.AuthenticationScheme)
+    .AddMicrosoftIdentityWebApp(builder.Configuration.GetSection("AzureAd"));
+builder.Services.AddAuthorization();
+builder.Services.AddCascadingAuthenticationState();
 
 // Add services to the container.
 builder.Services.AddRazorComponents()
@@ -14,6 +24,10 @@ var useSqlite = builder.Configuration.GetValue("Database:UseSqlite", defaultValu
 
 builder.Services.AddEchoBaseDatabase(connectionString, useSqlite);
 builder.Services.AddEchoBaseServices();
+builder.Services.AddEchoBaseNotifications(builder.Configuration);
+
+builder.Services.AddScoped<BlazorCurrentUserService>();
+builder.Services.AddScoped<ICurrentUserService>(sp => sp.GetRequiredService<BlazorCurrentUserService>());
 
 var app = builder.Build();
 
@@ -26,6 +40,9 @@ if (!app.Environment.IsDevelopment())
 }
 app.UseStatusCodePagesWithReExecute("/not-found", createScopeForStatusCodePages: true);
 app.UseHttpsRedirection();
+
+app.UseAuthentication();
+app.UseAuthorization();
 
 app.UseAntiforgery();
 

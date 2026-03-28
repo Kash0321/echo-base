@@ -38,6 +38,13 @@ internal sealed class ReservationRepository(EchoBaseDbContext context) : IReserv
         await context.Reservations.AddAsync(reservation, ct);
 
     /// <inheritdoc />
+    public async Task<string?> GetDockCodeAsync(Guid dockId, CancellationToken ct = default) =>
+        await context.Docks
+            .Where(d => d.Id == dockId)
+            .Select(d => d.Code)
+            .FirstOrDefaultAsync(ct);
+
+    /// <inheritdoc />
     public Task SaveChangesAsync(CancellationToken ct = default) =>
         context.SaveChangesAsync(ct);
 }
