@@ -4,8 +4,18 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace EchoBase.Infrastructure.Data.Configurations;
 
+/// <summary>
+/// Configuración Fluent API de <see cref="Reservation"/> para EF Core.
+/// Define la tabla, conversiones de enums a entero, índices compuestos para consultas
+/// de disponibilidad y límite diario de usuario, y las FKs hacia <see cref="User"/> y <see cref="Dock"/>.
+/// </summary>
+/// <remarks>
+/// La unicidad semántica de franjas horarias (<see cref="EchoBase.Core.Entities.Enums.TimeSlot.Both"/>
+/// solapa con <c>Morning</c> y <c>Afternoon</c>) se impone a nivel de dominio, no mediante un índice único en BD.
+/// </remarks>
 internal sealed class ReservationConfiguration : IEntityTypeConfiguration<Reservation>
 {
+    /// <inheritdoc />
     public void Configure(EntityTypeBuilder<Reservation> builder)
     {
         builder.ToTable("Reservations");

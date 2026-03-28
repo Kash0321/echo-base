@@ -4,8 +4,14 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace EchoBase.Infrastructure.Data.Configurations;
 
+/// <summary>
+/// Configuración Fluent API de <see cref="Role"/> para EF Core.
+/// Define la tabla y el índice único en <c>Name</c>.
+/// La relación N:M con <see cref="User"/> se configura en <see cref="UserConfiguration"/>.
+/// </summary>
 internal sealed class RoleConfiguration : IEntityTypeConfiguration<Role>
 {
+    /// <inheritdoc />
     public void Configure(EntityTypeBuilder<Role> builder)
     {
         builder.ToTable("Roles");

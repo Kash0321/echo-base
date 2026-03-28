@@ -4,8 +4,15 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace EchoBase.Infrastructure.Data.Configurations;
 
+/// <summary>
+/// Configuración Fluent API de <see cref="User"/> para EF Core.
+/// Define la tabla, restricciones de columnas, índice único en <c>Email</c>,
+/// la conversión de <c>BusinessLine</c> a entero, la relación 1:N con <see cref="Reservation"/>
+/// y la relación N:M con <see cref="Role"/> a través de la tabla <c>UserRole</c>.
+/// </summary>
 internal sealed class UserConfiguration : IEntityTypeConfiguration<User>
 {
+    /// <inheritdoc />
     public void Configure(EntityTypeBuilder<User> builder)
     {
         builder.ToTable("Users");

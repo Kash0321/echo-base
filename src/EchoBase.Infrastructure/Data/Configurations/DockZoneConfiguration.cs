@@ -4,8 +4,13 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace EchoBase.Infrastructure.Data.Configurations;
 
+/// <summary>
+/// Configuración Fluent API de <see cref="DockZone"/> para EF Core.
+/// Define la tabla, restricciones de columnas, índices y la relación 1:N con <see cref="Dock"/>.
+/// </summary>
 internal sealed class DockZoneConfiguration : IEntityTypeConfiguration<DockZone>
 {
+    /// <inheritdoc />
     public void Configure(EntityTypeBuilder<DockZone> builder)
     {
         builder.ToTable("DockZones");
