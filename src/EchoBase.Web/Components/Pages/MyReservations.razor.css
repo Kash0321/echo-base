@@ -1,0 +1,42 @@
+/* ── Cabecera de página (reutiliza misma paleta que DockMap) */
+.eb-page-header {
+    background: linear-gradient(135deg, #0d1b2a 0%, #1a3a5c 60%, #0d1b2a 100%);
+    border-bottom: 1px solid rgba(255,255,255,.08);
+}
+
+.eb-page-eyebrow {
+    font-size: .65rem;
+    letter-spacing: .15em;
+    opacity: .6;
+}
+
+/* ── Tarjetas de reservas próximas ─────────────────────── */
+.eb-reservation-card {
+    transition: transform .15s ease, box-shadow .15s ease;
+}
+
+.eb-reservation-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 .4rem 1rem rgba(0,0,0,.1) !important;
+}
+
+.eb-dock-badge {
+    font-size: .9rem !important;
+    letter-spacing: .05em;
+}
+
+/* ── Tabla de historial ────────────────────────────────── */
+.eb-table-head th {
+    background: rgba(13, 27, 42, .06);
+    font-size: .75rem;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    color: #6c757d;
+    font-weight: 600;
+    border-bottom: 2px solid #dee2e6;
+}
+
+.eb-row-cancelled td {
+    opacity: .5;
+    text-decoration: line-through;
+}

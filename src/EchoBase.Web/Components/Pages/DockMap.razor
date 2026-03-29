@@ -12,31 +12,46 @@
 @inject IMediator Mediator
 @inject BlazorCurrentUserService CurrentUser
 
-<PageTitle>Reserva de puestos</PageTitle>
+<PageTitle>Reserva de puestos — Echo Base</PageTitle>
 
-<h1 class="mb-3"><span class="bi bi-calendar-plus" aria-hidden="true"></span> Mapa de puestos</h1>
-
-<!-- Selector de fecha -->
-<div class="row mb-4">
-    <div class="col-auto">
-        <label for="selectedDate" class="form-label fw-semibold">Fecha</label>
-        <input type="date" id="selectedDate" class="form-control"
-               value="@_selectedDate.ToString("yyyy-MM-dd")"
-               min="@_today.ToString("yyyy-MM-dd")"
-               max="@_today.AddDays(7).ToString("yyyy-MM-dd")"
-               @onchange="OnDateChanged" />
-    </div>
-    <div class="col-auto d-flex align-items-end">
-        <span class="badge bg-success me-2">Libre</span>
-        <span class="badge bg-warning text-dark me-2">Parcial</span>
-        <span class="badge bg-danger me-2">Completo</span>
-        <span class="badge bg-secondary me-2">Bloqueado</span>
+<!-- ═══════════════════════════════════════════════════
+     CABECERA DE PÁGINA
+═══════════════════════════════════════════════════ -->
+<div class="eb-page-header text-white py-2 mb-3">
+    <div class="container-fluid px-3">
+        <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+            <div>
+                <p class="eb-page-eyebrow text-uppercase fw-semibold mb-0">Echo Base</p>
+                <h1 class="h4 fw-bold mb-0">
+                    <i class="bi bi-map-fill me-2"></i>Mapa de bahías
+                </h1>
+            </div>
+            <!-- Selector de fecha + leyenda -->
+            <div class="d-flex align-items-end gap-3 flex-wrap">
+                <div>
+                    <label for="selectedDate" class="form-label form-label-sm fw-semibold text-white-50 mb-1">Fecha</label>
+                    <input type="date" id="selectedDate" class="form-control form-control-sm eb-date-input"
+                           value="@_selectedDate.ToString("yyyy-MM-dd")"
+                           min="@_today.ToString("yyyy-MM-dd")"
+                           max="@_today.AddDays(7).ToString("yyyy-MM-dd")"
+                           @onchange="OnDateChanged" />
+                </div>
+                <div class="d-flex align-items-center gap-2 pb-1">
+                    <span class="eb-legend-dot bg-success"></span><span class="small text-white-50">Libre</span>
+                    <span class="eb-legend-dot bg-warning"></span><span class="small text-white-50">Parcial</span>
+                    <span class="eb-legend-dot bg-danger"></span><span class="small text-white-50">Completo</span>
+                    <span class="eb-legend-dot bg-secondary"></span><span class="small text-white-50">Bloqueado</span>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 
+<div class="container-fluid px-3">
+
 @if (_loading)
 {
-    <div class="d-flex justify-content-center my-5">
+    <div class="d-flex justify-content-center py-5">
         <div class="spinner-border text-primary" role="status">
             <span class="visually-hidden">Cargando...</span>
         </div>
@@ -44,84 +59,113 @@
 }
 else if (_dockMap is not null)
 {
-    @foreach (var zone in _dockMap.Zones)
-    {
-        <div class="card mb-4">
-            <div class="card-header">
-                <h4 class="mb-0">@zone.Name</h4>
-                @if (!string.IsNullOrEmpty(zone.Description))
-                {
-                    <small class="text-muted">@zone.Description</small>
-                }
-            </div>
-            <div class="card-body">
-                @foreach (var table in zone.Tables)
-                {
-                    <div class="mb-3">
-                        <h6 class="text-muted">@table.Name</h6>
-                        <div class="dock-table">
-                            <div class="dock-side d-flex gap-2 mb-1">
-                                @foreach (var seat in table.SideA)
-                                {
-                                    <button class="btn @GetBtnClass(seat) dock-seat"
-                                            disabled="@(seat.Status is DockStatus.FullyBooked or DockStatus.Blocked)"
-                                            title="@GetTooltip(seat)"
-                                            @onclick="() => OnSeatClicked(seat)">
-                                        @seat.Code
-                                    </button>
-                                }
-                            </div>
-                            <hr class="dock-divider my-1" />
-                            <div class="dock-side d-flex gap-2">
-                                @foreach (var seat in table.SideB)
-                                {
-                                    <button class="btn @GetBtnClass(seat) dock-seat"
-                                            disabled="@(seat.Status is DockStatus.FullyBooked or DockStatus.Blocked)"
-                                            title="@GetTooltip(seat)"
-                                            @onclick="() => OnSeatClicked(seat)">
-                                        @seat.Code
-                                    </button>
-                                }
-                            </div>
+    <div class="row g-3">
+        @foreach (var zone in _dockMap.Zones)
+        {
+            <div class="col-12">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-header eb-zone-header d-flex align-items-center gap-2 py-2">
+                        <i class="bi bi-grid-3x3 text-primary fs-5"></i>
+                        <div>
+                            <span class="fw-semibold">@zone.Name</span>
+                            @if (!string.IsNullOrEmpty(zone.Description))
+                            {
+                                <span class="text-muted small ms-2">— @zone.Description</span>
+                            }
                         </div>
                     </div>
-                }
+                    <div class="card-body py-2 px-3">
+                        <div class="d-flex flex-wrap gap-3">
+                            @foreach (var table in zone.Tables)
+                            {
+                                <div class="eb-table-block">
+                                    <p class="text-muted small fw-semibold mb-1 text-center">@table.Name</p>
+                                    <div class="eb-dock-table">
+                                        <div class="d-flex gap-2 mb-1">
+                                            @foreach (var seat in table.SideA)
+                                            {
+                                                <button class="btn @GetBtnClass(seat) eb-dock-seat"
+                                                        disabled="@(seat.Status is DockStatus.FullyBooked or DockStatus.Blocked)"
+                                                        title="@GetTooltip(seat)"
+                                                        @onclick="() => OnSeatClicked(seat)">
+                                                    @seat.Code
+                                                </button>
+                                            }
+                                        </div>
+                                        <hr class="eb-dock-divider my-1" />
+                                        <div class="d-flex gap-2">
+                                            @foreach (var seat in table.SideB)
+                                            {
+                                                <button class="btn @GetBtnClass(seat) eb-dock-seat"
+                                                        disabled="@(seat.Status is DockStatus.FullyBooked or DockStatus.Blocked)"
+                                                        title="@GetTooltip(seat)"
+                                                        @onclick="() => OnSeatClicked(seat)">
+                                                    @seat.Code
+                                                </button>
+                                            }
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
             </div>
-        </div>
-    }
+        }
+    </div>
 }
 
-<!-- Panel de reserva -->
+</div>
+
+<!-- ═══════════════════════════════════════════════════
+     MODAL DE RESERVA
+═══════════════════════════════════════════════════ -->
 @if (_selectedSeat is not null)
 {
     <div class="modal d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Reservar puesto @_selectedSeat.Code</h5>
-                    <button type="button" class="btn-close" @onclick="ClosePanel"></button>
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header eb-modal-header">
+                    <div>
+                        <p class="eb-page-eyebrow text-uppercase fw-semibold text-white-50 mb-0" style="font-size:.65rem;letter-spacing:.15em;">Bahía seleccionada</p>
+                        <h5 class="modal-title text-white fw-bold mb-0">
+                            <i class="bi bi-geo-alt-fill me-2"></i>Puesto @_selectedSeat.Code
+                        </h5>
+                    </div>
+                    <button type="button" class="btn-close btn-close-white" @onclick="ClosePanel"></button>
                 </div>
                 <div class="modal-body">
-                    <p><strong>Fecha:</strong> @_selectedDate.ToString("dd/MM/yyyy")</p>
+                    <!-- Resumen -->
+                    <div class="d-flex gap-3 mb-3">
+                        <div class="eb-modal-info-chip">
+                            <i class="bi bi-calendar3 text-primary me-1"></i>
+                            <span class="fw-semibold">@_selectedDate.ToString("dd/MM/yyyy")</span>
+                        </div>
+                        <div class="eb-modal-info-chip">
+                            <i class="bi bi-geo-alt text-primary me-1"></i>
+                            <span class="fw-semibold">@_selectedSeat.Code</span>
+                        </div>
+                    </div>
 
                     @if (_selectedSeat.Status == DockStatus.PartiallyBooked)
                     {
-                        <div class="alert alert-info">
-                            Franja <strong>@FormatSlot(_selectedSeat.BookedSlot!.Value)</strong> ya reservada.
+                        <div class="alert alert-warning d-flex align-items-center gap-2 py-2">
+                            <i class="bi bi-exclamation-triangle-fill flex-shrink-0"></i>
+                            <span>Franja <strong>@FormatSlot(_selectedSeat.BookedSlot!.Value)</strong> ya está ocupada.</span>
                         </div>
                     }
 
-                    <div class="mb-3">
-                        <label class="form-label fw-semibold">Franja horaria</label>
+                    <label class="form-label fw-semibold mb-2">Franja horaria</label>
+                    <div class="d-flex gap-2 flex-wrap">
                         @foreach (var slot in GetAvailableSlots(_selectedSeat))
                         {
-                            <div class="form-check">
-                                <input class="form-check-input" type="radio" name="timeSlot"
+                            <div>
+                                <input type="radio" class="btn-check" name="timeSlot"
                                        id="@($"slot-{slot}")"
                                        checked="@(_selectedSlot == slot)"
                                        @onchange="() => _selectedSlot = slot" />
-                                <label class="form-check-label" for="@($"slot-{slot}")">
-                                    @FormatSlot(slot)
+                                <label class="btn btn-outline-primary btn-sm" for="@($"slot-{slot}")">
+                                    <i class="bi @GetSlotIcon(slot) me-1"></i>@FormatSlot(slot)
                                 </label>
                             </div>
                         }
@@ -129,26 +173,36 @@ else if (_dockMap is not null)
 
                     @if (_reservationError is not null)
                     {
-                        <div class="alert alert-danger">@_reservationError</div>
+                        <div class="alert alert-danger d-flex align-items-center gap-2 py-2 mt-3">
+                            <i class="bi bi-x-circle-fill flex-shrink-0"></i>
+                            <span>@_reservationError</span>
+                        </div>
                     }
 
                     @if (_reservationSuccess)
                     {
-                        <div class="alert alert-success">
-                            Reserva confirmada correctamente.
+                        <div class="alert alert-success d-flex align-items-center gap-2 py-2 mt-3">
+                            <i class="bi bi-check-circle-fill flex-shrink-0"></i>
+                            <span>Reserva confirmada correctamente.</span>
                         </div>
                     }
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" @onclick="ClosePanel">Cerrar</button>
+                <div class="modal-footer border-0 pt-0">
+                    <button type="button" class="btn btn-outline-secondary btn-sm" @onclick="ClosePanel">
+                        <i class="bi bi-x me-1"></i>Cerrar
+                    </button>
                     @if (!_reservationSuccess)
                     {
-                        <button type="button" class="btn btn-primary"
+                        <button type="button" class="btn btn-primary btn-sm"
                                 disabled="@(_selectedSlot is null || _submitting)"
                                 @onclick="ConfirmReservation">
                             @if (_submitting)
                             {
                                 <span class="spinner-border spinner-border-sm me-1"></span>
+                            }
+                            else
+                            {
+                                <i class="bi bi-rocket-takeoff me-1"></i>
                             }
                             Confirmar reserva
                         </button>
@@ -158,26 +212,6 @@ else if (_dockMap is not null)
         </div>
     </div>
 }
-
-<style>
-    .dock-table {
-        background: #f8f9fa;
-        border: 2px solid #dee2e6;
-        border-radius: 0.5rem;
-        padding: 0.75rem;
-        display: inline-block;
-    }
-
-    .dock-seat {
-        min-width: 5.5rem;
-        font-weight: 600;
-        font-size: 0.85rem;
-    }
-
-    .dock-divider {
-        border-top: 3px solid #adb5bd;
-    }
-</style>
 
 @code {
     private DateOnly _today;
@@ -308,6 +342,14 @@ else if (_dockMap is not null)
         TimeSlot.Afternoon => "Tarde",
         TimeSlot.Both => "Mañana y Tarde",
         _ => slot.ToString()
+    };
+
+    private static string GetSlotIcon(TimeSlot slot) => slot switch
+    {
+        TimeSlot.Morning => "bi-sunrise",
+        TimeSlot.Afternoon => "bi-sunset",
+        TimeSlot.Both => "bi-sun",
+        _ => "bi-clock"
     };
 
     private static string MapError(string error) => error switch

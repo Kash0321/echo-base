@@ -21,6 +21,28 @@ App interna para que 70 empleados reserven 24 puestos físicos, permitiendo cada
 *   Usa el patrón Mediator para manejar la lógica de negocio y las interacciones entre componentes, promoviendo un código más limpio y desacoplado. Esto facilitará la gestión de comandos y consultas, así como la implementación de nuevas funcionalidades sin afectar otras partes del sistema. Usa la librería MediatR para facilitar la implementación de este patrón en toda la aplicación.
 *   Para la capa de acceso a datos, implementa el patrón Repository para abstraer la lógica de acceso a la base de datos y facilitar la gestión de entidades. Esto permitirá una mayor flexibilidad y mantenibilidad del código, ya que las operaciones de acceso a datos estarán centralizadas y desacopladas del resto de la aplicación.
 
+## Diseño y UX (UI Guidelines)
+Para mantener coherencia en el rediseño y ampliaciones futuras de Echo Base, se establecieron las siguientes bases de UX/UI en el desarrollo interactivo de `Home.razor`, `DockMap.razor` y `MyReservations.razor`:
+
+1. **Cabeceras de página (`eb-page-header`, `eb-hero`)**
+   - Dominadas por un gradiente espacial/táctico oscuro: `linear-gradient(135deg, #0d1b2a 0%, #1a3a5c 60%, #0d1b2a 100%)`.
+   - Textos en blanco para máximo contraste, integrando subtítulos ligeros tipo "eyebrow" (letras en mayúscula, pequeñas, con tracking/letter-spacing aumentado).
+   - En vistas operativas (DockMap), la cabecera acomoda controles compactos (selector de fecha transparente y leyenda simplificada con `span` circulares) para maximizar el espacio vertical útil (above the fold).
+
+2. **Densidad y Espaciado (Desktop/Mobile)**
+   - Elementos *compactos* (`py-2`, `mb-2`, `p-3`) en lugar del espaciado excesivo de Bootstrap por defecto. El objetivo de la interfaz es evitar el scroll vertical o minimizarlo, para que los usuarios vean el contexto visual (ej. el mapa de bahías interactivo) sin tener que desplazarse demasiado.
+   - Botones sutiles e inputs con clases como `form-control-sm` o `btn-sm` para interacciones recurrentes.
+
+3. **Uso de Iconografía (Bootstrap Icons)**
+   - Iconos integrados sistemáticamente en los títulos de secciones/vistas y en acciones principales (`bi-*` junto a textos como reservas confirmadas, botones de cancelación con *spinners* o símbolos).
+   - Modalidades de alerta: uso de alertas (`.alert`) acompañadas de íconos in-line y flexbox (`d-flex align-items-center gap-2`) para feedback de éxito o advertencia en vez de simples bloques de texto monótonos.
+
+4. **Componentización Visual**
+   - **Tarjetas sin borde y elevación sutil**: Uso de `.card.border-0.shadow-sm`.
+   - **Hover effects táctiles**: Aplicados en tarjetas informativas (reservas futuras) y los puestos del mapa (`.eb-reservation-card:hover`, `.eb-dock-seat:not(:disabled):hover`) usando `transform: translateY(-2px); box-shadow: ...`.
+   - **Interacciones enriquecidas (Formularios/Modales)**: Uso moderno de entradas, por ejemplo, convirtiendo opciones en botones (`.btn-check` + `.btn-outline-primary`) en lugar de radio buttons clásicos para mejorar las áreas táctiles en móviles y darle un look moderno.
+   - **Datos históricos**: Manejo diferenciado visualmente. Los elementos cancelados o pasados bajan su opacidad y tienen efecto tachado sobre los listados.
+
 ## Modelo de datos
 1. **User** (Empleado que reserva espacio): Id, Nombre, Email, Línea de negocio (Core, Energía, Scrap/Waste, Transversal).
 2. **Dock** (Puesto de trabajo): Id, Código (ej: A-01), Ubicación, Equipamiento (Monitor doble, etc.).
