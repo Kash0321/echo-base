@@ -61,6 +61,9 @@ A continuación se muestran capturas de las pantallas principales del sistema, q
 ![Acerca de - Parte 1](004.About_01.png)
 ![Acerca de - Parte 2](004.About_02.png)
 
+#### 5. Perfil de Usuario (`UserProfile.razor`)
+![Perfil de Usuario](005.UserProfile.png)
+
 ## Modelo de datos
 1. **User** (Empleado que reserva espacio): Id, Nombre, Email, Línea de negocio (Core, Energía, Scrap/Waste, Transversal), Teléfono de contacto (opcional), NotificaciónEmail (bool), NotificaciónTeams (bool).
 2. **Dock** (Puesto de trabajo): Id, Código (ej: A-01), Ubicación, Equipamiento (Monitor doble, etc.).
