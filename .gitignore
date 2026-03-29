@@ -59,6 +59,10 @@ node_modules/
 dist/
 build/
 
+# Librerias estaticas necesarias para el frontend de EchoBase.Web
+!src/EchoBase.Web/wwwroot/lib/
+!src/EchoBase.Web/wwwroot/lib/**
+
 ############################################
 # NUGET
 ############################################
