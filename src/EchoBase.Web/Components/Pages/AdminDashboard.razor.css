@@ -1,0 +1,11 @@
+/* ── Cabecera de página ────────────────────────────────── */
+.eb-page-header {
+    background: linear-gradient(135deg, #0d1b2a 0%, #1a3a5c 60%, #0d1b2a 100%);
+    border-bottom: 1px solid rgba(255,255,255,.08);
+}
+
+.eb-page-eyebrow {
+    font-size: .65rem;
+    letter-spacing: .15em;
+    opacity: .6;
+}

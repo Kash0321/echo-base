@@ -28,6 +28,7 @@ Para mantener coherencia en el rediseño y ampliaciones futuras de Echo Base, se
    - Dominadas por un gradiente espacial/táctico oscuro: `linear-gradient(135deg, #0d1b2a 0%, #1a3a5c 60%, #0d1b2a 100%)`.
    - Textos en blanco para máximo contraste, integrando subtítulos ligeros tipo "eyebrow" (letras en mayúscula, pequeñas, con tracking/letter-spacing aumentado).
    - En vistas operativas (DockMap), la cabecera acomoda controles compactos (selector de fecha transparente y leyenda simplificada con `span` circulares) para maximizar el espacio vertical útil (above the fold).
+   - **CSS Isolation (crítico):** Blazor aplica *scoped CSS*: los estilos definidos en `ComponenteX.razor.css` solo aplican al marcado de ese componente (se compilan con un atributo `b-xxxx` único). Por tanto, **cada nueva página que use `eb-page-header`, `eb-page-eyebrow` u otras clases compartidas debe tener su propio fichero `.razor.css`** con esas definiciones. No basta con que la clase exista en otro componente.
 
 2. **Densidad y Espaciado (Desktop/Mobile)**
    - Elementos *compactos* (`py-2`, `mb-2`, `p-3`) en lugar del espaciado excesivo de Bootstrap por defecto. El objetivo de la interfaz es evitar el scroll vertical o minimizarlo, para que los usuarios vean el contexto visual (ej. el mapa de bahías interactivo) sin tener que desplazarse demasiado.

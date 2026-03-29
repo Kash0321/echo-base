@@ -108,7 +108,7 @@ public static class DbSeeder
         var derelict = new DockZone(DerelictZoneId)
         {
             Name = "Derelict",
-            Description = "Dos mesas corridas con 3 puestos a cada lado en cada mesa (3+3 · 3+3)"
+            Description = "Dos mesas corridas con 3 puestos a cada lado en cada mesa (3+3 y 3+3)"
         };
 
         context.DockZones.AddRange(nostromo, derelict);
