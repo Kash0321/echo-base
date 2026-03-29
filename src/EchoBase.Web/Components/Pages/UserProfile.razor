@@ -1,0 +1,281 @@
+@page "/perfil"
+@attribute [Authorize]
+@rendermode InteractiveServer
+
+@using EchoBase.Core.Entities.Enums
+@using EchoBase.Core.Interfaces
+@using EchoBase.Core.Users.Commands
+@using EchoBase.Core.Users.Queries
+@using EchoBase.Web.Services
+@using MediatR
+
+@inject IMediator Mediator
+@inject BlazorCurrentUserService CurrentUser
+
+<PageTitle>Mi perfil — Echo Base</PageTitle>
+
+<!-- ═══════════════════════════════════════════════════
+     CABECERA
+═══════════════════════════════════════════════════ -->
+<div class="eb-page-header text-white py-2 mb-3">
+    <div class="container-fluid px-3">
+        <p class="eb-page-eyebrow text-uppercase fw-semibold mb-0">Echo Base</p>
+        <h1 class="h4 fw-bold mb-0">
+            <i class="bi bi-person-circle me-2"></i>Mi perfil
+        </h1>
+    </div>
+</div>
+
+<div class="container-fluid px-3">
+
+@if (_loading)
+{
+    <div class="d-flex justify-content-center py-5">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Cargando...</span>
+        </div>
+    </div>
+}
+else if (_profile is not null)
+{
+    <div class="row g-3 justify-content-center">
+        <div class="col-lg-8 col-xl-7">
+
+            <!-- ── Identidad (solo lectura, gestionada por Azure AD) ── -->
+            <div class="card border-0 shadow-sm mb-3">
+                <div class="card-body p-3">
+                    <h2 class="h6 text-uppercase fw-bold text-secondary mb-3 d-flex align-items-center gap-2">
+                        <i class="bi bi-shield-lock text-primary fs-5"></i>Identidad corporativa
+                        <span class="badge bg-light text-secondary border fw-normal ms-auto" style="font-size:.65rem;">
+                            Gestionada por Azure AD
+                        </span>
+                    </h2>
+                    <div class="row g-2">
+                        <div class="col-sm-6">
+                            <label class="form-label form-label-sm text-secondary mb-1">Nombre</label>
+                            <div class="eb-readonly-field">
+                                <i class="bi bi-person me-2 text-secondary"></i>@_profile.Name
+                            </div>
+                        </div>
+                        <div class="col-sm-6">
+                            <label class="form-label form-label-sm text-secondary mb-1">Correo corporativo</label>
+                            <div class="eb-readonly-field">
+                                <i class="bi bi-envelope me-2 text-secondary"></i>@_profile.Email
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ── Datos editables del perfil ───────────────────────── -->
+            <div class="card border-0 shadow-sm mb-3">
+                <div class="card-body p-3">
+                    <h2 class="h6 text-uppercase fw-bold text-secondary mb-3 d-flex align-items-center gap-2">
+                        <i class="bi bi-pencil-square text-primary fs-5"></i>Datos de perfil
+                    </h2>
+                    <div class="row g-3">
+                        <div class="col-sm-6">
+                            <label for="businessLine" class="form-label form-label-sm fw-semibold mb-1">Línea de negocio</label>
+                            <select id="businessLine" class="form-select form-select-sm"
+                                    @bind="_businessLine">
+                                @foreach (var bl in Enum.GetValues<BusinessLine>())
+                                {
+                                    <option value="@bl">@FormatBusinessLine(bl)</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-sm-6">
+                            <label for="phoneNumber" class="form-label form-label-sm fw-semibold mb-1">
+                                Teléfono de contacto
+                                <span class="text-secondary fw-normal">(opcional)</span>
+                            </label>
+                            <div class="input-group input-group-sm">
+                                <span class="input-group-text"><i class="bi bi-telephone"></i></span>
+                                <input type="tel" id="phoneNumber" class="form-control form-control-sm"
+                                       placeholder="p.ej. +34 600 000 000"
+                                       maxlength="30"
+                                       @bind="_phoneNumber" />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ── Preferencias de notificación ─────────────────────── -->
+            <div class="card border-0 shadow-sm mb-3">
+                <div class="card-body p-3">
+                    <h2 class="h6 text-uppercase fw-bold text-secondary mb-3 d-flex align-items-center gap-2">
+                        <i class="bi bi-bell text-primary fs-5"></i>Preferencias de notificación
+                        <span class="text-secondary mb-0" style="font-size:.75rem;">
+                            Confirmaciones, cancelaciones y recordatorios
+                        </span>
+                    </h2>
+                    <div class="row g-2">
+                        <div class="col-sm-6">
+                            <div class="eb-notif-card @(_emailNotifications ? "eb-notif-active" : "")">
+                                <div class="d-flex align-items-center gap-3">
+                                    <div class="eb-notif-icon">
+                                        <i class="bi bi-envelope-fill fs-4 @(_emailNotifications ? "text-primary" : "text-secondary")"></i>
+                                    </div>
+                                    <div class="flex-grow-1">
+                                        <p class="fw-semibold small mb-0">Correo electrónico</p>
+                                        <p class="text-secondary mb-0" style="font-size:.75rem;">
+                                            Mensajes directos a tu correo corporativo
+                                        </p>
+                                    </div>
+                                    <div class="form-check form-switch mb-0">
+                                        <input class="form-check-input" type="checkbox" role="switch"
+                                               id="emailToggle"
+                                               checked="@_emailNotifications"
+                                               @onchange="e => _emailNotifications = (bool)(e.Value ?? false)" />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-sm-6">
+                            <div class="eb-notif-card @(_teamsNotifications ? "eb-notif-active" : "")">
+                                <div class="d-flex align-items-center gap-3">
+                                    <div class="eb-notif-icon">
+                                        <i class="bi bi-microsoft-teams fs-4 @(_teamsNotifications ? "text-primary" : "text-secondary")"></i>
+                                    </div>
+                                    <div class="flex-grow-1">
+                                        <p class="fw-semibold small mb-0">Microsoft Teams</p>
+                                        <p class="text-secondary mb-0" style="font-size:.75rem;">
+                                            Mensajes directos vía chat de Teams corporativo
+                                        </p>
+                                    </div>
+                                    <div class="form-check form-switch mb-0">
+                                        <input class="form-check-input" type="checkbox" role="switch"
+                                               id="teamsToggle"
+                                               checked="@_teamsNotifications"
+                                               @onchange="e => _teamsNotifications = (bool)(e.Value ?? false)" />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ── Botón guardar + alerts ───────────────────────────── -->
+            <div class="d-flex align-items-center gap-3 flex-wrap">
+                <button class="btn btn-primary btn-sm px-4"
+                        disabled="@_saving"
+                        @onclick="SaveProfileAsync">
+                    @if (_saving)
+                    {
+                        <span class="spinner-border spinner-border-sm me-1"></span>
+                        <span>Guardando...</span>
+                    }
+                    else
+                    {
+                        <i class="bi bi-floppy me-1"></i>
+                        <span>Guardar cambios</span>
+                    }
+                </button>
+            </div>
+
+            @if (_saveSuccess)
+            {
+                <div class="alert alert-success d-flex align-items-center gap-2 py-2 mt-3">
+                    <i class="bi bi-check-circle-fill flex-shrink-0"></i>
+                    <span>Perfil actualizado correctamente.</span>
+                    <button type="button" class="btn-close ms-auto" @onclick="() => _saveSuccess = false"></button>
+                </div>
+            }
+
+            @if (_saveError is not null)
+            {
+                <div class="alert alert-danger d-flex align-items-center gap-2 py-2 mt-3">
+                    <i class="bi bi-x-circle-fill flex-shrink-0"></i>
+                    <span>@_saveError</span>
+                    <button type="button" class="btn-close ms-auto" @onclick="() => _saveError = null"></button>
+                </div>
+            }
+
+        </div>
+    </div>
+}
+
+</div>
+
+@code {
+    private UserProfileDto? _profile;
+    private bool _loading = true;
+    private bool _saving;
+    private bool _saveSuccess;
+    private string? _saveError;
+
+    // Campos del formulario, enlazados desde el perfil
+    private BusinessLine _businessLine;
+    private string? _phoneNumber;
+    private bool _emailNotifications;
+    private bool _teamsNotifications;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CurrentUser.InitializeAsync();
+        await LoadProfileAsync();
+    }
+
+    private async Task LoadProfileAsync()
+    {
+        _loading = true;
+        var result = await Mediator.Send(new GetUserProfileQuery(CurrentUser.UserId));
+
+        if (result.IsSuccess)
+        {
+            _profile = result.Value!;
+            _businessLine = _profile.BusinessLine;
+            _phoneNumber = _profile.PhoneNumber;
+            _emailNotifications = _profile.EmailNotifications;
+            _teamsNotifications = _profile.TeamsNotifications;
+        }
+
+        _loading = false;
+    }
+
+    private async Task SaveProfileAsync()
+    {
+        _saving = true;
+        _saveSuccess = false;
+        _saveError = null;
+
+        var command = new UpdateUserProfileCommand(
+            CurrentUser.UserId,
+            _businessLine,
+            _phoneNumber,
+            _emailNotifications,
+            _teamsNotifications);
+
+        var result = await Mediator.Send(command);
+
+        if (result.IsSuccess)
+        {
+            _saveSuccess = true;
+            await LoadProfileAsync();
+        }
+        else
+        {
+            _saveError = MapError(result.Error!);
+        }
+
+        _saving = false;
+    }
+
+    private static string FormatBusinessLine(BusinessLine bl) => bl switch
+    {
+        BusinessLine.Core => "Core",
+        BusinessLine.Energia => "Energía",
+        BusinessLine.ScrapWaste => "Scrap / Waste",
+        BusinessLine.Transversal => "Transversal",
+        _ => bl.ToString()
+    };
+
+    private static string MapError(string error) => error switch
+    {
+        "USER_NOT_FOUND" => "No se encontró tu perfil de usuario.",
+        "PHONE_NUMBER_TOO_LONG" => "El teléfono no puede superar los 30 caracteres.",
+        _ => $"Error inesperado: {error}"
+    };
+}

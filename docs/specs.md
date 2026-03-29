@@ -5,8 +5,8 @@ App interna para que 70 empleados reserven 24 puestos físicos, permitiendo cada
 
 ## Stack técnico
 - Framework: .NET 10
-- Frontend: Blazor Web App (Interactive Server/WebAssembly)
-- Estilo: Tailwind CSS o MudBlazor (UI Components)
+- Frontend: Blazor Web App (Interactive Server)
+- Estilo: Bootstrap 5 + Bootstrap Icons + CSS scoped por componente
 - Persistencia: Entity Framework Core con SQLite (Local) / Azure SQL (Prod)
 
 ## Convenciones de implementación
@@ -22,7 +22,7 @@ App interna para que 70 empleados reserven 24 puestos físicos, permitiendo cada
 *   Para la capa de acceso a datos, implementa el patrón Repository para abstraer la lógica de acceso a la base de datos y facilitar la gestión de entidades. Esto permitirá una mayor flexibilidad y mantenibilidad del código, ya que las operaciones de acceso a datos estarán centralizadas y desacopladas del resto de la aplicación.
 
 ## Diseño y UX (UI Guidelines)
-Para mantener coherencia en el rediseño y ampliaciones futuras de Echo Base, se establecieron las siguientes bases de UX/UI en el desarrollo interactivo de `Home.razor`, `DockMap.razor` y `MyReservations.razor`:
+Para mantener coherencia en el rediseño y ampliaciones futuras de Echo Base, se establecieron las siguientes bases de UX/UI en el desarrollo interactivo de `Home.razor`, `DockMap.razor`, `MyReservations.razor`, `About.razor` y `UserProfile.razor`:
 
 1. **Cabeceras de página (`eb-page-header`, `eb-hero`)**
    - Dominadas por un gradiente espacial/táctico oscuro: `linear-gradient(135deg, #0d1b2a 0%, #1a3a5c 60%, #0d1b2a 100%)`.
@@ -42,6 +42,7 @@ Para mantener coherencia en el rediseño y ampliaciones futuras de Echo Base, se
    - **Hover effects táctiles**: Aplicados en tarjetas informativas (reservas futuras) y los puestos del mapa (`.eb-reservation-card:hover`, `.eb-dock-seat:not(:disabled):hover`) usando `transform: translateY(-2px); box-shadow: ...`.
    - **Interacciones enriquecidas (Formularios/Modales)**: Uso moderno de entradas, por ejemplo, convirtiendo opciones en botones (`.btn-check` + `.btn-outline-primary`) en lugar de radio buttons clásicos para mejorar las áreas táctiles en móviles y darle un look moderno.
    - **Datos históricos**: Manejo diferenciado visualmente. Los elementos cancelados o pasados bajan su opacidad y tienen efecto tachado sobre los listados.
+   - **Formularios de perfil**: Separación clara entre datos corporativos de solo lectura (gestionados por Azure AD) y datos editables del usuario (línea de negocio, teléfono y preferencias), usando tarjetas diferenciadas, campos compactos y switches visuales para preferencias booleanas.
 
 ### Galería de Pantallas (UI/UX)
 
@@ -61,11 +62,11 @@ A continuación se muestran capturas de las pantallas principales del sistema, q
 ![Acerca de - Parte 2](004.About_02.png)
 
 ## Modelo de datos
-1. **User** (Empleado que reserva espacio): Id, Nombre, Email, Línea de negocio (Core, Energía, Scrap/Waste, Transversal).
+1. **User** (Empleado que reserva espacio): Id, Nombre, Email, Línea de negocio (Core, Energía, Scrap/Waste, Transversal), Teléfono de contacto (opcional), NotificaciónEmail (bool), NotificaciónTeams (bool).
 2. **Dock** (Puesto de trabajo): Id, Código (ej: A-01), Ubicación, Equipamiento (Monitor doble, etc.).
 3. **Reservation** (Reserva de espacio de trabajo): Id, UserId, DockId, Fecha (Solo fecha, sin hora), Estado (Activa, Cancelada).
 4. **BlockedDock** (Puestos bloqueados por administración): Id, DockId, FechaInicio, FechaFin, Motivo.
-5. **UserPreferences** (Preferencias de notificación): Id, UserId, NotificacionEmail (bool), NotificacionTeams (bool).
+5. **UserPreferences** (Preferencias de notificación): Conceptualmente forman parte del perfil del usuario. En la implementación actual se persisten como columnas de la entidad `User` en lugar de una tabla separada.
 6. **IncidenceReport** (Reporte de incidencias en los puestos de trabajo): Id, UserId, DockId, Fecha, Descripción, Estado (Abierta, En Proceso, Resuelta).
 7. **AuditLog** (Registro de auditoría para acciones críticas): Id, UserId, Acción (Reserva, Cancelación, Bloqueo), Detalles, Timestamp.
 8. **Report** (Reportes de uso y estadísticas): Id, Tipo (Ocupación, Cancelaciones, Incidencias), Periodo (Diario, Semanal, Mensual), Datos (JSON).
@@ -101,8 +102,11 @@ Integración con Azure AD (tennant de nuestra compañía) para autenticación y 
 
 ## Funcionalidad 1: Configuración de cuenta de usuario
 - El usuario inicia sesión en la aplicación utilizando su cuenta de Azure AD.
-- El usuario accede a su perfil de usuario, donde puede configurar sus preferencias de notificación (correo electrónico o chat de Microsoft Teams) para recibir confirmaciones de reservas, cancelaciones y recordatorios.
-- El usuario puede actualizar su información de contacto, como número de teléfono o dirección de correo electrónico, desde su perfil de usuario.
+- El usuario accede a su perfil de usuario desde un enlace persistente en la barra superior, identificado con su nombre de usuario autenticado.
+- El perfil muestra los datos corporativos básicos sincronizados con Azure AD (nombre y correo) en modo de solo lectura.
+- El usuario puede actualizar su línea de negocio y su número de teléfono de contacto desde su perfil.
+- El usuario puede configurar sus preferencias de notificación (correo electrónico y Microsoft Teams) para recibir confirmaciones de reservas, cancelaciones y recordatorios.
+- La edición del perfil se realiza en una pantalla dedicada, coherente con la UI principal de la aplicación, con feedback visual inmediato de guardado y validaciones básicas de entrada.
 
 ## Funcionalidad 2: Reserva de puesto de trabajo
 - El usuario inicia sesión en la aplicación utilizando su cuenta de Azure AD.

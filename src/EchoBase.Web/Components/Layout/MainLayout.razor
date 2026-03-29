@@ -6,10 +6,17 @@
     </div>
 
     <main>
-        <div class="top-row px-4">
+        <div class="top-row px-4 d-flex align-items-center gap-3">
             <NavLink href="acerca-de" class="text-decoration-none">
                 <i class="bi bi-info-circle me-1"></i>Acerca de
             </NavLink>
+            <AuthorizeView>
+                <Authorized>
+                    <NavLink href="perfil" class="text-decoration-none eb-user-link">
+                        <i class="bi bi-person-circle me-1"></i>@(context.User.FindFirst("name")?.Value ?? context.User.Identity?.Name ?? "Mi perfil")
+                    </NavLink>
+                </Authorized>
+            </AuthorizeView>
         </div>
 
         <article class="content px-4">

@@ -1,3 +1,6 @@
+using EchoBase.Core.Entities;
+using EchoBase.Core.Entities.Enums;
+
 namespace EchoBase.Core.Interfaces;
 
 /// <summary>
@@ -8,7 +11,19 @@ namespace EchoBase.Core.Interfaces;
 public sealed record UserContactInfo(string Email, string Name);
 
 /// <summary>
-/// Abstracción para obtener datos de contacto de usuarios.
+/// DTO de perfil de usuario con todos los campos consultables y editables.
+/// </summary>
+public sealed record UserProfileDto(
+    Guid Id,
+    string Name,
+    string Email,
+    BusinessLine BusinessLine,
+    string? PhoneNumber,
+    bool EmailNotifications,
+    bool TeamsNotifications);
+
+/// <summary>
+/// Abstracción para obtener y actualizar datos de usuarios.
 /// </summary>
 public interface IUserRepository
 {
@@ -20,4 +35,13 @@ public interface IUserRepository
     /// Si no existe, lo crea con los datos proporcionados.
     /// </summary>
     Task EnsureUserAsync(Guid userId, string name, string email, CancellationToken ct = default);
+
+    /// <summary>Obtiene el perfil completo de un usuario para su visualización y edición.</summary>
+    Task<UserProfileDto?> GetProfileAsync(Guid userId, CancellationToken ct = default);
+
+    /// <summary>Obtiene la entidad <see cref="User"/> rastreada por EF Core para su actualización.</summary>
+    Task<User?> GetForUpdateAsync(Guid userId, CancellationToken ct = default);
+
+    /// <summary>Persiste los cambios pendientes en la unidad de trabajo.</summary>
+    Task SaveChangesAsync(CancellationToken ct = default);
 }

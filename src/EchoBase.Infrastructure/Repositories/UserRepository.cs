@@ -30,4 +30,32 @@ internal sealed class UserRepository(EchoBaseDbContext context) : IUserRepositor
             await context.SaveChangesAsync(ct);
         }
     }
+
+    /// <inheritdoc />
+    public async Task<UserProfileDto?> GetProfileAsync(Guid userId, CancellationToken ct = default)
+    {
+        return await context.Users
+            .Where(u => u.Id == userId)
+            .Select(u => new UserProfileDto(
+                u.Id,
+                u.Name,
+                u.Email,
+                u.BusinessLine,
+                u.PhoneNumber,
+                u.EmailNotifications,
+                u.TeamsNotifications))
+            .FirstOrDefaultAsync(ct);
+    }
+
+    /// <inheritdoc />
+    public async Task<User?> GetForUpdateAsync(Guid userId, CancellationToken ct = default)
+    {
+        return await context.Users.FirstOrDefaultAsync(u => u.Id == userId, ct);
+    }
+
+    /// <inheritdoc />
+    public async Task SaveChangesAsync(CancellationToken ct = default)
+    {
+        await context.SaveChangesAsync(ct);
+    }
 }

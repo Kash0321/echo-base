@@ -34,6 +34,17 @@ internal sealed class UserConfiguration : IEntityTypeConfiguration<User>
             .HasConversion<int>()
             .IsRequired();
 
+        builder.Property(u => u.PhoneNumber)
+            .HasMaxLength(30);
+
+        builder.Property(u => u.EmailNotifications)
+            .IsRequired()
+            .HasDefaultValue(true);
+
+        builder.Property(u => u.TeamsNotifications)
+            .IsRequired()
+            .HasDefaultValue(false);
+
         builder.HasMany(u => u.Reservations)
             .WithOne(r => r.User)
             .HasForeignKey(r => r.UserId)
