@@ -57,6 +57,15 @@ internal sealed class BlockedDockRepository(EchoBaseDbContext context) : IBlocke
         await context.BlockedDocks.AddRangeAsync(blocks, ct);
 
     /// <inheritdoc />
+    public Task<List<BlockedDock>> GetAllActiveBlocksAsync(CancellationToken ct = default) =>
+        context.BlockedDocks
+            .Include(b => b.Dock)
+            .Include(b => b.BlockedByUser)
+            .Where(b => b.IsActive)
+            .OrderByDescending(b => b.StartDate)
+            .ToListAsync(ct);
+
+    /// <inheritdoc />
     public Task SaveChangesAsync(CancellationToken ct = default) =>
         context.SaveChangesAsync(ct);
 }

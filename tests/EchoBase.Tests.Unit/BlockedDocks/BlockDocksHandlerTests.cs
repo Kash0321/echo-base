@@ -2,6 +2,8 @@ using EchoBase.Core.BlockedDocks;
 using EchoBase.Core.BlockedDocks.Commands;
 using EchoBase.Core.Entities;
 using EchoBase.Core.Interfaces;
+using EchoBase.Core.Reservations.Notifications;
+using MediatR;
 using NSubstitute;
 
 namespace EchoBase.Tests.Unit.BlockedDocks;
@@ -14,6 +16,8 @@ public class BlockDocksHandlerTests
     private static readonly Guid Dock2 = Guid.NewGuid();
 
     private readonly IBlockedDockRepository _repository = Substitute.For<IBlockedDockRepository>();
+    private readonly IReservationRepository _reservationRepository = Substitute.For<IReservationRepository>();
+    private readonly IPublisher _publisher = Substitute.For<IPublisher>();
     private readonly TimeProvider _timeProvider = Substitute.For<TimeProvider>();
     private readonly BlockDocksHandler _handler;
 
@@ -25,7 +29,10 @@ public class BlockDocksHandlerTests
         _repository.GetActiveBlocksForDocksAsync(
                 Arg.Any<IReadOnlyList<Guid>>(), Arg.Any<DateOnly>(), Arg.Any<DateOnly>(), Arg.Any<CancellationToken>())
             .Returns([]);
-        _handler = new(_repository, _timeProvider);
+        _reservationRepository.GetActiveReservationsForDocksInRangeAsync(
+                Arg.Any<IReadOnlyList<Guid>>(), Arg.Any<DateOnly>(), Arg.Any<DateOnly>(), Arg.Any<CancellationToken>())
+            .Returns([]);
+        _handler = new(_repository, _reservationRepository, _publisher, _timeProvider);
     }
 
     private static BlockDocksCommand Cmd(
@@ -50,8 +57,8 @@ public class BlockDocksHandlerTests
         var result = await _handler.Handle(Cmd(), CancellationToken.None);
 
         Assert.True(result.IsSuccess);
-        Assert.Equal(2, result.Value.Count);
-        Assert.All(result.Value, id => Assert.NotEqual(Guid.Empty, id));
+        Assert.Equal(2, result.Value!.BlockedDockIds.Count);
+        Assert.All(result.Value.BlockedDockIds, id => Assert.NotEqual(Guid.Empty, id));
         await _repository.Received(1).AddRangeAsync(Arg.Any<IEnumerable<BlockedDock>>(), Arg.Any<CancellationToken>());
         await _repository.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
     }
@@ -63,7 +70,7 @@ public class BlockDocksHandlerTests
             Cmd(dockIds: [Dock1], start: Today, end: Today), CancellationToken.None);
 
         Assert.True(result.IsSuccess);
-        Assert.Single(result.Value);
+        Assert.Single(result.Value!.BlockedDockIds);
     }
 
     [Fact]
@@ -71,6 +78,67 @@ public class BlockDocksHandlerTests
     {
         var result = await _handler.Handle(Cmd(start: Today, end: Today), CancellationToken.None);
         Assert.True(result.IsSuccess);
+    }
+
+    [Fact]
+    public async Task Handle_NoConflictingReservations_ReturnEmptyCancelledList()
+    {
+        _reservationRepository.GetActiveReservationsForDocksInRangeAsync(
+                Arg.Any<IReadOnlyList<Guid>>(), Arg.Any<DateOnly>(), Arg.Any<DateOnly>(), Arg.Any<CancellationToken>())
+            .Returns([]);
+
+        var result = await _handler.Handle(Cmd(), CancellationToken.None);
+
+        Assert.True(result.IsSuccess);
+        Assert.Empty(result.Value!.CancelledReservationIds);
+    }
+
+    [Fact]
+    public async Task Handle_WithConflictingReservations_CancelsThemAndPublishesNotifications()
+    {
+        var userId = Guid.NewGuid();
+        var reservation1 = MakeActiveReservation(Dock1, userId, Today.AddDays(1));
+        var reservation2 = MakeActiveReservation(Dock2, userId, Today.AddDays(2));
+
+        _reservationRepository.GetActiveReservationsForDocksInRangeAsync(
+                Arg.Any<IReadOnlyList<Guid>>(), Arg.Any<DateOnly>(), Arg.Any<DateOnly>(), Arg.Any<CancellationToken>())
+            .Returns([reservation1, reservation2]);
+
+        var result = await _handler.Handle(Cmd(), CancellationToken.None);
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(2, result.Value!.CancelledReservationIds.Count);
+        Assert.Contains(reservation1.Id, result.Value.CancelledReservationIds);
+        Assert.Contains(reservation2.Id, result.Value.CancelledReservationIds);
+        // Las reservas deben haber sido canceladas en la entidad
+        Assert.Equal(EchoBase.Core.Entities.Enums.ReservationStatus.Cancelled, reservation1.Status);
+        Assert.Equal(EchoBase.Core.Entities.Enums.ReservationStatus.Cancelled, reservation2.Status);
+        // Debe haberse publicado una notificación por cada reserva cancelada
+        await _publisher.Received(2)
+            .Publish(Arg.Any<ReservationCancelledNotification>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Handle_WithConflictingReservations_SavesBeforePublishing()
+    {
+        var reservation = MakeActiveReservation(Dock1, Guid.NewGuid(), Today.AddDays(1));
+
+        _reservationRepository.GetActiveReservationsForDocksInRangeAsync(
+                Arg.Any<IReadOnlyList<Guid>>(), Arg.Any<DateOnly>(), Arg.Any<DateOnly>(), Arg.Any<CancellationToken>())
+            .Returns([reservation]);
+
+        // Verificar orden: SaveChanges antes que Publish
+        var saveCompleted = false;
+        _repository.SaveChangesAsync(Arg.Any<CancellationToken>())
+            .Returns(_ => { saveCompleted = true; return Task.CompletedTask; });
+        _publisher.Publish(Arg.Any<INotification>(), Arg.Any<CancellationToken>())
+            .Returns(_ =>
+            {
+                Assert.True(saveCompleted, "Publish se llamó antes de SaveChangesAsync");
+                return Task.CompletedTask;
+            });
+
+        await _handler.Handle(Cmd(dockIds: [Dock1]), CancellationToken.None);
     }
 
     // ──────────────────────────────────────────────────────────────
@@ -179,8 +247,6 @@ public class BlockDocksHandlerTests
     public async Task Handle_AdjacentBlocks_Succeeds()
     {
         // Existing block ends the day before our start → no overlap
-        var existingBlock = new BlockedDock(
-            Guid.NewGuid(), Dock1, ManagerId, Today.AddDays(-2), Today.AddDays(-1), "Anterior");
         _repository.GetActiveBlocksForDocksAsync(
                 Arg.Any<IReadOnlyList<Guid>>(), Arg.Any<DateOnly>(), Arg.Any<DateOnly>(), Arg.Any<CancellationToken>())
             .Returns([]);
@@ -204,5 +270,29 @@ public class BlockDocksHandlerTests
 
         await _repository.DidNotReceive()
             .AllDocksExistAsync(Arg.Any<IReadOnlyList<Guid>>(), Arg.Any<CancellationToken>());
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // Helpers
+    // ══════════════════════════════════════════════════════════════
+
+    private static Reservation MakeActiveReservation(Guid dockId, Guid userId, DateOnly date)
+    {
+        var dock = new Dock(dockId)
+        {
+            Code      = $"N-A0{dockId.ToString()[0]}",
+            Location  = "Zona de prueba",
+            Equipment = "Estándar"
+        };
+
+        var reservation = new Reservation(
+            Guid.NewGuid(), userId, dockId, date,
+            EchoBase.Core.Entities.Enums.TimeSlot.Morning);
+
+        typeof(Reservation).GetProperty("Dock")!
+            .GetSetMethod(nonPublic: true)!
+            .Invoke(reservation, [dock]);
+
+        return reservation;
     }
 }

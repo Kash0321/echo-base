@@ -15,12 +15,20 @@ public static class DatabaseInitializer
     /// Debe llamarse durante el arranque de la aplicación, después de construir el host.
     /// </summary>
     /// <param name="serviceProvider">Proveedor de servicios del host.</param>
-    public static async Task InitializeAsync(IServiceProvider serviceProvider)
+    /// <param name="isDevelopment">
+    /// <see langword="true"/> para inicializar también el usuario de desarrollo con rol Manager.
+    /// Solo debe usarse en entorno de desarrollo local.
+    /// </param>
+    public static async Task InitializeAsync(IServiceProvider serviceProvider, bool isDevelopment = false)
     {
         await using var scope = serviceProvider.CreateAsyncScope();
         var context = scope.ServiceProvider.GetRequiredService<EchoBaseDbContext>();
 
         await context.Database.MigrateAsync();
         await DbSeeder.SeedAsync(context);
+        await DbSeeder.SeedRolesAsync(context);
+
+        if (isDevelopment)
+            await DbSeeder.SeedDevUserAsync(context);
     }
 }

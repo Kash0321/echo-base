@@ -32,6 +32,13 @@ public interface IBlockedDockRepository
     /// <summary>Agrega múltiples bloqueos al contexto de persistencia.</summary>
     Task AddRangeAsync(IEnumerable<BlockedDock> blocks, CancellationToken ct = default);
 
+    /// <summary>
+    /// Obtiene todos los bloqueos activos, incluyendo los que ya han pasado su fecha de fin.
+    /// Carga las propiedades de navegación <see cref="BlockedDock.Dock"/> y <see cref="BlockedDock.BlockedByUser"/>.
+    /// Se usa en el cuadro de mando del Manager para gestionar bloqueos.
+    /// </summary>
+    Task<List<BlockedDock>> GetAllActiveBlocksAsync(CancellationToken ct = default);
+
     /// <summary>Persiste los cambios pendientes en la base de datos.</summary>
     Task SaveChangesAsync(CancellationToken ct = default);
 }

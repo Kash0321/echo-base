@@ -46,6 +46,17 @@ public interface IReservationRepository
     /// </summary>
     Task<List<Reservation>> GetActiveReservationsForDateAsync(DateOnly date, CancellationToken ct = default);
 
+    /// <summary>
+    /// Obtiene todas las reservas activas de los puestos indicados que se solapan con el rango de fechas especificado.
+    /// Carga la propiedad de navegación <see cref="Reservation.Dock"/> para obtener el código del puesto.
+    /// Se usa al bloquear puestos para cancelar automáticamente las reservas conflictivas.
+    /// </summary>
+    Task<List<Reservation>> GetActiveReservationsForDocksInRangeAsync(
+        IReadOnlyList<Guid> dockIds,
+        DateOnly startDate,
+        DateOnly endDate,
+        CancellationToken ct = default);
+
     /// <summary>Persiste los cambios pendientes en la base de datos.</summary>
     Task SaveChangesAsync(CancellationToken ct = default);
 }

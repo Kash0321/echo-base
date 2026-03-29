@@ -1,0 +1,458 @@
+@page "/admin"
+@attribute [Authorize(Roles = "Manager")]
+@rendermode InteractiveServer
+
+@using EchoBase.Core.BlockedDocks.Commands
+@using EchoBase.Core.BlockedDocks.Queries
+@using EchoBase.Core.Reservations.Queries
+@using EchoBase.Web.Services
+@using MediatR
+
+@inject IMediator Mediator
+@inject BlazorCurrentUserService CurrentUser
+
+<PageTitle>Cuadro de mando — Echo Base</PageTitle>
+
+<!-- ═══════════════════════════════════════════════════
+     CABECERA DE PÁGINA
+═══════════════════════════════════════════════════ -->
+<div class="eb-page-header text-white py-2 mb-3">
+    <div class="container-fluid px-3">
+        <p class="eb-page-eyebrow text-uppercase fw-semibold mb-0">Manager · Echo Base</p>
+        <h1 class="h4 fw-bold mb-0">
+            <i class="bi bi-speedometer2 me-2"></i>Cuadro de mando
+        </h1>
+    </div>
+</div>
+
+<div class="container-fluid px-3">
+
+@if (_loading)
+{
+    <div class="d-flex justify-content-center py-5">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Cargando...</span>
+        </div>
+    </div>
+}
+else
+{
+    <!-- ═══════════════════════ BLOQUEO + MAPA ═══════════════════════ -->
+    <div class="row g-3">
+
+        <!-- Panel de bloqueo -->
+        <div class="col-lg-4 col-xl-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header eb-zone-header d-flex align-items-center gap-2 py-2">
+                    <i class="bi bi-slash-circle text-danger fs-5"></i>
+                    <span class="fw-semibold">Bloquear puestos</span>
+                </div>
+                <div class="card-body">
+
+                    <!-- Puestos seleccionados -->
+                    <label class="form-label form-label-sm fw-semibold">Puestos seleccionados</label>
+                    @if (_selectedDockIds.Count > 0)
+                    {
+                        <div class="d-flex flex-wrap gap-1 mb-3">
+                            @foreach (var dockId in _selectedDockIds)
+                            {
+                                <span class="badge bg-primary d-flex align-items-center gap-1">
+                                    @GetDockCode(dockId)
+                                    <button type="button"
+                                            class="btn-close btn-close-white ms-1"
+                                            style="font-size:.5rem;"
+                                            title="Quitar"
+                                            @onclick="() => ToggleDock(dockId)"></button>
+                                </span>
+                            }
+                        </div>
+                    }
+                    else
+                    {
+                        <p class="text-muted small mb-3">
+                            <i class="bi bi-hand-index me-1"></i>Haz clic en el mapa para seleccionar puestos.
+                        </p>
+                    }
+
+                    <!-- Fechas -->
+                    <div class="mb-2">
+                        <label for="blockStart" class="form-label form-label-sm fw-semibold">Fecha inicio</label>
+                        <input type="date" id="blockStart" class="form-control form-control-sm"
+                               value="@_blockStartDate.ToString("yyyy-MM-dd")"
+                               min="@_today.ToString("yyyy-MM-dd")"
+                               @onchange="OnStartDateChanged" />
+                    </div>
+                    <div class="mb-2">
+                        <label for="blockEnd" class="form-label form-label-sm fw-semibold">Fecha fin</label>
+                        <input type="date" id="blockEnd" class="form-control form-control-sm"
+                               value="@_blockEndDate.ToString("yyyy-MM-dd")"
+                               min="@_blockStartDate.ToString("yyyy-MM-dd")"
+                               @onchange="e => { if (DateOnly.TryParse(e.Value?.ToString(), out var d)) _blockEndDate = d; _blockError = null; _blockSuccess = null; }" />
+                    </div>
+                    <div class="mb-3">
+                        <label for="blockReason" class="form-label form-label-sm fw-semibold">Motivo</label>
+                        <input type="text" id="blockReason" class="form-control form-control-sm"
+                               placeholder="Ej: Mantenimiento eléctrico..."
+                               @bind="_blockReason" />
+                    </div>
+
+                    <!-- Feedback -->
+                    @if (_blockError is not null)
+                    {
+                        <div class="alert alert-danger d-flex align-items-center gap-2 py-2 mb-2">
+                            <i class="bi bi-x-circle-fill flex-shrink-0"></i>
+                            <span class="small">@_blockError</span>
+                        </div>
+                    }
+                    @if (_blockSuccess is not null)
+                    {
+                        <div class="alert alert-success d-flex align-items-center gap-2 py-2 mb-2">
+                            <i class="bi bi-check-circle-fill flex-shrink-0"></i>
+                            <span class="small">@_blockSuccess</span>
+                        </div>
+                    }
+
+                    <!-- Botón bloquear -->
+                    <button class="btn btn-danger btn-sm w-100"
+                            disabled="@(_selectedDockIds.Count == 0 || string.IsNullOrWhiteSpace(_blockReason) || _blocking)"
+                            @onclick="BlockSelectedDocks">
+                        @if (_blocking)
+                        {
+                            <span class="spinner-border spinner-border-sm me-1"></span>
+                        }
+                        else
+                        {
+                            <i class="bi bi-slash-circle me-1"></i>
+                        }
+                        Bloquear selección
+                        @if (_selectedDockIds.Count > 0)
+                        {
+                            <span>(@_selectedDockIds.Count)</span>
+                        }
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Mapa de puestos (multiselección) -->
+        <div class="col-lg-8 col-xl-9">
+            @if (_dockMap is not null)
+            {
+                <div class="card border-0 shadow-sm">
+                    <div class="card-header eb-zone-header d-flex align-items-center gap-2 py-2">
+                        <i class="bi bi-map-fill text-primary fs-5"></i>
+                        <span class="fw-semibold">Selección de puestos</span>
+                        <span class="text-muted small ms-auto">
+                            <i class="bi bi-hand-index me-1"></i>Clic para seleccionar · Bloqueados deshabilitados
+                        </span>
+                    </div>
+                    <div class="card-body py-2 px-3">
+                        <div class="row g-3">
+                            @foreach (var zone in _dockMap.Zones)
+                            {
+                                <div class="col-12">
+                                    <p class="text-muted small fw-semibold mb-2">
+                                        <i class="bi bi-grid-3x3 text-primary me-1"></i>@zone.Name
+                                    </p>
+                                    <div class="d-flex flex-wrap gap-3">
+                                        @foreach (var table in zone.Tables)
+                                        {
+                                            <div class="eb-table-block">
+                                                <p class="text-muted small fw-semibold mb-1 text-center">@table.Name</p>
+                                                <div class="eb-dock-table">
+                                                    <div class="d-flex gap-2 mb-1">
+                                                        @foreach (var seat in table.SideA)
+                                                        {
+                                                            <button class="btn @GetSeatBtnClass(seat) eb-dock-seat"
+                                                                    disabled="@IsSeatDisabled(seat)"
+                                                                    title="@GetAdminTooltip(seat)"
+                                                                    @onclick="() => ToggleDock(seat.Id)">
+                                                                @seat.Code
+                                                            </button>
+                                                        }
+                                                    </div>
+                                                    <hr class="eb-dock-divider my-1" />
+                                                    <div class="d-flex gap-2">
+                                                        @foreach (var seat in table.SideB)
+                                                        {
+                                                            <button class="btn @GetSeatBtnClass(seat) eb-dock-seat"
+                                                                    disabled="@IsSeatDisabled(seat)"
+                                                                    title="@GetAdminTooltip(seat)"
+                                                                    @onclick="() => ToggleDock(seat.Id)">
+                                                                @seat.Code
+                                                            </button>
+                                                        }
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        }
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+
+    <!-- ═══════════════════════ BLOQUEOS ACTIVOS ═══════════════════════ -->
+    <div class="row mt-3">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header eb-zone-header d-flex align-items-center gap-2 py-2">
+                    <i class="bi bi-list-check text-primary fs-5"></i>
+                    <span class="fw-semibold">Bloqueos activos</span>
+                    <span class="badge bg-secondary ms-auto">@_activeBlocks.Count</span>
+                </div>
+                <div class="card-body p-0">
+                    @if (_activeBlocks.Count == 0)
+                    {
+                        <p class="text-muted small p-3 mb-0">
+                            <i class="bi bi-info-circle me-1"></i>No hay bloqueos activos actualmente.
+                        </p>
+                    }
+                    else
+                    {
+                        <div class="table-responsive">
+                            <table class="table table-sm table-hover align-middle mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th class="ps-3">Puesto</th>
+                                        <th>Fecha inicio</th>
+                                        <th>Fecha fin</th>
+                                        <th>Motivo</th>
+                                        <th>Bloqueado por</th>
+                                        <th class="pe-3 text-end">Acción</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var block in _activeBlocks)
+                                    {
+                                        <tr>
+                                            <td class="ps-3">
+                                                <span class="badge bg-secondary">@block.DockCode</span>
+                                            </td>
+                                            <td class="small">@block.StartDate.ToString("dd/MM/yyyy")</td>
+                                            <td class="small">
+                                                @block.EndDate.ToString("dd/MM/yyyy")
+                                                @if (block.EndDate < _today)
+                                                {
+                                                    <span class="badge bg-light text-secondary ms-1">Pasado</span>
+                                                }
+                                            </td>
+                                            <td class="small">@block.Reason</td>
+                                            <td class="small text-muted">@block.BlockedByName</td>
+                                            <td class="pe-3 text-end">
+                                                <button class="btn btn-outline-danger btn-sm"
+                                                        disabled="@(_unblockingId == block.BlockId)"
+                                                        title="Desbloquear puesto"
+                                                        @onclick="() => UnblockAsync(block.BlockId)">
+                                                    @if (_unblockingId == block.BlockId)
+                                                    {
+                                                        <span class="spinner-border spinner-border-sm"></span>
+                                                    }
+                                                    else
+                                                    {
+                                                        <i class="bi bi-unlock"></i>
+                                                    }
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+</div>
+
+@code {
+    // ──────────────────────────────────────────────────────────────
+    // Estado: fechas y formulario de bloqueo
+    // ──────────────────────────────────────────────────────────────
+    private DateOnly _today;
+    private DateOnly _blockStartDate;
+    private DateOnly _blockEndDate;
+    private string _blockReason = string.Empty;
+    private string? _blockError;
+    private string? _blockSuccess;
+    private bool _blocking;
+
+    // ──────────────────────────────────────────────────────────────
+    // Estado: datos cargados
+    // ──────────────────────────────────────────────────────────────
+    private DockMapDto? _dockMap;
+    private IReadOnlyList<ActiveBlockDto> _activeBlocks = [];
+    private bool _loading = true;
+
+    // ──────────────────────────────────────────────────────────────
+    // Estado: selección y desbloqueo
+    // ──────────────────────────────────────────────────────────────
+    private readonly HashSet<Guid> _selectedDockIds = new();
+    private Guid? _unblockingId;
+
+    // ══════════════════════════════════════════════════════════════
+    // Ciclo de vida
+    // ══════════════════════════════════════════════════════════════
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CurrentUser.InitializeAsync();
+        _today = DateOnly.FromDateTime(DateTime.UtcNow);
+        _blockStartDate = _today;
+        _blockEndDate = _today;
+        await LoadDataAsync();
+    }
+
+    private async Task LoadDataAsync()
+    {
+        _loading = true;
+        _dockMap = await Mediator.Send(new GetDockMapQuery(_blockStartDate));
+        _activeBlocks = await Mediator.Send(new GetActiveBlocksQuery());
+        _loading = false;
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // Interacciones de formulario
+    // ══════════════════════════════════════════════════════════════
+
+    private async Task OnStartDateChanged(ChangeEventArgs e)
+    {
+        if (!DateOnly.TryParse(e.Value?.ToString(), out var date)) return;
+
+        _blockStartDate = date;
+        if (_blockEndDate < _blockStartDate)
+            _blockEndDate = _blockStartDate;
+
+        _blockError = null;
+        _blockSuccess = null;
+        _dockMap = await Mediator.Send(new GetDockMapQuery(_blockStartDate));
+    }
+
+    private void ToggleDock(Guid dockId)
+    {
+        if (!_selectedDockIds.Remove(dockId))
+            _selectedDockIds.Add(dockId);
+
+        _blockError = null;
+        _blockSuccess = null;
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // Operaciones de bloqueo / desbloqueo
+    // ══════════════════════════════════════════════════════════════
+
+    private async Task BlockSelectedDocks()
+    {
+        if (_selectedDockIds.Count == 0 || string.IsNullOrWhiteSpace(_blockReason)) return;
+
+        _blocking = true;
+        _blockError = null;
+        _blockSuccess = null;
+
+        var command = new BlockDocksCommand(
+            CurrentUser.UserId,
+            _selectedDockIds.ToList(),
+            _blockStartDate,
+            _blockEndDate,
+            _blockReason.Trim());
+
+        var result = await Mediator.Send(command);
+
+        if (result.IsSuccess)
+        {
+            var cancelledCount = result.Value!.CancelledReservationIds.Count;
+            _blockSuccess = cancelledCount > 0
+                ? $"Se han bloqueado {result.Value.BlockedDockIds.Count} puesto(s). " +
+                  $"Se han cancelado automáticamente {cancelledCount} reserva(s) existente(s)."
+                : $"Se han bloqueado {result.Value.BlockedDockIds.Count} puesto(s) correctamente.";
+
+            _selectedDockIds.Clear();
+            _blockReason = string.Empty;
+            await LoadDataAsync();
+        }
+        else
+        {
+            _blockError = MapBlockError(result.Error!);
+        }
+
+        _blocking = false;
+    }
+
+    private async Task UnblockAsync(Guid blockId)
+    {
+        _unblockingId = blockId;
+
+        var command = new UnblockDocksCommand(CurrentUser.UserId, [blockId]);
+        var result = await Mediator.Send(command);
+
+        if (result.IsSuccess)
+            await LoadDataAsync();
+
+        _unblockingId = null;
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // Helpers visuales
+    // ══════════════════════════════════════════════════════════════
+
+    private string? GetDockCode(Guid dockId)
+    {
+        if (_dockMap is null) return dockId.ToString()[..8];
+        foreach (var zone in _dockMap.Zones)
+        foreach (var table in zone.Tables)
+        {
+            var seat = table.SideA.FirstOrDefault(s => s.Id == dockId)
+                    ?? table.SideB.FirstOrDefault(s => s.Id == dockId);
+            if (seat is not null) return seat.Code;
+        }
+        return dockId.ToString()[..8];
+    }
+
+    private string GetSeatBtnClass(DockSeatDto seat)
+    {
+        if (_selectedDockIds.Contains(seat.Id)) return "btn-primary";
+        return seat.Status switch
+        {
+            DockStatus.Free           => "btn-outline-success",
+            DockStatus.PartiallyBooked => "btn-outline-warning",
+            DockStatus.FullyBooked    => "btn-outline-danger",
+            DockStatus.Blocked        => "btn-secondary",
+            _                         => "btn-outline-secondary"
+        };
+    }
+
+    private bool IsSeatDisabled(DockSeatDto seat)
+        => seat.Status == DockStatus.Blocked && !_selectedDockIds.Contains(seat.Id);
+
+    private string GetAdminTooltip(DockSeatDto seat)
+    {
+        if (_selectedDockIds.Contains(seat.Id)) return "Seleccionado — clic para quitar";
+        return seat.Status switch
+        {
+            DockStatus.Free            => "Libre — clic para seleccionar",
+            DockStatus.PartiallyBooked => "Parcialmente reservado — clic para seleccionar (se cancelará la reserva)",
+            DockStatus.FullyBooked     => "Totalmente reservado — clic para seleccionar (se cancelarán las reservas)",
+            DockStatus.Blocked         => "Ya bloqueado — no se puede seleccionar",
+            _                          => seat.Code
+        };
+    }
+
+    private static string MapBlockError(string error) => error switch
+    {
+        "NOT_MANAGER"               => "No tienes permisos de Manager para realizar esta acción.",
+        "EMPTY_DOCK_LIST"           => "No has seleccionado ningún puesto.",
+        "START_DATE_IN_THE_PAST"    => "La fecha de inicio no puede ser anterior a hoy.",
+        "END_DATE_BEFORE_START_DATE" => "La fecha de fin no puede ser anterior a la de inicio.",
+        "EMPTY_REASON"              => "Debes introducir un motivo para el bloqueo.",
+        "DOCKS_NOT_FOUND"           => "Alguno de los puestos seleccionados no existe.",
+        "OVERLAPPING_BLOCKS"        => "Ya existen bloqueos activos para alguno de los puestos en ese período.",
+        _                           => $"Error inesperado: {error}"
+    };
+}

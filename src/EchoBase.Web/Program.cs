@@ -62,6 +62,6 @@ app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 
 // Aplicar migraciones pendientes e inicializar datos maestros al arrancar
-await DatabaseInitializer.InitializeAsync(app.Services);
+await DatabaseInitializer.InitializeAsync(app.Services, app.Environment.IsDevelopment());
 
 app.Run();

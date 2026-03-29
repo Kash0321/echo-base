@@ -78,6 +78,16 @@ public static class DbSeeder
     private const string DefaultEquipment = "Monitor doble, teclado, ratón, silla ergonómica";
 
     // ──────────────────────────────────────────────────────────────
+    // GUIDs determinísticos para roles — NO modificar
+    // ──────────────────────────────────────────────────────────────
+
+    private static readonly Guid BasicUserRoleId = new("d0000000-0000-0000-0000-000000000001");
+    private static readonly Guid ManagerRoleId   = new("d0000000-0000-0000-0000-000000000002");
+
+    // GUID del usuario de desarrollo (coincide con DevAuthHandler)
+    private static readonly Guid DevUserId = new("00000000-0000-0000-0000-000000000001");
+
+    // ──────────────────────────────────────────────────────────────
 
     /// <summary>
     /// Inicializa las zonas y puestos de trabajo si la base de datos está vacía.
@@ -136,5 +146,53 @@ public static class DbSeeder
             dock.AssignToZone(zone);
             context.Docks.Add(dock);
         }
+    }
+
+    /// <summary>
+    /// Inicializa los roles de autorización si no existen aún.
+    /// Es idempotente: no duplica los roles en ejecuciones posteriores.
+    /// </summary>
+    /// <param name="context">Contexto de base de datos ya configurado y migrado.</param>
+    public static async Task SeedRolesAsync(EchoBaseDbContext context)
+    {
+        var existingRoleIds = await context.Roles
+            .Select(r => r.Id)
+            .ToListAsync();
+
+        if (!existingRoleIds.Contains(BasicUserRoleId))
+            context.Roles.Add(new Role(BasicUserRoleId) { Name = "BasicUser" });
+
+        if (!existingRoleIds.Contains(ManagerRoleId))
+            context.Roles.Add(new Role(ManagerRoleId) { Name = "Manager" });
+
+        await context.SaveChangesAsync();
+    }
+
+    /// <summary>
+    /// Crea el usuario de desarrollo y le asigna el rol Manager si no existe aún.
+    /// Solo debe llamarse en entorno de desarrollo.
+    /// </summary>
+    /// <param name="context">Contexto de base de datos ya configurado y migrado.</param>
+    public static async Task SeedDevUserAsync(EchoBaseDbContext context)
+    {
+        var devUser = await context.Users
+            .Include(u => u.Roles)
+            .FirstOrDefaultAsync(u => u.Id == DevUserId);
+
+        if (devUser is null)
+        {
+            devUser = new User(DevUserId) { Name = "Dev User", Email = "dev@localhost" };
+            context.Users.Add(devUser);
+        }
+
+        bool hasManagerRole = devUser.Roles.Any(r => r.Id == ManagerRoleId);
+        if (!hasManagerRole)
+        {
+            var managerRole = await context.Roles.FindAsync(ManagerRoleId);
+            if (managerRole is not null)
+                devUser.Roles.Add(managerRole);
+        }
+
+        await context.SaveChangesAsync();
     }
 }

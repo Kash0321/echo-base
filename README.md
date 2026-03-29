@@ -55,3 +55,148 @@ El repositorio sigue una separación de intereses estricta para facilitar la man
 1. Clonar el repositorio:
    ```bash
    git clone [https://github.com/tu-usuario/echo-base.git](https://github.com/tu-usuario/echo-base.git)
+   cd echo-base
+   ```
+
+2. Restaurar dependencias:
+   ```bash
+   dotnet restore
+   ```
+
+3. Ejecutar la aplicación en modo desarrollo (autenticación simulada, SQLite local):
+   ```bash
+   dotnet run --project src/EchoBase.Web
+   ```
+
+La aplicación arranca automáticamente en modo desarrollo con:
+- **Autenticación simulada** (`DevAuth`): no requiere Azure AD. El usuario de desarrollo tiene rol **Manager** por defecto (configurable).
+- **Base de datos SQLite local** (`echobase-dev.db`): se crea y migra automáticamente al arrancar.
+- **Notificaciones stub**: los envíos de email y Teams se simulan con logs en consola.
+
+---
+
+## 🔐 Configuración y Gestión de Secretos
+
+### Principio general
+
+Los ficheros `appsettings.json` y `appsettings.Development.json` del repositorio **no deben contener nunca valores reales** de contraseñas, clientes de Azure AD ni secretos de API. Solo contienen placeholders (`YOUR_*`) o stubs para desarrollo.
+
+Los valores sensibles deben gestionarse según el entorno:
+
+| Entorno | Mecanismo recomendado |
+| :--- | :--- |
+| **Desarrollo local** | [.NET User Secrets](https://learn.microsoft.com/aspnet/core/security/app-secrets) |
+| **Staging / Producción** | Variables de entorno o [Azure Key Vault](https://learn.microsoft.com/azure/key-vault/general/overview) |
+
+---
+
+### Entorno de desarrollo — .NET User Secrets
+
+Los User Secrets se almacenan fuera del directorio del repositorio, en:
+```
+%APPDATA%\Microsoft\UserSecrets\echobase-web-devenv-001\secrets.json
+```
+Git nunca los ve. El `UserSecretsId` está definido en `src/EchoBase.Web/EchoBase.Web.csproj`.
+
+#### Configuración automática con el script incluido
+
+El repositorio incluye un script PowerShell para establecer todos los secretos en un solo paso:
+
+```powershell
+# 1. Abre el script y rellena los valores YOUR_* con los reales
+notepad scripts\setup-dev-secrets.ps1
+
+# 2. Ejecuta desde la raíz del repositorio (requiere PowerShell 7+)
+.\scripts\setup-dev-secrets.ps1
+
+# 3. Verifica que se han guardado correctamente
+dotnet user-secrets list --project src\EchoBase.Web
+```
+
+#### Configuración manual clave a clave
+
+Si prefieres hacerlo a mano, estos son todos los secretos necesarios:
+
+```powershell
+# ── Azure AD ──────────────────────────────────────────────────────
+# Obtener desde: portal.azure.com → Azure Active Directory → App Registrations
+dotnet user-secrets set "AzureAd:Domain"   "contoso.onmicrosoft.com"    --project src\EchoBase.Web
+dotnet user-secrets set "AzureAd:TenantId" "<GUID-del-tenant>"           --project src\EchoBase.Web
+dotnet user-secrets set "AzureAd:ClientId" "<GUID-del-app-registration>" --project src\EchoBase.Web
+
+# ── SMTP (Office 365) ─────────────────────────────────────────────
+# Usar una App Password de M365; nunca la contraseña personal
+dotnet user-secrets set "Smtp:UserName"    "notificaciones@contoso.com" --project src\EchoBase.Web
+dotnet user-secrets set "Smtp:Password"    "<app-password>"             --project src\EchoBase.Web
+dotnet user-secrets set "Smtp:FromAddress" "notificaciones@contoso.com" --project src\EchoBase.Web
+
+# ── Microsoft Graph (notificaciones Teams) ────────────────────────
+# Requiere permisos: Chat.Create, ChatMessage.Send (Application permissions)
+dotnet user-secrets set "MicrosoftGraph:TenantId"     "<GUID-del-tenant>"       --project src\EchoBase.Web
+dotnet user-secrets set "MicrosoftGraph:ClientId"     "<GUID-del-app-graph>"    --project src\EchoBase.Web
+dotnet user-secrets set "MicrosoftGraph:ClientSecret" "<valor-del-secreto>"     --project src\EchoBase.Web
+```
+
+#### Limpiar todos los secretos
+
+```powershell
+dotnet user-secrets clear --project src\EchoBase.Web
+```
+
+---
+
+### Modos de autenticación
+
+El modo de autenticación se controla mediante `appsettings.Development.json`:
+
+```json
+"Authentication": {
+  "UseDevelopmentStub": true,   // true → DevAuth sin Azure AD; false → Azure AD real
+  "DevUserIsManager": true      // true → el usuario dev tiene rol Manager
+}
+```
+
+| `UseDevelopmentStub` | Comportamiento |
+| :--- | :--- |
+| `true` | Autenticación simulada (`DevAuth`). No requiere Azure AD. Válido para desarrollo local sin acceso al tenant. |
+| `false` | Autenticación real con Azure AD (OpenID Connect). Requiere `AzureAd:*` configurados vía User Secrets. |
+
+> **Nota:** Mientras no esté disponible la configuración del tenant de Azure AD, mantén `UseDevelopmentStub: true`. El usuario simulado tiene un ID determinístico (`00000000-0000-0000-0000-000000000001`) y se crea automáticamente en la base de datos con rol Manager al arrancar.
+
+---
+
+### Entorno de producción — Variables de entorno / Azure Key Vault
+
+En producción (Azure App Service, Container Apps, etc.), las mismas claves se pueden pasar como **variables de entorno** usando el separador `__` (doble guion bajo) en lugar de `:`:
+
+```
+AzureAd__TenantId=<valor>
+AzureAd__ClientId=<valor>
+Smtp__Password=<valor>
+MicrosoftGraph__ClientSecret=<valor>
+```
+
+Para un enfoque más seguro, se recomienda integrar **Azure Key Vault**:
+1. Crear un Key Vault en el mismo tenant.
+2. Añadir el paquete `Azure.Extensions.AspNetCore.Configuration.Secrets` al proyecto Web.
+3. Registrar el Key Vault en `Program.cs` usando la identidad gestionada del App Service (sin secretos en código).
+
+Consulta la [documentación oficial de Azure Key Vault con ASP.NET Core](https://learn.microsoft.com/azure/key-vault/general/tutorial-net-create-vault-azure-web-app) para la integración completa.
+
+---
+
+### Resumen de claves de configuración sensibles
+
+| Clave | Descripción | Obligatoria en prod |
+| :--- | :--- | :---: |
+| `AzureAd:Domain` | Dominio del tenant (`contoso.onmicrosoft.com`) | ✅ |
+| `AzureAd:TenantId` | GUID del tenant de Azure AD | ✅ |
+| `AzureAd:ClientId` | GUID del App Registration de la aplicación | ✅ |
+| `Smtp:UserName` | Cuenta de correo para envío de notificaciones | ✅ |
+| `Smtp:Password` | App Password de la cuenta de correo | ✅ |
+| `Smtp:FromAddress` | Dirección de remitente del correo | ✅ |
+| `MicrosoftGraph:TenantId` | GUID del tenant (coincide con `AzureAd:TenantId`) | Solo si Teams activo |
+| `MicrosoftGraph:ClientId` | GUID del App Registration con permisos Graph | Solo si Teams activo |
+| `MicrosoftGraph:ClientSecret` | Secreto del App Registration con permisos Graph | Solo si Teams activo |
+| `ConnectionStrings:EchoBase` | Cadena de conexión a la base de datos | ✅ |
+
