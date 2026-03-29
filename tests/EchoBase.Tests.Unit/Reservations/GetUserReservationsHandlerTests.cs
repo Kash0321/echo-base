@@ -11,16 +11,15 @@ public class GetUserReservationsHandlerTests
     private static readonly Guid UserId = Guid.NewGuid();
     private static readonly Guid DockId1 = Guid.NewGuid();
     private static readonly Guid DockId2 = Guid.NewGuid();
+    private static readonly DateOnly FutureDate = DateOnly.FromDateTime(DateTime.UtcNow).AddDays(7);
+    private static readonly DateOnly PastDate = DateOnly.FromDateTime(DateTime.UtcNow).AddDays(-7);
 
     private readonly IReservationRepository _repository = Substitute.For<IReservationRepository>();
-    private readonly TimeProvider _timeProvider = Substitute.For<TimeProvider>();
     private readonly GetUserReservationsHandler _handler;
 
     public GetUserReservationsHandlerTests()
     {
-        // Current time: 2026-03-28 10:00 UTC
-        _timeProvider.GetUtcNow().Returns(new DateTimeOffset(2026, 3, 28, 10, 0, 0, TimeSpan.Zero));
-        _handler = new(_repository, _timeProvider);
+        _handler = new(_repository);
     }
 
     private static Dock MakeDock(Guid id, string code) =>
@@ -63,8 +62,8 @@ public class GetUserReservationsHandlerTests
     {
         var reservations = new List<Reservation>
         {
-            MakeReservation(new DateOnly(2026, 3, 30), TimeSlot.Morning),
-            MakeReservation(new DateOnly(2026, 3, 25), TimeSlot.Afternoon, cancelled: true),
+            MakeReservation(FutureDate, TimeSlot.Morning),
+            MakeReservation(PastDate, TimeSlot.Afternoon, cancelled: true),
         };
         _repository.GetUserReservationsAsync(UserId, Arg.Any<CancellationToken>())
             .Returns(reservations);
@@ -77,16 +76,15 @@ public class GetUserReservationsHandlerTests
     }
 
     // ──────────────────────────────────────────────────────────────
-    // CanCancel logic
+    // CanCancel logic — cualquier reserva activa es cancelable
     // ──────────────────────────────────────────────────────────────
 
     [Fact]
     public async Task Handle_ActiveFutureReservation_CanCancel()
     {
-        // March 30 is >24h from 2026-03-28 10:00
         var reservations = new List<Reservation>
         {
-            MakeReservation(new DateOnly(2026, 3, 30), TimeSlot.Both)
+            MakeReservation(FutureDate, TimeSlot.Both)
         };
         _repository.GetUserReservationsAsync(UserId, Arg.Any<CancellationToken>())
             .Returns(reservations);
@@ -97,19 +95,35 @@ public class GetUserReservationsHandlerTests
     }
 
     [Fact]
-    public async Task Handle_ActiveReservationWithin24Hours_CannotCancel()
+    public async Task Handle_ActiveReservationSameDay_CanCancel()
     {
-        // March 29 at 00:00 is 14h from 2026-03-28 10:00 → less than 24h
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
         var reservations = new List<Reservation>
         {
-            MakeReservation(new DateOnly(2026, 3, 29), TimeSlot.Morning)
+            MakeReservation(today, TimeSlot.Morning)
         };
         _repository.GetUserReservationsAsync(UserId, Arg.Any<CancellationToken>())
             .Returns(reservations);
 
         var result = await _handler.Handle(new GetUserReservationsQuery(UserId), CancellationToken.None);
 
-        Assert.False(result[0].CanCancel);
+        Assert.True(result[0].CanCancel);
+    }
+
+    [Fact]
+    public async Task Handle_ActiveReservationNextDay_CanCancel()
+    {
+        var tomorrow = DateOnly.FromDateTime(DateTime.UtcNow).AddDays(1);
+        var reservations = new List<Reservation>
+        {
+            MakeReservation(tomorrow, TimeSlot.Morning)
+        };
+        _repository.GetUserReservationsAsync(UserId, Arg.Any<CancellationToken>())
+            .Returns(reservations);
+
+        var result = await _handler.Handle(new GetUserReservationsQuery(UserId), CancellationToken.None);
+
+        Assert.True(result[0].CanCancel);
     }
 
     [Fact]
@@ -117,22 +131,7 @@ public class GetUserReservationsHandlerTests
     {
         var reservations = new List<Reservation>
         {
-            MakeReservation(new DateOnly(2026, 3, 30), TimeSlot.Both, cancelled: true)
-        };
-        _repository.GetUserReservationsAsync(UserId, Arg.Any<CancellationToken>())
-            .Returns(reservations);
-
-        var result = await _handler.Handle(new GetUserReservationsQuery(UserId), CancellationToken.None);
-
-        Assert.False(result[0].CanCancel);
-    }
-
-    [Fact]
-    public async Task Handle_PastReservation_CannotCancel()
-    {
-        var reservations = new List<Reservation>
-        {
-            MakeReservation(new DateOnly(2026, 3, 20), TimeSlot.Afternoon)
+            MakeReservation(FutureDate, TimeSlot.Both, cancelled: true)
         };
         _repository.GetUserReservationsAsync(UserId, Arg.Any<CancellationToken>())
             .Returns(reservations);
@@ -154,7 +153,7 @@ public class GetUserReservationsHandlerTests
     {
         var reservations = new List<Reservation>
         {
-            MakeReservation(new DateOnly(2026, 3, 30), slot)
+            MakeReservation(FutureDate, slot)
         };
         _repository.GetUserReservationsAsync(UserId, Arg.Any<CancellationToken>())
             .Returns(reservations);
@@ -169,7 +168,7 @@ public class GetUserReservationsHandlerTests
     {
         var reservations = new List<Reservation>
         {
-            MakeReservation(new DateOnly(2026, 3, 30))
+            MakeReservation(FutureDate)
         };
         _repository.GetUserReservationsAsync(UserId, Arg.Any<CancellationToken>())
             .Returns(reservations);
@@ -184,7 +183,7 @@ public class GetUserReservationsHandlerTests
     {
         var reservations = new List<Reservation>
         {
-            MakeReservation(new DateOnly(2026, 3, 30), cancelled: true)
+            MakeReservation(FutureDate, cancelled: true)
         };
         _repository.GetUserReservationsAsync(UserId, Arg.Any<CancellationToken>())
             .Returns(reservations);
@@ -192,28 +191,5 @@ public class GetUserReservationsHandlerTests
         var result = await _handler.Handle(new GetUserReservationsQuery(UserId), CancellationToken.None);
 
         Assert.Equal(ReservationStatus.Cancelled, result[0].Status);
-    }
-
-    // ──────────────────────────────────────────────────────────────
-    // Exactly at 24h boundary
-    // ──────────────────────────────────────────────────────────────
-
-    [Fact]
-    public async Task Handle_ExactlyAt24HourBoundary_CanCancel()
-    {
-        // 2026-03-29 10:00 UTC is exactly 24h from now → CanCancel = true (>= 24h)
-        _timeProvider.GetUtcNow().Returns(new DateTimeOffset(2026, 3, 28, 10, 0, 0, TimeSpan.Zero));
-        var reservations = new List<Reservation>
-        {
-            MakeReservation(new DateOnly(2026, 3, 29), TimeSlot.Morning)
-        };
-        // March 29 at 00:00 is only 14h from 28 10:00 → NOT cancellable
-        _repository.GetUserReservationsAsync(UserId, Arg.Any<CancellationToken>())
-            .Returns(reservations);
-
-        var result = await _handler.Handle(new GetUserReservationsQuery(UserId), CancellationToken.None);
-
-        // March 29 00:00 - March 28 10:00 = 14h < 24h → cannot cancel
-        Assert.False(result[0].CanCancel);
     }
 }

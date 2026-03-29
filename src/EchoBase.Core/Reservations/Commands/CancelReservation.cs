@@ -24,16 +24,12 @@ public sealed record CancelReservationCommand(
 ///   <item>La reserva debe existir.</item>
 ///   <item>El solicitante debe ser el propietario de la reserva.</item>
 ///   <item>La reserva no puede estar ya cancelada.</item>
-///   <item>La cancelación debe realizarse con al menos 24 horas de antelación.</item>
 /// </list>
 /// </remarks>
 public sealed class CancelReservationHandler(
     IReservationRepository repository,
-    TimeProvider timeProvider,
     IPublisher publisher) : IRequestHandler<CancelReservationCommand, Result>
 {
-    private static readonly TimeSpan MinCancellationAdvance = TimeSpan.FromHours(24);
-
     /// <inheritdoc />
     public async Task<Result> Handle(CancelReservationCommand request, CancellationToken cancellationToken)
     {
@@ -47,12 +43,6 @@ public sealed class CancelReservationHandler(
 
         if (reservation.Status == ReservationStatus.Cancelled)
             return Result.Failure(ReservationErrors.AlreadyCancelled);
-
-        var now = timeProvider.GetUtcNow();
-        var reservationStart = reservation.Date.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
-
-        if (reservationStart - now < MinCancellationAdvance)
-            return Result.Failure(ReservationErrors.CancellationTooLate);
 
         reservation.Cancel();
         await repository.SaveChangesAsync(cancellationToken);

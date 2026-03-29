@@ -14,18 +14,15 @@ public class CancelReservationHandlerTests
     private static readonly Guid UserId = Guid.NewGuid();
     private static readonly Guid ReservationId = Guid.NewGuid();
     private static readonly Guid DockId = Guid.NewGuid();
-    private static readonly DateOnly FutureDate = new(2026, 3, 30); // 2 days ahead
+    private static readonly DateOnly FutureDate = DateOnly.FromDateTime(DateTime.UtcNow).AddDays(7);
 
     private readonly IReservationRepository _repository = Substitute.For<IReservationRepository>();
-    private readonly TimeProvider _timeProvider = Substitute.For<TimeProvider>();
     private readonly IPublisher _publisher = Substitute.For<IPublisher>();
     private readonly CancelReservationHandler _handler;
 
     public CancelReservationHandlerTests()
     {
-        // Current time: 2026-03-28 10:00 UTC → 38h before FutureDate (March 30 00:00)
-        _timeProvider.GetUtcNow().Returns(new DateTimeOffset(2026, 3, 28, 10, 0, 0, TimeSpan.Zero));
-        _handler = new(_repository, _timeProvider, _publisher);
+        _handler = new(_repository, _publisher);
     }
 
     private static Reservation MakeActiveReservation(DateOnly? date = null, Guid? userId = null) =>
@@ -56,6 +53,43 @@ public class CancelReservationHandlerTests
         Assert.True(result.IsSuccess);
         Assert.Equal(ReservationStatus.Cancelled, reservation.Status);
         await _repository.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Handle_ActiveReservationFutureDate_Succeeds()
+    {
+        var reservation = MakeActiveReservation();
+        _repository.GetByIdAsync(ReservationId, Arg.Any<CancellationToken>()).Returns(reservation);
+
+        var result = await _handler.Handle(Cmd(), CancellationToken.None);
+
+        Assert.True(result.IsSuccess);
+    }
+
+    [Fact]
+    public async Task Handle_ActiveReservationNextDay_Succeeds()
+    {
+        var tomorrow = DateOnly.FromDateTime(DateTime.UtcNow).AddDays(1);
+        var reservation = MakeActiveReservation(date: tomorrow);
+        _repository.GetByIdAsync(ReservationId, Arg.Any<CancellationToken>()).Returns(reservation);
+
+        var result = await _handler.Handle(Cmd(), CancellationToken.None);
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(ReservationStatus.Cancelled, reservation.Status);
+    }
+
+    [Fact]
+    public async Task Handle_ActiveReservationSameDay_Succeeds()
+    {
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var reservation = MakeActiveReservation(date: today);
+        _repository.GetByIdAsync(ReservationId, Arg.Any<CancellationToken>()).Returns(reservation);
+
+        var result = await _handler.Handle(Cmd(), CancellationToken.None);
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(ReservationStatus.Cancelled, reservation.Status);
     }
 
     // ──────────────────────────────────────────────────────────────
@@ -96,62 +130,5 @@ public class CancelReservationHandlerTests
 
         Assert.False(result.IsSuccess);
         Assert.Equal(ReservationErrors.AlreadyCancelled, result.Error);
-    }
-
-    // ──────────────────────────────────────────────────────────────
-    // 24-hour cancellation window
-    // ──────────────────────────────────────────────────────────────
-
-    [Fact]
-    public async Task Handle_LessThan24HoursBeforeDate_ReturnsCancellationTooLate()
-    {
-        // Reservation for March 29, current time is March 28 10:00 → 14h left → too late
-        var tomorrow = new DateOnly(2026, 3, 29);
-        var reservation = MakeActiveReservation(date: tomorrow);
-        _repository.GetByIdAsync(ReservationId, Arg.Any<CancellationToken>()).Returns(reservation);
-
-        var result = await _handler.Handle(Cmd(), CancellationToken.None);
-
-        Assert.False(result.IsSuccess);
-        Assert.Equal(ReservationErrors.CancellationTooLate, result.Error);
-    }
-
-    [Fact]
-    public async Task Handle_Exactly24HoursBeforeDate_Succeeds()
-    {
-        // March 28 00:00 UTC → March 29 00:00 UTC = exactly 24h → >= 24h → allowed
-        _timeProvider.GetUtcNow().Returns(new DateTimeOffset(2026, 3, 28, 0, 0, 0, TimeSpan.Zero));
-        var reservation = MakeActiveReservation(date: new DateOnly(2026, 3, 29));
-        _repository.GetByIdAsync(ReservationId, Arg.Any<CancellationToken>()).Returns(reservation);
-
-        var result = await _handler.Handle(Cmd(), CancellationToken.None);
-
-        Assert.True(result.IsSuccess);
-    }
-
-    [Fact]
-    public async Task Handle_MoreThan24HoursBeforeDate_Succeeds()
-    {
-        // Default: March 28 10:00 → March 30 00:00 = 38h → OK
-        var reservation = MakeActiveReservation();
-        _repository.GetByIdAsync(ReservationId, Arg.Any<CancellationToken>()).Returns(reservation);
-
-        var result = await _handler.Handle(Cmd(), CancellationToken.None);
-
-        Assert.True(result.IsSuccess);
-    }
-
-    [Fact]
-    public async Task Handle_OneSecondBefore24Hours_ReturnsCancellationTooLate()
-    {
-        // March 28 00:00:01 UTC → March 29 00:00 UTC = 23h 59m 59s → too late
-        _timeProvider.GetUtcNow().Returns(new DateTimeOffset(2026, 3, 28, 0, 0, 1, TimeSpan.Zero));
-        var reservation = MakeActiveReservation(date: new DateOnly(2026, 3, 29));
-        _repository.GetByIdAsync(ReservationId, Arg.Any<CancellationToken>()).Returns(reservation);
-
-        var result = await _handler.Handle(Cmd(), CancellationToken.None);
-
-        Assert.False(result.IsSuccess);
-        Assert.Equal(ReservationErrors.CancellationTooLate, result.Error);
     }
 }

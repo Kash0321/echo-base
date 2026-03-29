@@ -14,7 +14,7 @@ namespace EchoBase.Core.Reservations.Queries;
 /// <param name="Date">Fecha de la reserva.</param>
 /// <param name="TimeSlot">Franja horaria reservada.</param>
 /// <param name="Status">Estado actual de la reserva.</param>
-/// <param name="CanCancel">Indica si la reserva puede cancelarse (activa y &gt;24 h de antelación).</param>
+/// <param name="CanCancel">Indica si la reserva puede cancelarse (estado activo).</param>
 public sealed record UserReservationDto(
     Guid Id,
     string DockCode,
@@ -40,34 +40,23 @@ public sealed record GetUserReservationsQuery(Guid UserId)
 /// y calcula si cada una puede cancelarse según las reglas de negocio.
 /// </summary>
 internal sealed class GetUserReservationsHandler(
-    IReservationRepository repository,
-    TimeProvider timeProvider)
+    IReservationRepository repository)
     : IRequestHandler<GetUserReservationsQuery, IReadOnlyList<UserReservationDto>>
 {
-    private static readonly TimeSpan MinCancellationAdvance = TimeSpan.FromHours(24);
-
     public async Task<IReadOnlyList<UserReservationDto>> Handle(
         GetUserReservationsQuery request,
         CancellationToken cancellationToken)
     {
         var reservations = await repository.GetUserReservationsAsync(request.UserId, cancellationToken);
-        var now = timeProvider.GetUtcNow();
 
         return reservations
-            .Select(r =>
-            {
-                var reservationStart = r.Date.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
-                var canCancel = r.Status == ReservationStatus.Active
-                    && reservationStart - now >= MinCancellationAdvance;
-
-                return new UserReservationDto(
-                    r.Id,
-                    r.Dock?.Code ?? r.DockId.ToString(),
-                    r.Date,
-                    r.TimeSlot,
-                    r.Status,
-                    canCancel);
-            })
+            .Select(r => new UserReservationDto(
+                r.Id,
+                r.Dock?.Code ?? r.DockId.ToString(),
+                r.Date,
+                r.TimeSlot,
+                r.Status,
+                r.Status == ReservationStatus.Active))
             .ToList();
     }
 }

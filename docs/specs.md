@@ -82,7 +82,7 @@ Integración con Azure AD (tennant de nuestra compañía) para autenticación y 
 
 ## Funcionalidad 4: Gestión de reservas
 - El usuario puede ver un historial de sus reservas pasadas y futuras.
-- El usuario puede cancelar una reserva futura desde su historial, siempre que la cancelación se realice con al menos 24 horas de antelación a la fecha de la reserva.
+- El usuario puede cancelar una reserva activa desde su historial en cualquier momento, sin restricción de antelación. Las cancelaciones de última hora son bienvenidas, ya que liberan el puesto para otros compañeros.
 - El sistema envía notificaciones por correo electrónico al usuario para confirmar la creación, modificación o cancelación de una reserva.
 - El sistema envía recordatorios automáticos a los usuarios sobre sus reservas próximas, con opciones para modificar o cancelar la reserva directamente desde la notificación.
 

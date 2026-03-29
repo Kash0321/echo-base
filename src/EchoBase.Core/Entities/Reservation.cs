@@ -10,7 +10,7 @@ namespace EchoBase.Core.Entities;
 /// <list type="bullet">
 ///   <item>Un empleado puede realizar como máximo dos reservas al día (una por franja).</item>
 ///   <item>Las reservas solo pueden crearse con hasta 7 días de antelación.</item>
-///   <item>La cancelación solo se permite con más de 24 horas de antelación respecto a la fecha reservada.</item>
+///   <item>Las reservas activas pueden cancelarse en cualquier momento sin restricción de antelación.</item>
 /// </list>
 /// </remarks>
 public sealed class Reservation(

@@ -35,7 +35,4 @@ public static class ReservationErrors
 
     /// <summary>La reserva ya fue cancelada anteriormente.</summary>
     public const string AlreadyCancelled = "ALREADY_CANCELLED";
-
-    /// <summary>La cancelación debe realizarse con al menos 24 horas de antelación.</summary>
-    public const string CancellationTooLate = "CANCELLATION_TOO_LATE";
 }

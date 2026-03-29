@@ -68,10 +68,6 @@ else if (_reservations is not null)
                                             Cancelar
                                         </button>
                                     }
-                                    else if (r.Status == ReservationStatus.Active)
-                                    {
-                                        <span class="text-muted small">No cancelable (&lt; 24 h)</span>
-                                    }
                                 </td>
                             </tr>
                         }
@@ -202,7 +198,6 @@ else if (_reservations is not null)
         "RESERVATION_NOT_FOUND" => "La reserva no existe.",
         "NOT_RESERVATION_OWNER" => "No puedes cancelar una reserva que no te pertenece.",
         "ALREADY_CANCELLED" => "La reserva ya fue cancelada anteriormente.",
-        "CANCELLATION_TOO_LATE" => "No se puede cancelar con menos de 24 horas de antelación.",
         _ => $"Error inesperado: {error}"
     };
 }
