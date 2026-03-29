@@ -28,13 +28,19 @@
             </div>
             <!-- Selector de fecha + leyenda -->
             <div class="d-flex align-items-end gap-3 flex-wrap">
-                <div>
-                    <label for="selectedDate" class="form-label form-label-sm fw-semibold text-white-50 mb-1">Fecha</label>
+                <div class="d-flex align-items-center gap-2">
+                    <label for="selectedDate" class="form-label form-label-sm fw-semibold text-white-50 mb-0">Fecha</label>
+                    <button class="btn btn-sm eb-date-nav-btn" @onclick="PrevDay" disabled="@(_selectedDate <= _today)" title="Día anterior">
+                        <i class="bi bi-chevron-left"></i>
+                    </button>
                     <input type="date" id="selectedDate" class="form-control form-control-sm eb-date-input"
                            value="@_selectedDate.ToString("yyyy-MM-dd")"
                            min="@_today.ToString("yyyy-MM-dd")"
                            max="@_today.AddDays(7).ToString("yyyy-MM-dd")"
                            @onchange="OnDateChanged" />
+                    <button class="btn btn-sm eb-date-nav-btn" @onclick="NextDay" disabled="@(_selectedDate >= _today.AddDays(7))" title="Día siguiente">
+                        <i class="bi bi-chevron-right"></i>
+                    </button>
                 </div>
                 <div class="d-flex align-items-center gap-2 pb-1">
                     <span class="eb-legend-dot bg-success"></span><span class="small text-white-50">Libre</span>
@@ -239,6 +245,24 @@ else if (_dockMap is not null)
         if (DateOnly.TryParse(e.Value?.ToString(), out var date))
         {
             _selectedDate = date;
+            await LoadMapAsync();
+        }
+    }
+
+    private async Task PrevDay()
+    {
+        if (_selectedDate > _today)
+        {
+            _selectedDate = _selectedDate.AddDays(-1);
+            await LoadMapAsync();
+        }
+    }
+
+    private async Task NextDay()
+    {
+        if (_selectedDate < _today.AddDays(7))
+        {
+            _selectedDate = _selectedDate.AddDays(1);
             await LoadMapAsync();
         }
     }
