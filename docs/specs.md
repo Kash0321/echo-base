@@ -43,6 +43,23 @@ Para mantener coherencia en el rediseño y ampliaciones futuras de Echo Base, se
    - **Interacciones enriquecidas (Formularios/Modales)**: Uso moderno de entradas, por ejemplo, convirtiendo opciones en botones (`.btn-check` + `.btn-outline-primary`) en lugar de radio buttons clásicos para mejorar las áreas táctiles en móviles y darle un look moderno.
    - **Datos históricos**: Manejo diferenciado visualmente. Los elementos cancelados o pasados bajan su opacidad y tienen efecto tachado sobre los listados.
 
+### Galería de Pantallas (UI/UX)
+
+A continuación se muestran capturas de las pantallas principales del sistema, que reflejan la aplicación de los principios de diseño mencionados:
+
+#### 1. Home (`Home.razor`)
+![Home](001.Home.png)
+
+#### 2. Mapa de Bahías (`DockMap.razor`)
+![Mapa de bahías](002.DockMap.png)
+
+#### 3. Mis Reservas (`MyReservations.razor`)
+![Mis Reservas](003.MyReservations.png)
+
+#### 4. Acerca de (`About.razor`)
+![Acerca de - Parte 1](004.About_01.png)
+![Acerca de - Parte 2](004.About_02.png)
+
 ## Modelo de datos
 1. **User** (Empleado que reserva espacio): Id, Nombre, Email, Línea de negocio (Core, Energía, Scrap/Waste, Transversal).
 2. **Dock** (Puesto de trabajo): Id, Código (ej: A-01), Ubicación, Equipamiento (Monitor doble, etc.).

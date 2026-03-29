@@ -1,0 +1,123 @@
+/* ── Hero ──────────────────────────────────────────────── */
+.eb-about-hero {
+    background: linear-gradient(135deg, #0d1b2a 0%, #1a3a5c 50%, #0a2540 100%);
+    border-bottom: 1px solid rgba(255,255,255,.08);
+    position: relative;
+    overflow: hidden;
+}
+
+.eb-about-hero::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse at 50% 120%, rgba(30,90,160,.35) 0%, transparent 70%);
+    pointer-events: none;
+}
+
+.eb-about-eyebrow {
+    font-size: .65rem;
+    letter-spacing: .2em;
+    opacity: .55;
+}
+
+/* ── Lore card ─────────────────────────────────────────── */
+.eb-lore-card {
+    background: rgba(13, 27, 42, .03);
+    border-left: 4px solid var(--bs-primary) !important;
+}
+
+.eb-lore-pillar {
+    padding: .75rem;
+    background: rgba(13, 27, 42, .04);
+    border-radius: .5rem;
+}
+
+.eb-lore-pillar-icon {
+    line-height: 1;
+}
+
+/* ── Tech cards ────────────────────────────────────────── */
+.eb-tech-card {
+    transition: transform .15s ease, box-shadow .15s ease;
+}
+
+.eb-tech-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 .5rem 1rem rgba(0,0,0,.12) !important;
+}
+
+/* ── Credit cards ──────────────────────────────────────── */
+.eb-credit-card-human {
+    border-left: 4px solid #0a66c2 !important;
+    transition: transform .15s ease;
+}
+
+.eb-credit-card-human:hover {
+    transform: translateY(-2px);
+}
+
+.eb-credit-card-ai {
+    border-left: 4px solid var(--bs-primary) !important;
+    transition: transform .15s ease;
+}
+
+.eb-credit-card-ai:hover {
+    transform: translateY(-2px);
+}
+
+.eb-avatar-human {
+    width: 3rem;
+    height: 3rem;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #0a66c2, #0d8de0);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.eb-avatar-ai {
+    width: 3rem;
+    height: 3rem;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #1b6ec2, #1a3a5c);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+/* ── Social buttons ────────────────────────────────────── */
+.eb-btn-linkedin {
+    background: #0a66c2;
+    color: #fff;
+    font-size: .75rem;
+    padding: .2rem .6rem;
+}
+
+.eb-btn-linkedin:hover {
+    background: #004182;
+    color: #fff;
+}
+
+.eb-btn-x {
+    background: #000;
+    color: #fff;
+    font-size: .75rem;
+    padding: .2rem .6rem;
+}
+
+.eb-btn-x:hover {
+    background: #333;
+    color: #fff;
+}
+
+/* ── AI info chips ─────────────────────────────────────── */
+.eb-ai-chip {
+    display: inline-block;
+    background: #f1f3f5;
+    border-radius: .375rem;
+    padding: .15rem .5rem;
+    font-size: .75rem;
+    color: #495057;
+}
