@@ -53,7 +53,7 @@ public class GetDockMapHandlerTests
     }
 
     [Fact]
-    public async Task Handle_ReturnsTwoZonesOrderedByName()
+    public async Task Handle_ReturnsTwoZonesOrderedDescendingByName()
     {
         var result = await _handler.Handle(Query(), CancellationToken.None);
 
