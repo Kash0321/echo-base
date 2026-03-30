@@ -155,9 +155,18 @@ else if (_dockMap is not null)
 
                     @if (_selectedSeat.Status == DockStatus.PartiallyBooked)
                     {
+                        var occupiedUser = _selectedSeat.BookedSlot!.Value == TimeSlot.Morning
+                            ? _selectedSeat.MorningBookedBy
+                            : _selectedSeat.AfternoonBookedBy;
                         <div class="alert alert-warning d-flex align-items-center gap-2 py-2">
                             <i class="bi bi-exclamation-triangle-fill flex-shrink-0"></i>
-                            <span>Franja <strong>@FormatSlot(_selectedSeat.BookedSlot!.Value)</strong> ya está ocupada.</span>
+                            <span>
+                                Franja <strong>@FormatSlot(_selectedSeat.BookedSlot!.Value)</strong> ya está ocupada
+                                @if (!string.IsNullOrEmpty(occupiedUser))
+                                {
+                                    <span> por <strong>@occupiedUser</strong></span>
+                                }
+                            </span>
                         </div>
                     }
 
@@ -337,11 +346,41 @@ else if (_dockMap is not null)
     private static string GetTooltip(DockSeatDto seat) => seat.Status switch
     {
         DockStatus.Free => "Libre — haz clic para reservar",
-        DockStatus.PartiallyBooked => $"Parcial — {FormatSlot(seat.BookedSlot!.Value)} ocupada",
-        DockStatus.FullyBooked => "Completo",
-        DockStatus.Blocked => "Bloqueado por administración",
+        DockStatus.PartiallyBooked => BuildPartialTooltip(seat),
+        DockStatus.FullyBooked => BuildFullBookedTooltip(seat),
+        DockStatus.Blocked => BuildBlockedTooltip(seat),
         _ => seat.Code
     };
+
+    private static string BuildPartialTooltip(DockSeatDto seat)
+    {
+        var slot = FormatSlot(seat.BookedSlot!.Value);
+        var who = seat.BookedSlot!.Value == TimeSlot.Morning ? seat.MorningBookedBy : seat.AfternoonBookedBy;
+        return string.IsNullOrEmpty(who)
+            ? $"Parcial — {slot} ocupada"
+            : $"Parcial — {slot} ocupada ({who})";
+    }
+
+    private static string BuildFullBookedTooltip(DockSeatDto seat)
+    {
+        if (seat.MorningBookedBy is null && seat.AfternoonBookedBy is null)
+            return "Completo";
+
+        if (seat.MorningBookedBy == seat.AfternoonBookedBy && seat.MorningBookedBy is not null)
+            return $"Completo — {seat.MorningBookedBy}";
+
+        var parts = new List<string>();
+        if (seat.MorningBookedBy is not null) parts.Add($"Mañana: {seat.MorningBookedBy}");
+        if (seat.AfternoonBookedBy is not null) parts.Add($"Tarde: {seat.AfternoonBookedBy}");
+        return "Completo — " + string.Join(", ", parts);
+    }
+
+    private static string BuildBlockedTooltip(DockSeatDto seat)
+    {
+        var by = string.IsNullOrEmpty(seat.BlockedByName) ? "" : $" por {seat.BlockedByName}";
+        var reason = string.IsNullOrEmpty(seat.BlockReason) ? "" : $": {seat.BlockReason}";
+        return $"Bloqueado{by}{reason}";
+    }
 
     private static IEnumerable<TimeSlot> GetAvailableSlots(DockSeatDto seat)
     {

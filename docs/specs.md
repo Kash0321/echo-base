@@ -119,13 +119,20 @@ Integración con Azure AD (tennant de nuestra compañía) para autenticación y 
 - El usuario indica la franja horaria (mañana, tarde o ambas) para su reserva.
 - El sistema valida que el usuario no tenga otra reserva para ese día y que el puesto esté disponible en la franja horaria seleccionada.
 - El sistema confirma la reserva y muestra un resumen de la misma. El usuario puede cancelar la reserva desde el mismo resumen. El usuario recibe una notificación por correo electrónico o chat de Microsoft Teams (según configuración) confirmando la reserva.
+- El mapa de bahías muestra información contextual en los tooltips de cada puesto:
+  - **Libre**: "Libre — haz clic para reservar".
+  - **Parcialmente reservado**: franja ocupada y nombre del usuario que la tiene reservada.
+  - **Completo**: nombre(s) del/de los usuario(s) que tienen cada franja (mañana / tarde), diferenciados si son distintos.
+  - **Bloqueado**: nombre del Manager que realizó el bloqueo y el motivo.
+- Al abrir el modal de reserva de un puesto parcialmente ocupado, se indica explícitamente quién tiene reservada la franja ya ocupada.
 
 ## Funcionalidad 3: Cuadro de mando para administración [Implementada]
 - Un usuario con rol de Manager inicia sesión en la aplicación.
 - El Manager accede a un cuadro de mando que muestra el mapa de puestos de trabajo con la capacidad de seleccionar uno o varios puestos de trabajo.
 - El Manager selecciona los puestos de trabajo que desea bloquear para un día específico o un período de días.
 - El sistema bloquea los puestos de trabajo seleccionados, impidiendo que los usuarios con rol BasicUser puedan reservar esos puestos para las fechas bloqueadas.
-- El Manager puede desbloquear los puestos de trabajo bloqueados desde el mismo cuadro de mando. 
+- El Manager puede desbloquear los puestos de trabajo bloqueados desde el mismo cuadro de mando.
+- El mapa de selección del cuadro de mando muestra en los tooltips quién tiene reservado cada puesto y en qué franja, diferenciando reservas de mañana y tarde con el nombre del reservador. Esto permite al Manager conocer el impacto sobre las reservas existentes antes de proceder al bloqueo.
 
 ## Funcionalidad 4: Gestión de reservas [Implementada]
 - El usuario puede ver un historial de sus reservas pasadas y futuras.

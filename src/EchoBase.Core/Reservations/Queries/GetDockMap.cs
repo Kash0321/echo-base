@@ -31,11 +31,19 @@ public enum DockStatus
 /// <param name="Code">Código del puesto (ej.: N-A01).</param>
 /// <param name="Status">Estado del puesto para la fecha consultada.</param>
 /// <param name="BookedSlot">Franja reservada (solo si <see cref="Status"/> es <see cref="DockStatus.PartiallyBooked"/>).</param>
+/// <param name="MorningBookedBy">Nombre del usuario que ha reservado la franja de mañana (o ambas). <see langword="null"/> si la franja está libre.</param>
+/// <param name="AfternoonBookedBy">Nombre del usuario que ha reservado la franja de tarde (o ambas). <see langword="null"/> si la franja está libre.</param>
+/// <param name="BlockedByName">Nombre del Manager que bloqueó el puesto. Solo presente cuando <see cref="Status"/> es <see cref="DockStatus.Blocked"/>.</param>
+/// <param name="BlockReason">Motivo del bloqueo. Solo presente cuando <see cref="Status"/> es <see cref="DockStatus.Blocked"/>.</param>
 public sealed record DockSeatDto(
     Guid Id,
     string Code,
     DockStatus Status,
-    TimeSlot? BookedSlot);
+    TimeSlot? BookedSlot,
+    string? MorningBookedBy = null,
+    string? AfternoonBookedBy = null,
+    string? BlockedByName = null,
+    string? BlockReason = null);
 
 /// <summary>
 /// Representación de una mesa física con dos lados (A y B).
@@ -98,16 +106,16 @@ internal sealed class GetDockMapHandler(IDockMapRepository repository)
     {
         var zones = await repository.GetAllZonesWithDocksAsync(cancellationToken);
         var reservations = await repository.GetAllActiveReservationsForDateAsync(request.Date, cancellationToken);
-        var blockedDockIds = await repository.GetBlockedDockIdsForDateAsync(request.Date, cancellationToken);
+        var blockedDocks = await repository.GetBlockedDocksForDateAsync(request.Date, cancellationToken);
 
-        var blockedSet = blockedDockIds.ToHashSet();
+        var blockedMap = blockedDocks.ToDictionary(b => b.DockId);
         var reservationsByDock = reservations
             .GroupBy(r => r.DockId)
             .ToDictionary(g => g.Key, g => g.ToList());
 
         var zoneDtos = zones
             .OrderByDescending(z => z.Name)
-            .Select(z => BuildZoneDto(z, blockedSet, reservationsByDock))
+            .Select(z => BuildZoneDto(z, blockedMap, reservationsByDock))
             .ToList();
 
         return new DockMapDto(request.Date, zoneDtos);
@@ -115,7 +123,7 @@ internal sealed class GetDockMapHandler(IDockMapRepository repository)
 
     internal static DockZoneMapDto BuildZoneDto(
         Entities.DockZone zone,
-        HashSet<Guid> blockedSet,
+        Dictionary<Guid, Entities.BlockedDock> blockedMap,
         Dictionary<Guid, List<Entities.Reservation>> reservationsByDock)
     {
         // Agrupar puestos por mesa y lado según el patrón de código
@@ -133,11 +141,11 @@ internal sealed class GetDockMapHandler(IDockMapRepository repository)
                 .ToDictionary(g => g.Key, g => g.OrderBy(d => d.Code).ToList());
 
             var sideA = bySide.GetValueOrDefault("A", [])
-                .Select(d => BuildSeatDto(d, blockedSet, reservationsByDock))
+                .Select(d => BuildSeatDto(d, blockedMap, reservationsByDock))
                 .ToList();
 
             var sideB = bySide.GetValueOrDefault("B", [])
-                .Select(d => BuildSeatDto(d, blockedSet, reservationsByDock))
+                .Select(d => BuildSeatDto(d, blockedMap, reservationsByDock))
                 .ToList();
 
             var tableName = BuildTableName(zone.Name, tableGroup.Key);
@@ -149,23 +157,38 @@ internal sealed class GetDockMapHandler(IDockMapRepository repository)
 
     internal static DockSeatDto BuildSeatDto(
         Entities.Dock dock,
-        HashSet<Guid> blockedSet,
+        Dictionary<Guid, Entities.BlockedDock> blockedMap,
         Dictionary<Guid, List<Entities.Reservation>> reservationsByDock)
     {
-        if (blockedSet.Contains(dock.Id))
-            return new DockSeatDto(dock.Id, dock.Code, DockStatus.Blocked, null);
+        if (blockedMap.TryGetValue(dock.Id, out var block))
+            return new DockSeatDto(
+                dock.Id, dock.Code, DockStatus.Blocked, null,
+                BlockedByName: block.BlockedByUser?.Name,
+                BlockReason: block.Reason);
 
         if (!reservationsByDock.TryGetValue(dock.Id, out var dockReservations) || dockReservations.Count == 0)
             return new DockSeatDto(dock.Id, dock.Code, DockStatus.Free, null);
 
+        // Determinar quién ocupa cada franja
+        string? morningName = null;
+        string? afternoonName = null;
+        foreach (var r in dockReservations)
+        {
+            var name = r.User?.Name;
+            if (r.TimeSlot is TimeSlot.Morning or TimeSlot.Both)
+                morningName = name;
+            if (r.TimeSlot is TimeSlot.Afternoon or TimeSlot.Both)
+                afternoonName = name;
+        }
+
         var totalSlots = dockReservations.Sum(r => SlotCount(r.TimeSlot));
 
         if (totalSlots >= 2)
-            return new DockSeatDto(dock.Id, dock.Code, DockStatus.FullyBooked, null);
+            return new DockSeatDto(dock.Id, dock.Code, DockStatus.FullyBooked, null, morningName, afternoonName);
 
         // Parcialmente reservado: informar qué franja está ocupada
         var bookedSlot = dockReservations[0].TimeSlot;
-        return new DockSeatDto(dock.Id, dock.Code, DockStatus.PartiallyBooked, bookedSlot);
+        return new DockSeatDto(dock.Id, dock.Code, DockStatus.PartiallyBooked, bookedSlot, morningName, afternoonName);
     }
 
     /// <summary>

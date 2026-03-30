@@ -46,4 +46,13 @@ public sealed class BlockedDock(
 
     /// <summary>Desactiva el bloqueo, permitiendo de nuevo la reserva del puesto.</summary>
     public void Deactivate() => IsActive = false;
+
+    /// <summary>Establece la referencia de navegación al Manager que creó el bloqueo.</summary>
+    /// <param name="user">Instancia del usuario Manager.</param>
+    /// <exception cref="ArgumentNullException">Se lanza cuando <paramref name="user"/> es <see langword="null"/>.</exception>
+    public void SetBlockedByUser(User user)
+    {
+        ArgumentNullException.ThrowIfNull(user);
+        BlockedByUser = user;
+    }
 }

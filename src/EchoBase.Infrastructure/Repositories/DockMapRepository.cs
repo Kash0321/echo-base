@@ -22,16 +22,17 @@ internal sealed class DockMapRepository(EchoBaseDbContext context) : IDockMapRep
     public Task<List<Reservation>> GetAllActiveReservationsForDateAsync(
         DateOnly date, CancellationToken ct = default) =>
         context.Reservations
+            .Include(r => r.User)
             .Where(r => r.Date == date && r.Status == ReservationStatus.Active)
             .AsNoTracking()
             .ToListAsync(ct);
 
     /// <inheritdoc />
-    public Task<List<Guid>> GetBlockedDockIdsForDateAsync(
+    public Task<List<BlockedDock>> GetBlockedDocksForDateAsync(
         DateOnly date, CancellationToken ct = default) =>
         context.BlockedDocks
+            .Include(b => b.BlockedByUser)
             .Where(b => b.IsActive && b.StartDate <= date && b.EndDate >= date)
-            .Select(b => b.DockId)
-            .Distinct()
+            .AsNoTracking()
             .ToListAsync(ct);
 }

@@ -4,6 +4,7 @@
 
 @using EchoBase.Core.BlockedDocks.Commands
 @using EchoBase.Core.BlockedDocks.Queries
+@using EchoBase.Core.Entities.Enums
 @using EchoBase.Core.Reservations.Queries
 @using EchoBase.Web.Services
 @using MediatR
@@ -437,12 +438,37 @@ else
         return seat.Status switch
         {
             DockStatus.Free            => "Libre — clic para seleccionar",
-            DockStatus.PartiallyBooked => "Parcialmente reservado — clic para seleccionar (se cancelará la reserva)",
-            DockStatus.FullyBooked     => "Totalmente reservado — clic para seleccionar (se cancelarán las reservas)",
+            DockStatus.PartiallyBooked => BuildAdminPartialTooltip(seat),
+            DockStatus.FullyBooked     => BuildAdminFullBookedTooltip(seat),
             DockStatus.Blocked         => "Ya bloqueado — no se puede seleccionar",
             _                          => seat.Code
         };
     }
+
+    private static string BuildAdminPartialTooltip(DockSeatDto seat)
+    {
+        var slot = FormatSlot(seat.BookedSlot!.Value);
+        var who = seat.BookedSlot!.Value == TimeSlot.Morning ? seat.MorningBookedBy : seat.AfternoonBookedBy;
+        var whoText = string.IsNullOrEmpty(who) ? "" : $" ({who})";
+        return $"Parcial — {slot} ocupada{whoText} — clic para seleccionar (se cancelará la reserva)";
+    }
+
+    private static string BuildAdminFullBookedTooltip(DockSeatDto seat)
+    {
+        var parts = new List<string>();
+        if (seat.MorningBookedBy is not null) parts.Add($"Mañana: {seat.MorningBookedBy}");
+        if (seat.AfternoonBookedBy is not null) parts.Add($"Tarde: {seat.AfternoonBookedBy}");
+        var detailsText = parts.Count > 0 ? $" ({string.Join(", ", parts)})" : "";
+        return $"Totalmente reservado{detailsText} — clic para seleccionar (se cancelarán las reservas)";
+    }
+
+    private static string FormatSlot(TimeSlot slot) => slot switch
+    {
+        TimeSlot.Morning   => "Mañana",
+        TimeSlot.Afternoon => "Tarde",
+        TimeSlot.Both      => "Mañana y Tarde",
+        _                  => slot.ToString()
+    };
 
     private static string MapBlockError(string error) => error switch
     {

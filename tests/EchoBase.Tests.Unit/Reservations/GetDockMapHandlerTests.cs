@@ -20,7 +20,7 @@ public class GetDockMapHandlerTests
             .Returns(BuildZones());
         _repository.GetAllActiveReservationsForDateAsync(Arg.Any<DateOnly>(), Arg.Any<CancellationToken>())
             .Returns([]);
-        _repository.GetBlockedDockIdsForDateAsync(Arg.Any<DateOnly>(), Arg.Any<CancellationToken>())
+        _repository.GetBlockedDocksForDateAsync(Arg.Any<DateOnly>(), Arg.Any<CancellationToken>())
             .Returns([]);
 
         _handler = new(_repository);
@@ -133,8 +133,8 @@ public class GetDockMapHandlerTests
     [Fact]
     public async Task Handle_DockBlocked_StatusIsBlocked()
     {
-        _repository.GetBlockedDockIdsForDateAsync(TestDate, Arg.Any<CancellationToken>())
-            .Returns([DockNA01]);
+        _repository.GetBlockedDocksForDateAsync(TestDate, Arg.Any<CancellationToken>())
+            .Returns([MakeBlock(DockNA01)]);
 
         var result = await _handler.Handle(Query(), CancellationToken.None);
 
@@ -147,14 +147,43 @@ public class GetDockMapHandlerTests
     public async Task Handle_DockBlockedOverridesReservation()
     {
         // Aunque haya reserva, si está bloqueado, el estado es Blocked
-        _repository.GetBlockedDockIdsForDateAsync(TestDate, Arg.Any<CancellationToken>())
-            .Returns([DockNA01]);
+        _repository.GetBlockedDocksForDateAsync(TestDate, Arg.Any<CancellationToken>())
+            .Returns([MakeBlock(DockNA01)]);
         _repository.GetAllActiveReservationsForDateAsync(TestDate, Arg.Any<CancellationToken>())
             .Returns([MakeReservation(DockNA01, TimeSlot.Morning)]);
 
         var result = await _handler.Handle(Query(), CancellationToken.None);
 
         Assert.Equal(DockStatus.Blocked, FindSeat(result, DockNA01).Status);
+    }
+
+    [Fact]
+    public async Task Handle_DockBlocked_BlockInfoPropagatedToDto()
+    {
+        var block = MakeBlock(DockNA01, blockedByName: "Han Solo", reason: "Mantenimiento eléctrico");
+        _repository.GetBlockedDocksForDateAsync(TestDate, Arg.Any<CancellationToken>())
+            .Returns([block]);
+
+        var result = await _handler.Handle(Query(), CancellationToken.None);
+
+        var seat = FindSeat(result, DockNA01);
+        Assert.Equal("Han Solo", seat.BlockedByName);
+        Assert.Equal("Mantenimiento eléctrico", seat.BlockReason);
+    }
+
+    [Fact]
+    public async Task Handle_DockBlocked_BlockInfoNullWhenUserNotLoaded()
+    {
+        var block = MakeBlock(DockNA01); // sin usuario cargado
+        _repository.GetBlockedDocksForDateAsync(TestDate, Arg.Any<CancellationToken>())
+            .Returns([block]);
+
+        var result = await _handler.Handle(Query(), CancellationToken.None);
+
+        var seat = FindSeat(result, DockNA01);
+        Assert.Equal(DockStatus.Blocked, seat.Status);
+        Assert.Null(seat.BlockedByName);
+        Assert.Equal("Test reason", seat.BlockReason);
     }
 
     // ──────────────────────────────────────────────────────────
@@ -214,8 +243,8 @@ public class GetDockMapHandlerTests
     [Fact]
     public async Task Handle_MixedStatuses_EachDockHasCorrectStatus()
     {
-        _repository.GetBlockedDockIdsForDateAsync(TestDate, Arg.Any<CancellationToken>())
-            .Returns([DockNB01]);
+        _repository.GetBlockedDocksForDateAsync(TestDate, Arg.Any<CancellationToken>())
+            .Returns([MakeBlock(DockNB01)]);
         _repository.GetAllActiveReservationsForDateAsync(TestDate, Arg.Any<CancellationToken>())
             .Returns([
                 MakeReservation(DockNA01, TimeSlot.Morning),
@@ -228,6 +257,81 @@ public class GetDockMapHandlerTests
         Assert.Equal(DockStatus.FullyBooked, FindSeat(result, DockNA02).Status);
         Assert.Equal(DockStatus.Blocked, FindSeat(result, DockNB01).Status);
         Assert.Equal(DockStatus.Free, FindSeat(result, DockNB02).Status);
+    }
+
+    // ──────────────────────────────────────────────────────────
+    // User names in reservations
+    // ──────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task Handle_MorningReservation_MorningBookedByPopulated()
+    {
+        _repository.GetAllActiveReservationsForDateAsync(TestDate, Arg.Any<CancellationToken>())
+            .Returns([MakeReservation(DockNA01, TimeSlot.Morning, userName: "Luke Skywalker")]);
+
+        var result = await _handler.Handle(Query(), CancellationToken.None);
+
+        var seat = FindSeat(result, DockNA01);
+        Assert.Equal("Luke Skywalker", seat.MorningBookedBy);
+        Assert.Null(seat.AfternoonBookedBy);
+    }
+
+    [Fact]
+    public async Task Handle_AfternoonReservation_AfternoonBookedByPopulated()
+    {
+        _repository.GetAllActiveReservationsForDateAsync(TestDate, Arg.Any<CancellationToken>())
+            .Returns([MakeReservation(DockNA01, TimeSlot.Afternoon, userName: "Leia Organa")]);
+
+        var result = await _handler.Handle(Query(), CancellationToken.None);
+
+        var seat = FindSeat(result, DockNA01);
+        Assert.Null(seat.MorningBookedBy);
+        Assert.Equal("Leia Organa", seat.AfternoonBookedBy);
+    }
+
+    [Fact]
+    public async Task Handle_BothSlotReservation_BothNamesPopulatedWithSameUser()
+    {
+        _repository.GetAllActiveReservationsForDateAsync(TestDate, Arg.Any<CancellationToken>())
+            .Returns([MakeReservation(DockNA01, TimeSlot.Both, userName: "Han Solo")]);
+
+        var result = await _handler.Handle(Query(), CancellationToken.None);
+
+        var seat = FindSeat(result, DockNA01);
+        Assert.Equal("Han Solo", seat.MorningBookedBy);
+        Assert.Equal("Han Solo", seat.AfternoonBookedBy);
+    }
+
+    [Fact]
+    public async Task Handle_TwoReservations_EachSlotHasCorrectUserName()
+    {
+        _repository.GetAllActiveReservationsForDateAsync(TestDate, Arg.Any<CancellationToken>())
+            .Returns([
+                MakeReservation(DockNA01, TimeSlot.Morning,   userName: "R2-D2"),
+                MakeReservation(DockNA01, TimeSlot.Afternoon, userName: "C-3PO"),
+            ]);
+
+        var result = await _handler.Handle(Query(), CancellationToken.None);
+
+        var seat = FindSeat(result, DockNA01);
+        Assert.Equal(DockStatus.FullyBooked, seat.Status);
+        Assert.Equal("R2-D2", seat.MorningBookedBy);
+        Assert.Equal("C-3PO", seat.AfternoonBookedBy);
+    }
+
+    [Fact]
+    public async Task Handle_ReservationWithoutUser_NamesAreNull()
+    {
+        // Simula que el repositorio no cargó la nav. property User
+        _repository.GetAllActiveReservationsForDateAsync(TestDate, Arg.Any<CancellationToken>())
+            .Returns([MakeReservation(DockNA01, TimeSlot.Morning)]);
+
+        var result = await _handler.Handle(Query(), CancellationToken.None);
+
+        var seat = FindSeat(result, DockNA01);
+        Assert.Equal(DockStatus.PartiallyBooked, seat.Status);
+        Assert.Null(seat.MorningBookedBy);
+        Assert.Null(seat.AfternoonBookedBy);
     }
 
     // ──────────────────────────────────────────────────────────
@@ -263,8 +367,27 @@ public class GetDockMapHandlerTests
             .SelectMany(t => t.SideA.Concat(t.SideB))
             .Single(s => s.Id == dockId);
 
-    private static Reservation MakeReservation(Guid dockId, TimeSlot slot) =>
-        new(Guid.NewGuid(), Guid.NewGuid(), dockId, TestDate, slot);
+    private static Reservation MakeReservation(Guid dockId, TimeSlot slot, string? userName = null)
+    {
+        var reservation = new Reservation(Guid.NewGuid(), Guid.NewGuid(), dockId, TestDate, slot);
+        if (userName is not null)
+        {
+            var user = new User(Guid.NewGuid()) { Name = userName, Email = $"{userName.ToLower().Replace(' ', '.')}@test.com" };
+            reservation.SetUser(user);
+        }
+        return reservation;
+    }
+
+    private static BlockedDock MakeBlock(Guid dockId, string? blockedByName = null, string reason = "Test reason")
+    {
+        var block = new BlockedDock(Guid.NewGuid(), dockId, Guid.NewGuid(), TestDate, TestDate, reason);
+        if (blockedByName is not null)
+        {
+            var manager = new User(Guid.NewGuid()) { Name = blockedByName, Email = $"{blockedByName.ToLower().Replace(' ', '.')}@test.com" };
+            block.SetBlockedByUser(manager);
+        }
+        return block;
+    }
 
     private static List<DockZone> BuildZones()
     {
