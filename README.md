@@ -200,3 +200,93 @@ Consulta la [documentación oficial de Azure Key Vault con ASP.NET Core](https:/
 | `MicrosoftGraph:ClientSecret` | Secreto del App Registration con permisos Graph | Solo si Teams activo |
 | `ConnectionStrings:EchoBase` | Cadena de conexión a la base de datos | ✅ |
 
+---
+
+## 📏 Reporte LoC por commit
+
+Esta sección mantiene un historico del LoC con el formato acordado, separando:
+- Codigo de aplicacion
+- Codigo de pruebas
+
+Definicion de conteo usada por script:
+- Lineas no vacias de archivos fuente
+- Excluye `bin`, `obj`, `Migrations`, `wwwroot/lib`, `*.min.*`, `*.Designer.cs`, `*.g.cs`, `*.g.i.cs`
+
+### Generar y registrar el reporte (manual)
+
+Desde la raiz del repositorio:
+
+```powershell
+pwsh -File .\scripts\update-loc-report.ps1 -CommitRef HEAD
+```
+
+### Automatizar en cada commit
+
+Instala el hook de Git una sola vez:
+
+```powershell
+pwsh -File .\scripts\install-loc-post-commit-hook.ps1
+```
+
+El hook ejecuta el calculo tras cada commit y enmienda el mismo commit para incluir la actualizacion de `README.md` con el nuevo bloque LoC.
+
+### Historico
+
+<!-- LOC_REPORT_HISTORY_START -->
+
+### 2026-03-30 | commit ca7ff95
+
+Resumen
+
+| Categoria | Ficheros | LoC | % sobre total |
+|---|---:|---:|---:|
+| Codigo de aplicacion | 84 | 5.282 | 74,6% |
+| Codigo de pruebas | 12 | 1.795 | 25,4% |
+| Total | 96 | 7.077 | 100% |
+
+Desglose de codigo de aplicacion
+
+| Proyecto | Ficheros | LoC |
+|---|---:|---:|
+| EchoBase.Core | 32 | 1.326 |
+| EchoBase.Infrastructure | 23 | 1.256 |
+| EchoBase.Web | 29 | 2.700 |
+
+Desglose de pruebas
+
+| Proyecto | Ficheros | LoC |
+|---|---:|---:|
+| EchoBase.Tests.Integration | 0 | 0 |
+| EchoBase.Tests.Unit | 12 | 1.795 |
+
+### 2026-03-29 | commit 29eda05
+
+Resumen
+
+| Categoria | Ficheros | LoC | % sobre total |
+|---|---:|---:|---:|
+| Codigo de aplicacion | 84 | 5.282 | 74,6% |
+| Codigo de pruebas | 12 | 1.795 | 25,4% |
+| Total | 96 | 7.077 | 100% |
+
+Desglose de codigo de aplicacion
+
+| Proyecto | Ficheros | LoC |
+|---|---:|---:|
+| EchoBase.Core | 32 | 1.326 |
+| EchoBase.Infrastructure | 23 | 1.256 |
+| EchoBase.Web | 29 | 2.700 |
+
+Desglose de pruebas
+
+| Proyecto | Ficheros | LoC |
+|---|---:|---:|
+| EchoBase.Tests.Integration | 0 | 0 |
+| EchoBase.Tests.Unit | 12 | 1.795 |
+
+<!-- LOC_REPORT_HISTORY_END -->
+
+
+
+
+
