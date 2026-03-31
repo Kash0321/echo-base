@@ -80,24 +80,37 @@ public static class ServiceCollectionExtensions
     /// Registra los servicios de notificación (email SMTP y Teams vía Graph).
     /// </summary>
     /// <param name="services">Colección de servicios de la aplicación.</param>
-    /// <param name="configuration">Configuración de la aplicación para leer secciones SMTP y MicrosoftGraph.</param>
+    /// <param name="configuration">Configuración de la aplicación para leer secciones SMTP, MicrosoftGraph y Features.</param>
     /// <returns>La misma <paramref name="services"/> para encadenamiento fluido.</returns>
+    /// <remarks>
+    /// El feature flag <c>Features:TeamsNotificationsEnabled</c> controla globalmente las notificaciones
+    /// de Teams. Cuando es <see langword="false"/>, se registra <see cref="NullTeamsNotificationService"/>
+    /// y no se envía ningún mensaje por Teams, independientemente de las preferencias de usuario.
+    /// Por defecto es <see langword="true"/> para mantener compatibilidad hacia atrás.
+    /// </remarks>
     public static IServiceCollection AddEchoBaseNotifications(
         this IServiceCollection services,
         IConfiguration configuration)
     {
         var useStubs = configuration.GetValue("Notifications:UseDevelopmentStubs", false);
+        var teamsEnabled = configuration.GetValue("Features:TeamsNotificationsEnabled", true);
 
+        // ── Email ──────────────────────────────────────────────────────────
         if (useStubs)
-        {
             services.AddScoped<IEmailService, LogEmailService>();
-            services.AddScoped<ITeamsNotificationService, LogTeamsNotificationService>();
-        }
         else
         {
             services.Configure<SmtpSettings>(configuration.GetSection(SmtpSettings.SectionName));
             services.AddScoped<IEmailService, SmtpEmailService>();
+        }
 
+        // ── Teams ──────────────────────────────────────────────────────────
+        if (!teamsEnabled)
+            services.AddScoped<ITeamsNotificationService, NullTeamsNotificationService>();
+        else if (useStubs)
+            services.AddScoped<ITeamsNotificationService, LogTeamsNotificationService>();
+        else
+        {
             services.Configure<GraphSettings>(configuration.GetSection(GraphSettings.SectionName));
             services.AddScoped<ITeamsNotificationService, GraphTeamsNotificationService>();
         }

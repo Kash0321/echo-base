@@ -8,9 +8,11 @@
 @using EchoBase.Core.Users.Queries
 @using EchoBase.Web.Services
 @using MediatR
+@using Microsoft.Extensions.Configuration
 
 @inject IMediator Mediator
 @inject BlazorCurrentUserService CurrentUser
+@inject IConfiguration Configuration
 
 <PageTitle>Mi perfil — Echo Base</PageTitle>
 
@@ -111,7 +113,7 @@ else if (_profile is not null)
                         </span>
                     </h2>
                     <div class="row g-2">
-                        <div class="col-sm-6">
+                        <div class="@(TeamsFeatureEnabled ? "col-sm-6" : "col-12")">
                             <div class="eb-notif-card @(_emailNotifications ? "eb-notif-active" : "")">
                                 <div class="d-flex align-items-center gap-3">
                                     <div class="eb-notif-icon">
@@ -132,6 +134,8 @@ else if (_profile is not null)
                                 </div>
                             </div>
                         </div>
+                        @if (TeamsFeatureEnabled)
+                        {
                         <div class="col-sm-6">
                             <div class="eb-notif-card @(_teamsNotifications ? "eb-notif-active" : "")">
                                 <div class="d-flex align-items-center gap-3">
@@ -153,6 +157,7 @@ else if (_profile is not null)
                                 </div>
                             </div>
                         </div>
+                        }
                     </div>
                 </div>
             </div>
@@ -246,7 +251,7 @@ else if (_profile is not null)
             _businessLine,
             _phoneNumber,
             _emailNotifications,
-            _teamsNotifications);
+            _teamsNotifications && TeamsFeatureEnabled);
 
         var result = await Mediator.Send(command);
 
@@ -271,6 +276,9 @@ else if (_profile is not null)
         BusinessLine.Transversal => "Transversal",
         _ => bl.ToString()
     };
+
+    private bool TeamsFeatureEnabled =>
+        Configuration.GetValue("Features:TeamsNotificationsEnabled", true);
 
     private static string MapError(string error) => error switch
     {

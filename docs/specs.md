@@ -109,8 +109,9 @@ Integración con Azure AD (tennant de nuestra compañía) para autenticación y 
 - El usuario accede a su perfil de usuario desde un enlace persistente en la barra superior, identificado con su nombre de usuario autenticado.
 - El perfil muestra los datos corporativos básicos sincronizados con Azure AD (nombre y correo) en modo de solo lectura.
 - El usuario puede actualizar su línea de negocio y su número de teléfono de contacto desde su perfil.
-- El usuario puede configurar sus preferencias de notificación (correo electrónico y Microsoft Teams) para recibir confirmaciones de reservas, cancelaciones y recordatorios.
+- El usuario puede configurar sus preferencias de notificación (correo electrónico y, si está habilitada, Microsoft Teams) para recibir confirmaciones de reservas, cancelaciones y recordatorios.
 - La edición del perfil se realiza en una pantalla dedicada, coherente con la UI principal de la aplicación, con feedback visual inmediato de guardado y validaciones básicas de entrada.
+- La opción de configuración de notificaciones por Teams solo se muestra al usuario si el feature flag `Features:TeamsNotificationsEnabled` está activado. Si está desactivado, la tarjeta Teams desaparece de la pantalla de perfil y no se persiste la preferencia.
 
 ## Funcionalidad 2: Reserva de puesto de trabajo [Implementada]
 - El usuario inicia sesión en la aplicación utilizando su cuenta de Azure AD.
@@ -139,6 +140,7 @@ Integración con Azure AD (tennant de nuestra compañía) para autenticación y 
 - El usuario puede cancelar una reserva activa desde su historial en cualquier momento, sin restricción de antelación. Las cancelaciones de última hora son bienvenidas, ya que liberan el puesto para otros compañeros.
 - El sistema envía notificaciones por correo electrónico al usuario para confirmar la creación, modificación o cancelación de una reserva.
 - El sistema envía recordatorios automáticos a los usuarios sobre sus reservas próximas, con opciones para modificar o cancelar la reserva directamente desde la notificación.
+- Las notificaciones por Microsoft Teams solo se envían si el feature flag `Features:TeamsNotificationsEnabled` está activo a nivel global (ver Funcionalidad 7).
 
 ## Funcionalidad 5: Reportes y estadísticas [Pendiente de implementación]
 - El Manager puede acceder a un panel de reportes que muestra estadísticas de uso de los puestos de trabajo, como el porcentaje de ocupación por día, semana o mes.
@@ -150,3 +152,45 @@ Integración con Azure AD (tennant de nuestra compañía) para autenticación y 
 - El usuario selecciona el puesto de trabajo afectado y describe la incidencia en un formulario.
 - El sistema registra la incidencia y notifica a los usuarios con rol de Manager para que puedan tomar medidas correctivas. El usuario recibe una confirmación de que su reporte ha sido registrado y se le informa sobre el proceso de seguimiento de la incidencia.
 - El usuario puede hacer seguimiento del estado de su reporte de incidencia desde su perfil de usuario, recibiendo notificaciones sobre el progreso y la resolución de la incidencia.
+
+## Funcionalidad 7: Feature Flags de sistema [Implementada]
+
+El sistema incluye un mecanismo de feature flags basado en configuración para activar o desactivar funcionalidades sin necesidad de redespliegue. Los flags se declaran en la sección `Features` de `appsettings.json` y pueden sobreescribirse en `appsettings.Development.json` o en las variables de entorno del host.
+
+### Flag: `Features:TeamsNotificationsEnabled`
+
+| Valor | Comportamiento |
+|---|---|
+| `true` (por defecto) | Las notificaciones de Teams están activas. Se usa `GraphTeamsNotificationService` en producción o `LogTeamsNotificationService` con stubs de desarrollo. |
+| `false` | Las notificaciones de Teams están completamente desactivadas. Se registra `NullTeamsNotificationService` (no-op) independientemente del entorno. El toggle de Teams desaparece de la pantalla de perfil de usuario y no se almacena la preferencia. |
+
+**Alcance del flag:**
+- **Infraestructura**: `ServiceCollectionExtensions.AddEchoBaseNotifications` lee el flag durante el arranque y registra la implementación apropiada de `ITeamsNotificationService`.
+- **UI**: `UserProfile.razor` lee el flag en tiempo de ejecución para mostrar u ocultar el toggle de preferencias de Teams. Además, aunque el usuario tuviera previamente activada la preferencia, al guardar el perfil con el flag en `false` se persiste `false` para la preferencia de Teams.
+- **Lógica de negocio**: Los handlers MediatR (`ReservationCreatedTeamsHandler`, `ReservationCancelledTeamsHandler`, `ReservationReminderTeamsHandler`) no tienen conocimiento del flag; simplemente llaman a `ITeamsNotificationService`, que en caso de flag desactivado es la implementación no-op.
+
+**Configuración de referencia (`appsettings.json`):**
+```json
+{
+  "Features": {
+    "TeamsNotificationsEnabled": true
+  }
+}
+```
+
+**Para desactivar Teams en un entorno específico**, añadir a `appsettings.{Environment}.json`:
+```json
+{
+  "Features": {
+    "TeamsNotificationsEnabled": false
+  }
+}
+```
+
+**Tests unitarios:** `TeamsFeatureFlagTests` (en `EchoBase.Tests.Unit`) cubre:
+- `NullTeamsNotificationService` completa sin efecto ni excepción.
+- Con flag `false`, `AddEchoBaseNotifications` registra `NullTeamsNotificationService`.
+- Con flag `false` y stubs activos, `NullTeamsNotificationService` sigue teniendo prioridad.
+- Con flag `true` y stubs activos, se registra `LogTeamsNotificationService`.
+- Con flag `true` y stubs desactivados, se registra `GraphTeamsNotificationService`.
+- Sin flag declarado, el valor por defecto (`true`) preserva el comportamiento original.
