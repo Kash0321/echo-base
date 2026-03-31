@@ -120,7 +120,7 @@ else if (_reservations is not null)
                                 </tr>
                             </thead>
                             <tbody>
-                                @foreach (var r in _pastReservations)
+                                @foreach (var r in HistoryPagedItems)
                                 {
                                     <tr class="@(r.Status == ReservationStatus.Cancelled ? "eb-row-cancelled" : "")">
                                         <td class="ps-3 small">@r.Date.ToString("dd/MM/yyyy")</td>
@@ -132,6 +132,24 @@ else if (_reservations is not null)
                             </tbody>
                         </table>
                     </div>
+                    @if (HistoryTotalPages > 1)
+                    {
+                        <div class="d-flex justify-content-between align-items-center px-3 py-2 border-top small text-muted">
+                            <span>Página @_historyPage de @HistoryTotalPages</span>
+                            <div class="d-flex gap-1">
+                                <button class="btn btn-outline-secondary btn-sm"
+                                        disabled="@(_historyPage == 1)"
+                                        @onclick="() => _historyPage--">
+                                    <i class="bi bi-chevron-left"></i>
+                                </button>
+                                <button class="btn btn-outline-secondary btn-sm"
+                                        disabled="@(_historyPage == HistoryTotalPages)"
+                                        @onclick="() => _historyPage++">
+                                    <i class="bi bi-chevron-right"></i>
+                                </button>
+                            </div>
+                        </div>
+                    }
                 </div>
             </div>
         }
@@ -168,6 +186,12 @@ else if (_reservations is not null)
     private string? _cancelError;
     private bool _cancelSuccess;
 
+    private const int HistoryPageSize = 10;
+    private int _historyPage = 1;
+    private int HistoryTotalPages => (int)Math.Ceiling(_pastReservations.Count / (double)HistoryPageSize);
+    private IEnumerable<UserReservationDto> HistoryPagedItems =>
+        _pastReservations.Skip((_historyPage - 1) * HistoryPageSize).Take(HistoryPageSize);
+
     protected override async Task OnInitializedAsync()
     {
         await CurrentUser.InitializeAsync();
@@ -189,6 +213,7 @@ else if (_reservations is not null)
             .OrderByDescending(r => r.Date)
             .ToList();
 
+        _historyPage = 1;
         _loading = false;
     }
 

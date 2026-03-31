@@ -84,7 +84,7 @@ else
     @if (_activeTab == Tab.Maintenance)
     {
         <div class="row g-3">
-            <div class="col-md-6 col-xl-5">
+            <div class="col-12">
                 <div class="card border-0 shadow-sm">
                     <div class="card-header eb-zone-header d-flex align-items-center gap-2 py-2">
                         <i class="bi bi-tools @(_maintenanceActive ? "text-warning" : "text-secondary") fs-5"></i>
@@ -465,7 +465,7 @@ else
                                 </tr>
                             </thead>
                             <tbody>
-                                @foreach (var user in _allUsers)
+                                @foreach (var user in UsersPagedItems)
                                 {
                                     var uid = user.Id;
                                     var hasManager = user.Roles.Contains("Manager");
@@ -524,6 +524,24 @@ else
                             </tbody>
                         </table>
                     </div>
+                    @if (UsersTotalPages > 1)
+                    {
+                        <div class="d-flex justify-content-between align-items-center px-3 py-2 border-top small text-muted">
+                            <span>Página @_usersPage de @UsersTotalPages</span>
+                            <div class="d-flex gap-1">
+                                <button class="btn btn-outline-secondary btn-sm"
+                                        disabled="@(_usersPage == 1)"
+                                        @onclick="() => _usersPage--">
+                                    <i class="bi bi-chevron-left"></i>
+                                </button>
+                                <button class="btn btn-outline-secondary btn-sm"
+                                        disabled="@(_usersPage == UsersTotalPages)"
+                                        @onclick="() => _usersPage++">
+                                    <i class="bi bi-chevron-right"></i>
+                                </button>
+                            </div>
+                        </div>
+                    }
                 }
                 @if (_roleError is not null)
                 {
@@ -560,7 +578,7 @@ else
                     </div>
                     <div class="col-sm-6 col-md-3">
                         <label for="logAction" class="form-label form-label-sm fw-semibold">Acción</label>
-                        <select id="logAction" class="form-select form-select-sm" @bind="_auditActionFilter">
+                        <select id="logAction" class="form-select form-select-sm" @bind="_auditActionFilterStr">
                             <option value="">— Todas —</option>
                             @foreach (var action in Enum.GetValues<AuditAction>())
                             {
@@ -570,13 +588,15 @@ else
                     </div>
                     <div class="col-sm-6 col-md-3">
                         <label for="logUser" class="form-label form-label-sm fw-semibold">Usuario</label>
-                        <div class="input-group input-group-sm">
-                            <input type="text" id="logUser" class="form-control form-control-sm"
-                                   placeholder="Buscar..." @bind="_auditUserSearch" />
-                            <button class="btn btn-primary btn-sm" @onclick="ApplyAuditFilter">
-                                <i class="bi bi-search"></i>
-                            </button>
-                        </div>
+                        <input type="text" id="logUser" class="form-control form-control-sm"
+                               placeholder="Buscar..." @bind="_auditUserSearch" />
+                    </div>
+                </div>
+                <div class="row mt-2">
+                    <div class="col-12 d-flex justify-content-end">
+                        <button class="btn btn-primary btn-sm" @onclick="ApplyAuditFilter">
+                            <i class="bi bi-search me-1"></i>Filtrar
+                        </button>
                     </div>
                 </div>
             </div>
@@ -798,10 +818,16 @@ else
     // ── Gestión de roles ───────────────────────────────────────────
     private string? _roleError;
 
+    private const int UsersPageSize = 10;
+    private int _usersPage = 1;
+    private int UsersTotalPages => (int)Math.Ceiling(_allUsers.Count / (double)UsersPageSize);
+    private IEnumerable<UserWithRolesDto> UsersPagedItems =>
+        _allUsers.Skip((_usersPage - 1) * UsersPageSize).Take(UsersPageSize);
+
     // ── Log de auditoría ───────────────────────────────────────────
-    private PagedResult<AuditLogDto> _auditLog = new([], 0, 1, 20);
+    private PagedResult<AuditLogDto> _auditLog = new([], 0, 1, 10);
     private int _auditPage = 1;
-    private const int AuditPageSize = 20;
+    private const int AuditPageSize = 10;
     private string? _auditFromDateStr;
     private string? _auditToDateStr;
     private string? _auditActionFilterStr;
@@ -854,6 +880,7 @@ else
         _maintenanceReason = maint.Reason ?? string.Empty;
 
         _allUsers = (List<UserWithRolesDto>)(await usersTask);
+        _usersPage = 1;
 
         _bulkDockMap = await bulkMapTask;
         _emergencyDockMap = _bulkDockMap; // same initial map; reloads per date later
@@ -1071,7 +1098,10 @@ else
         var result = await Mediator.Send(new AssignUserRoleCommand(CurrentUser.UserId, userId, roleName));
 
         if (result.IsSuccess)
+        {
             _allUsers = (List<UserWithRolesDto>)await Mediator.Send(new GetAllUsersWithRolesQuery());
+            _usersPage = 1;
+        }
         else
             _roleError = MapSystemAdminError(result.Error!);
     }
@@ -1082,7 +1112,10 @@ else
         var result = await Mediator.Send(new RemoveUserRoleCommand(CurrentUser.UserId, userId, roleName));
 
         if (result.IsSuccess)
+        {
             _allUsers = (List<UserWithRolesDto>)await Mediator.Send(new GetAllUsersWithRolesQuery());
+            _usersPage = 1;
+        }
         else
             _roleError = MapSystemAdminError(result.Error!);
     }

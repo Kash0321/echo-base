@@ -28,10 +28,23 @@ public sealed record CreateEmergencyReservationCommand(
     DateOnly Date,
     TimeSlot TimeSlot) : IRequest<Result<Guid>>, IAuditableRequest
 {
+    internal string? ResolvedDockCode { get; set; }
+    internal string? ResolvedTargetUserName { get; set; }
     Guid? IAuditableRequest.PerformedByUserId => AdminUserId;
     AuditAction IAuditableRequest.AuditAction => AuditAction.EmergencyReservationCreated;
-    string IAuditableRequest.BuildAuditDetails() =>
-        $"Reserva de emergencia en puesto {DockId} para usuario {TargetUserId} el {Date:dd/MM/yyyy}, franja {TimeSlot}";
+    string IAuditableRequest.BuildAuditDetails()
+    {
+        var dock = ResolvedDockCode ?? DockId.ToString();
+        var user = ResolvedTargetUserName ?? TargetUserId.ToString();
+        var slot = TimeSlot switch
+        {
+            TimeSlot.Morning   => "Mañana",
+            TimeSlot.Afternoon => "Tarde",
+            TimeSlot.Both      => "Mañana y Tarde",
+            _                  => TimeSlot.ToString()
+        };
+        return $"Reserva de emergencia · Puesto {dock} · {Date:dd/MM/yyyy} · {slot} · Para: {user}";
+    }
 }
 
 /// <summary>
@@ -40,6 +53,7 @@ public sealed record CreateEmergencyReservationCommand(
 public sealed class CreateEmergencyReservationHandler(
     IBlockedDockRepository blockedDockRepository,
     IReservationRepository reservationRepository,
+    IUserRepository userRepository,
     IPublisher publisher,
     TimeProvider timeProvider)
     : IRequestHandler<CreateEmergencyReservationCommand, Result<Guid>>
@@ -108,6 +122,9 @@ public sealed class CreateEmergencyReservationHandler(
         // Notificar al usuario destino
         var dockCode = await reservationRepository.GetDockCodeAsync(request.DockId, cancellationToken)
                        ?? request.DockId.ToString();
+        request.ResolvedDockCode = dockCode;
+        var targetUserInfo = await userRepository.GetContactInfoAsync(request.TargetUserId, cancellationToken);
+        request.ResolvedTargetUserName = targetUserInfo?.Name;
         await publisher.Publish(
             new ReservationCreatedNotification(
                 reservation.Id, request.TargetUserId, dockCode, request.Date, request.TimeSlot),

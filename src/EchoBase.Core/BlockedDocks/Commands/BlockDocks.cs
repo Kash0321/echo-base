@@ -32,10 +32,16 @@ public sealed record BlockDocksCommand(
     DateOnly EndDate,
     string Reason) : IRequest<Result<BlockDocksResult>>, IAuditableRequest
 {
+    internal IReadOnlyList<string>? ResolvedDockCodes { get; set; }
     Guid? IAuditableRequest.PerformedByUserId => ManagerUserId;
     AuditAction IAuditableRequest.AuditAction => AuditAction.DockBlocked;
-    string IAuditableRequest.BuildAuditDetails() =>
-        $"Bloqueo de {DockIds.Count} puesto(s) del {StartDate:dd/MM/yyyy} al {EndDate:dd/MM/yyyy}. Motivo: {Reason}";
+    string IAuditableRequest.BuildAuditDetails()
+    {
+        var docks = ResolvedDockCodes is { Count: > 0 }
+            ? string.Join(", ", ResolvedDockCodes)
+            : $"{DockIds.Count} puesto(s)";
+        return $"Bloqueo de {docks} del {StartDate:dd/MM/yyyy} al {EndDate:dd/MM/yyyy}. Motivo: {Reason}";
+    }
 }
 
 /// <summary>
@@ -99,6 +105,12 @@ public sealed class BlockDocksHandler(
 
         if (overlapping.Count > 0)
             return Result<BlockDocksResult>.Failure(BlockedDockErrors.OverlappingBlocks);
+
+        // Resolver códigos de puesto para el log de auditoría
+        var resolvedCodes = new List<string>(request.DockIds.Count);
+        foreach (var dockId in request.DockIds)
+            resolvedCodes.Add(await reservationRepository.GetDockCodeAsync(dockId, cancellationToken) ?? dockId.ToString());
+        request.ResolvedDockCodes = resolvedCodes;
 
         // 8. Crear los bloqueos
         var blocks = request.DockIds.Select(dockId =>

@@ -15,9 +15,11 @@ public sealed record CancelReservationCommand(
     Guid ReservationId,
     Guid UserId) : IRequest<Result>, IAuditableRequest
 {
+    internal string? ResolvedAuditDetails { get; set; }
     Guid? IAuditableRequest.PerformedByUserId => UserId;
     AuditAction IAuditableRequest.AuditAction => AuditAction.ReservationCancelled;
-    string IAuditableRequest.BuildAuditDetails() => $"Cancelación de reserva {ReservationId}";
+    string IAuditableRequest.BuildAuditDetails() =>
+        ResolvedAuditDetails ?? $"Cancelación de reserva {ReservationId}";
 }
 
 /// <summary>
@@ -53,6 +55,14 @@ public sealed class CancelReservationHandler(
         await repository.SaveChangesAsync(cancellationToken);
 
         var dockCode = await repository.GetDockCodeAsync(reservation.DockId, cancellationToken) ?? reservation.DockId.ToString();
+        var slot = reservation.TimeSlot switch
+        {
+            TimeSlot.Morning   => "Mañana",
+            TimeSlot.Afternoon => "Tarde",
+            TimeSlot.Both      => "Mañana y Tarde",
+            _                  => reservation.TimeSlot.ToString()
+        };
+        request.ResolvedAuditDetails = $"Puesto {dockCode} · {reservation.Date:dd/MM/yyyy} · {slot}";
         await publisher.Publish(
             new ReservationCancelledNotification(
                 reservation.Id, reservation.UserId, dockCode, reservation.Date, reservation.TimeSlot),

@@ -21,6 +21,7 @@ public class CreateEmergencyReservationTests
 
     private readonly IBlockedDockRepository _blockedDockRepo = Substitute.For<IBlockedDockRepository>();
     private readonly IReservationRepository _reservationRepo = Substitute.For<IReservationRepository>();
+    private readonly IUserRepository _userRepo = Substitute.For<IUserRepository>();
     private readonly IPublisher _publisher = Substitute.For<IPublisher>();
     private readonly TimeProvider _time = Substitute.For<TimeProvider>();
     private readonly CreateEmergencyReservationHandler _handler;
@@ -39,7 +40,7 @@ public class CreateEmergencyReservationTests
             .Returns(new List<Reservation>());
         _reservationRepo.GetDockCodeAsync(DockId, Arg.Any<CancellationToken>()).Returns("N-A01");
 
-        _handler = new(_blockedDockRepo, _reservationRepo, _publisher, _time);
+        _handler = new(_blockedDockRepo, _reservationRepo, _userRepo, _publisher, _time);
     }
 
     private CreateEmergencyReservationCommand Cmd(

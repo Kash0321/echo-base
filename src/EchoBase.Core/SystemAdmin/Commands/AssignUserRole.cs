@@ -17,10 +17,11 @@ public sealed record AssignUserRoleCommand(
     Guid TargetUserId,
     string RoleName) : IRequest<Result>, IAuditableRequest
 {
+    internal string? ResolvedTargetUserName { get; set; }
     Guid? IAuditableRequest.PerformedByUserId => AdminUserId;
     AuditAction IAuditableRequest.AuditAction => AuditAction.UserRoleAssigned;
     string IAuditableRequest.BuildAuditDetails() =>
-        $"Rol '{RoleName}' asignado al usuario {TargetUserId}";
+        $"Rol '{RoleName}' asignado a: {ResolvedTargetUserName ?? TargetUserId.ToString()}";
 }
 
 /// <summary>
@@ -62,6 +63,7 @@ public sealed class AssignUserRoleHandler(
 
         user.Roles.Add(role);
         await userRepository.SaveChangesAsync(cancellationToken);
+        request.ResolvedTargetUserName = user.Name;
 
         return Result.Success();
     }

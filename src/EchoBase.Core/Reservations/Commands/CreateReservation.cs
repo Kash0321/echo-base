@@ -21,10 +21,20 @@ public sealed record CreateReservationCommand(
     DateOnly Date,
     TimeSlot TimeSlot) : IRequest<Result<Guid>>, IAuditableRequest
 {
+    internal string? ResolvedDockCode { get; set; }
     Guid? IAuditableRequest.PerformedByUserId => UserId;
     AuditAction IAuditableRequest.AuditAction => AuditAction.ReservationCreated;
-    string IAuditableRequest.BuildAuditDetails() =>
-        $"Reserva en puesto {DockId} para {Date:dd/MM/yyyy}, franja {TimeSlot}";
+    string IAuditableRequest.BuildAuditDetails()
+    {
+        var slot = TimeSlot switch
+        {
+            TimeSlot.Morning   => "Mañana",
+            TimeSlot.Afternoon => "Tarde",
+            TimeSlot.Both      => "Mañana y Tarde",
+            _                  => TimeSlot.ToString()
+        };
+        return $"Puesto {ResolvedDockCode ?? DockId.ToString()} · {Date:dd/MM/yyyy} · {slot}";
+    }
 }
 
 /// <summary>
@@ -106,6 +116,7 @@ public sealed class CreateReservationHandler(
 
         // Publicar notificación para email y Teams (fire-and-forget dentro del scope)
         var dockCode = await repository.GetDockCodeAsync(request.DockId, cancellationToken) ?? request.DockId.ToString();
+        request.ResolvedDockCode = dockCode;
         await publisher.Publish(
             new ReservationCreatedNotification(
                 reservation.Id, request.UserId, dockCode, request.Date, request.TimeSlot),

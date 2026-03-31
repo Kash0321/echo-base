@@ -17,10 +17,11 @@ public sealed record RemoveUserRoleCommand(
     Guid TargetUserId,
     string RoleName) : IRequest<Result>, IAuditableRequest
 {
+    internal string? ResolvedTargetUserName { get; set; }
     Guid? IAuditableRequest.PerformedByUserId => AdminUserId;
     AuditAction IAuditableRequest.AuditAction => AuditAction.UserRoleRemoved;
     string IAuditableRequest.BuildAuditDetails() =>
-        $"Rol '{RoleName}' retirado al usuario {TargetUserId}";
+        $"Rol '{RoleName}' retirado a: {ResolvedTargetUserName ?? TargetUserId.ToString()}";
 }
 
 /// <summary>
@@ -60,6 +61,7 @@ public sealed class RemoveUserRoleHandler(
 
         user.Roles.Remove(roleToRemove);
         await userRepository.SaveChangesAsync(cancellationToken);
+        request.ResolvedTargetUserName = user.Name;
 
         return Result.Success();
     }

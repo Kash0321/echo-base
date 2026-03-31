@@ -230,7 +230,7 @@ else
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    @foreach (var block in _activeBlocks)
+                                    @foreach (var block in BlocksPagedItems)
                                     {
                                         <tr>
                                             <td class="ps-3">
@@ -266,6 +266,24 @@ else
                                 </tbody>
                             </table>
                         </div>
+                        @if (BlocksTotalPages > 1)
+                        {
+                            <div class="d-flex justify-content-between align-items-center px-3 py-2 border-top small text-muted">
+                                <span>Página @_blocksPage de @BlocksTotalPages</span>
+                                <div class="d-flex gap-1">
+                                    <button class="btn btn-outline-secondary btn-sm"
+                                            disabled="@(_blocksPage == 1)"
+                                            @onclick="() => _blocksPage--">
+                                        <i class="bi bi-chevron-left"></i>
+                                    </button>
+                                    <button class="btn btn-outline-secondary btn-sm"
+                                            disabled="@(_blocksPage == BlocksTotalPages)"
+                                            @onclick="() => _blocksPage++">
+                                        <i class="bi bi-chevron-right"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        }
                     }
                 </div>
             </div>
@@ -300,6 +318,15 @@ else
     private readonly HashSet<Guid> _selectedDockIds = new();
     private Guid? _unblockingId;
 
+    // ──────────────────────────────────────────────────────────────
+    // Estado: paginación de bloqueos activos
+    // ──────────────────────────────────────────────────────────────
+    private const int BlocksPageSize = 10;
+    private int _blocksPage = 1;
+    private int BlocksTotalPages => (int)Math.Ceiling(_activeBlocks.Count / (double)BlocksPageSize);
+    private IEnumerable<ActiveBlockDto> BlocksPagedItems =>
+        _activeBlocks.Skip((_blocksPage - 1) * BlocksPageSize).Take(BlocksPageSize);
+
     // ══════════════════════════════════════════════════════════════
     // Ciclo de vida
     // ══════════════════════════════════════════════════════════════
@@ -318,6 +345,7 @@ else
         _loading = true;
         _dockMap = await Mediator.Send(new GetDockMapQuery(_blockStartDate));
         _activeBlocks = await Mediator.Send(new GetActiveBlocksQuery());
+        _blocksPage = 1;
         _loading = false;
     }
 

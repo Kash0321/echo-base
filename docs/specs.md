@@ -415,6 +415,28 @@ Cada instancia de clase de tests obtiene su propia base de datos en memoria, por
 | UT-SA-37 | Behavior no altera la respuesta del handler |
 | UT-SA-38 | Timestamp de la entrada proviene del `TimeProvider` |
 
+**`AuditDetailsReservationTests`** (4 casos — `EchoBase.Tests.Unit/Reservations/`):
+
+| ID | Caso |
+|---|---|
+| UT-AD-01 | `CreateReservationCommand` con `ResolvedDockCode` → `Details` contiene código, fecha y franja legible (Mañana/Tarde/Mañana y Tarde); no contiene el GUID |
+| UT-AD-02 | `CreateReservationCommand` sin resolución → fallback al GUID del puesto |
+| UT-AD-03 | `CancelReservationCommand` con `ResolvedAuditDetails` → `Details` contiene texto enriquecido; GUID de reserva ausente |
+| UT-AD-04 | `CancelReservationCommand` sin resolución → fallback al GUID de la reserva |
+
+**`AuditDetailsAdminCommandsTests`** (8 casos — `EchoBase.Tests.Unit/SystemAdmin/`):
+
+| ID | Caso |
+|---|---|
+| UT-AD-05 | `BlockDocksCommand` con `ResolvedDockCodes` → `Details` contiene códigos, fechas y motivo; no contiene GUIDs |
+| UT-AD-06 | `BlockDocksCommand` sin resolución → fallback a conteo de puestos |
+| UT-AD-07 | `CreateEmergencyReservationCommand` con resolución → `Details` contiene código puesto, nombre usuario y franja legible |
+| UT-AD-08 | `CreateEmergencyReservationCommand` sin resolución → fallback a GUIDs de puesto y usuario |
+| UT-AD-09 | `AssignUserRoleCommand` con `ResolvedTargetUserName` → `Details` contiene nombre del usuario; GUID ausente |
+| UT-AD-10 | `AssignUserRoleCommand` sin resolución → fallback al GUID del usuario |
+| UT-AD-11 | `RemoveUserRoleCommand` con `ResolvedTargetUserName` → `Details` contiene nombre del usuario; GUID ausente |
+| UT-AD-12 | `RemoveUserRoleCommand` sin resolución → fallback al GUID del usuario |
+
 **Pruebas de integración**
 
 **`SetMaintenanceModeIntegrationTests`** (5 casos):
