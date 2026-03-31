@@ -12,6 +12,7 @@ App interna para que 70 empleados reserven 24 puestos físicos, permitiendo cada
 ## Convenciones de implementación
 *   Usa Clean Code y sigue las convenciones de estilo de C#.
 *   Aplica principios SOLID y patrones de diseño cuando sea apropiado.
+*
 *   Documenta con XML comments y mantén el código legible.
 *   Escribe tests para cada nueva funcionalidad o cambio significativo.
 *   Utiliza GitHub Copilot Pro para generar código boilerplate, pero siempre revisa y ajusta según el contexto específico del proyecto.
@@ -194,3 +195,60 @@ El sistema incluye un mecanismo de feature flags basado en configuración para a
 - Con flag `true` y stubs activos, se registra `LogTeamsNotificationService`.
 - Con flag `true` y stubs desactivados, se registra `GraphTeamsNotificationService`.
 - Sin flag declarado, el valor por defecto (`true`) preserva el comportamiento original.
+---
+
+## Estrategia de pruebas
+
+### Pruebas unitarias (`EchoBase.Tests.Unit`)
+
+- **Framework:** xUnit + NSubstitute
+- **Alcance:** Handlers MediatR de forma aislada; cada dependencia externa (repositorios, servicios de notificación) se sustituye por un doble de prueba con NSubstitute.
+- **Cobertura actual:** Handlers de comandos/queries de Reservaciones, Usuarios y BlockedDocks; feature flags de Teams.
+
+### Pruebas de integración (`EchoBase.Tests.Integration`)
+
+#### Herramientas elegidas
+
+| Capa | Decisión | Justificación |
+|---|---|---|
+| Framework de tests | xUnit (ya en uso) | Consistencia con el resto del proyecto; no se introduce nueva dependencia. |
+| Base de datos | EF Core con **SQLite en memoria** (`Microsoft.Data.Sqlite`) | Misma librería ya referenciada en `EchoBase.Infrastructure`. Semántica SQL real (a diferencia del proveedor `InMemory` de EF Core, que no valida tipos ni restricciones). |
+| Pipeline de negocio | **MediatR real** — sin mocks | Los tests ejercen el pipeline completo (validación, handler, notificaciones), de modo que cualquier regresión en el ensamblado de dependencias o en el flujo de un comando queda expuesta. |
+| Servicios externos | Stubs no-operativos en `Infrastructure/Stubs/` | `NullEmailService` y `NullTeamsNotificationService` implementan las interfaces reales sin efecto secundario; permiten que los handlers de notificación se ejecuten sin SMTP ni Graph API. |
+| Tiempo | `FrozenTimeProvider` | Subclase de `TimeProvider` congelada al inicio del día UTC. Hace deterministas las comprobaciones de "hoy" y "máximo 7 días vista". |
+
+#### Patrón de aislamiento
+
+Cada clase de tests hereda de `IntegrationTestBase : IAsyncLifetime`.
+
+- En `InitializeAsync`: se abre una `SqliteConnection("Data Source=:memory:")` y se mantiene abierta durante toda la vida del objeto. EF Core recibe esa conexión directamente con `UseSqlite(connection)`, lo que garantiza que el esquema persiste entre operaciones (las bases de datos SQLite en memoria se destruyen en cuanto se cierran todas sus conexiones).
+- Se construye un contenedor DI con los repositorios reales, MediatR, stubs y `FrozenTimeProvider`.
+- `DbSeeder.SeedAsync` puebla zonas y puestos de la configuración real; a continuación se insertan los tres usuarios de prueba específicos de los tests.
+- En `DisposeAsync`: se libera el `DbContext`, el proveedor de servicios y la conexión SQLite.
+
+Cada instancia de clase de tests obtiene su propia base de datos en memoria, por lo que los tests son completamente independientes entre sí.
+
+#### Cobertura actual — Funcionalidad 2: Reserva de puesto de trabajo
+
+**`CreateReservationIntegrationTests`** (9 casos):
+
+| ID | Caso |
+|---|---|
+| IT-CR-01 | Solicitud válida → reserva persistida, devuelve Guid no vacío |
+| IT-CR-02 | Fecha en el pasado → `ReservationErrors.DateInThePast` |
+| IT-CR-03 | Fecha demasiado lejana (hoy + 8 días) → `ReservationErrors.DateTooFarAhead` |
+| IT-CR-04 | Puesto inexistente → `ReservationErrors.DockNotFound` |
+| IT-CR-05 | Puesto bloqueado por administración → `ReservationErrors.DockBlocked` |
+| IT-CR-06 | Puesto ya reservado en ambas franjas → `ReservationErrors.DockNotAvailable` |
+| IT-CR-07 | Usuario supera máximo de franjas diarias → `ReservationErrors.UserMaxSlotsExceeded` |
+| IT-CR-08 | Dos usuarios reservan franjas complementarias (Mañana + Tarde) → ambas se persisten |
+| IT-CR-09 | Usuario reserva franja `Both` → éxito, franja correcta almacenada |
+
+**`CancelReservationIntegrationTests`** (4 casos):
+
+| ID | Caso |
+|---|---|
+| IT-CA-01 | Propietario cancela reserva activa → estado pasa a `Cancelled` |
+| IT-CA-02 | No propietario intenta cancelar → `ReservationErrors.NotReservationOwner`, reserva permanece activa |
+| IT-CA-03 | Reserva ya cancelada → `ReservationErrors.AlreadyCancelled` |
+| IT-CA-04 | Reserva no encontrada → `ReservationErrors.ReservationNotFound` |

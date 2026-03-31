@@ -8,6 +8,7 @@
 
   <ItemGroup>
     <InternalsVisibleTo Include="EchoBase.Tests.Unit" />
+    <InternalsVisibleTo Include="EchoBase.Tests.Integration" />
   </ItemGroup>
 
   <ItemGroup>
