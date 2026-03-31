@@ -35,6 +35,16 @@
                 </div>
             </Authorized>
         </AuthorizeView>
+
+        <AuthorizeView Roles="SystemAdmin">
+            <Authorized>
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="system-admin">
+                        <span class="bi bi-shield-lock-fill" aria-hidden="true"></span> Administración
+                    </NavLink>
+                </div>
+            </Authorized>
+        </AuthorizeView>
     </nav>
 </div>
 

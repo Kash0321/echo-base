@@ -13,7 +13,12 @@ namespace EchoBase.Core.Reservations.Commands;
 /// <param name="UserId">Identificador del usuario que solicita la cancelación.</param>
 public sealed record CancelReservationCommand(
     Guid ReservationId,
-    Guid UserId) : IRequest<Result>;
+    Guid UserId) : IRequest<Result>, IAuditableRequest
+{
+    Guid? IAuditableRequest.PerformedByUserId => UserId;
+    AuditAction IAuditableRequest.AuditAction => AuditAction.ReservationCancelled;
+    string IAuditableRequest.BuildAuditDetails() => $"Cancelación de reserva {ReservationId}";
+}
 
 /// <summary>
 /// Handler que implementa las reglas de negocio para la cancelación de reservas.

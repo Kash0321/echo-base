@@ -30,6 +30,12 @@ public sealed class EchoBaseDbContext(DbContextOptions<EchoBaseDbContext> option
     /// <summary>Bloqueos de puestos de trabajo realizados por Managers.</summary>
     public DbSet<BlockedDock> BlockedDocks => Set<BlockedDock>();
 
+    /// <summary>Log de auditoría de acciones críticas del sistema.</summary>
+    public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
+
+    /// <summary>Configuraciones de sistema (pares clave-valor persistidos).</summary>
+    public DbSet<SystemSetting> SystemSettings => Set<SystemSetting>();
+
     /// <inheritdoc />
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

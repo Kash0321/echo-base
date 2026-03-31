@@ -1,3 +1,4 @@
+using EchoBase.Core.Common;
 using EchoBase.Core.Entities;
 using EchoBase.Core.Interfaces;
 using EchoBase.Core.Reservations.Commands;
@@ -40,6 +41,7 @@ public abstract class IntegrationTestBase : IAsyncLifetime
     protected static readonly Guid TestUserId    = new("e0000000-0000-0000-0001-000000000001");
     protected static readonly Guid AnotherUserId = new("e0000000-0000-0000-0001-000000000002");
     protected static readonly Guid ManagerUserId = new("e0000000-0000-0000-0001-000000000003");
+    protected static readonly Guid AdminUserId   = new("e0000000-0000-0000-0001-000000000004");
 
     // ── Infraestructura DI ────────────────────────────────────────────────────
     private ServiceProvider _provider = null!;
@@ -77,12 +79,15 @@ public abstract class IntegrationTestBase : IAsyncLifetime
         services.AddScoped<IBlockedDockRepository, BlockedDockRepository>();
         services.AddScoped<IDockMapRepository, DockMapRepository>();
         services.AddScoped<IUserRepository, UserRepository>();
+        services.AddScoped<IAuditLogRepository, AuditLogRepository>();
+        services.AddScoped<ISystemSettingRepository, SystemSettingRepository>();
 
         // MediatR: handlers de Core (negocio) + Infrastructure (notificaciones)
         services.AddMediatR(cfg =>
         {
             cfg.RegisterServicesFromAssembly(typeof(CreateReservationCommand).Assembly);
             cfg.RegisterServicesFromAssembly(typeof(EchoBase.Infrastructure.ServiceCollectionExtensions).Assembly);
+            cfg.AddOpenBehavior(typeof(AuditLoggingBehavior<,>));
         });
 
         // Servicios externos: stubs no-op para aislar del mundo real
@@ -107,10 +112,20 @@ public abstract class IntegrationTestBase : IAsyncLifetime
         await DbSeeder.SeedRolesAsync(DbContext);
 
         // Usuarios de prueba
+        var systemAdminRole = await DbContext.Roles.SingleAsync(r => r.Name == "SystemAdmin");
+        var managerRole = await DbContext.Roles.SingleAsync(r => r.Name == "Manager");
+
+        var adminUser = new User(AdminUserId) { Name = "Admin User", Email = "admin@echobase.com" };
+        adminUser.Roles.Add(systemAdminRole);
+
+        var managerUser = new User(ManagerUserId) { Name = "Manager User", Email = "manager@echobase.com" };
+        managerUser.Roles.Add(managerRole);
+
         DbContext.Users.AddRange(
             new User(TestUserId)    { Name = "Test User",    Email = "test@echobase.com"    },
             new User(AnotherUserId) { Name = "Another User", Email = "other@echobase.com"   },
-            new User(ManagerUserId) { Name = "Manager User", Email = "manager@echobase.com" }
+            managerUser,
+            adminUser
         );
         await DbContext.SaveChangesAsync();
     }

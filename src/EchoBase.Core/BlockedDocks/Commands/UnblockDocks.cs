@@ -1,4 +1,5 @@
 using EchoBase.Core.Common;
+using EchoBase.Core.Entities.Enums;
 using EchoBase.Core.Interfaces;
 using MediatR;
 
@@ -12,7 +13,13 @@ namespace EchoBase.Core.BlockedDocks.Commands;
 /// <param name="BlockedDockIds">Identificadores de los registros de bloqueo a desactivar.</param>
 public sealed record UnblockDocksCommand(
     Guid ManagerUserId,
-    IReadOnlyList<Guid> BlockedDockIds) : IRequest<Result>;
+    IReadOnlyList<Guid> BlockedDockIds) : IRequest<Result>, IAuditableRequest
+{
+    Guid? IAuditableRequest.PerformedByUserId => ManagerUserId;
+    AuditAction IAuditableRequest.AuditAction => AuditAction.DockUnblocked;
+    string IAuditableRequest.BuildAuditDetails() =>
+        $"Desbloqueo de {BlockedDockIds.Count} bloqueo(s) activo(s)";
+}
 
 /// <summary>
 /// Handler que implementa las reglas de negocio para el desbloqueo de puestos.

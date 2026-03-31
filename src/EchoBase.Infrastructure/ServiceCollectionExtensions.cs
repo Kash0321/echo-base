@@ -1,3 +1,4 @@
+using EchoBase.Core.Common;
 using EchoBase.Core.Interfaces;
 using EchoBase.Core.Reservations.Commands;
 using EchoBase.Infrastructure.Data;
@@ -5,6 +6,7 @@ using EchoBase.Infrastructure.Email;
 using EchoBase.Infrastructure.Notifications;
 using EchoBase.Infrastructure.Repositories;
 using EchoBase.Infrastructure.Teams;
+using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -63,12 +65,15 @@ public static class ServiceCollectionExtensions
         {
             cfg.RegisterServicesFromAssembly(typeof(CreateReservationCommand).Assembly);
             cfg.RegisterServicesFromAssembly(typeof(ReservationCreatedEmailHandler).Assembly);
+            cfg.AddOpenBehavior(typeof(AuditLoggingBehavior<,>));
         });
 
         services.AddScoped<IReservationRepository, ReservationRepository>();
         services.AddScoped<IBlockedDockRepository, BlockedDockRepository>();
         services.AddScoped<IDockMapRepository, DockMapRepository>();
         services.AddScoped<IUserRepository, UserRepository>();
+        services.AddScoped<IAuditLogRepository, AuditLogRepository>();
+        services.AddScoped<ISystemSettingRepository, SystemSettingRepository>();
         services.AddSingleton(TimeProvider.System);
 
         services.AddHostedService<ReservationReminderService>();

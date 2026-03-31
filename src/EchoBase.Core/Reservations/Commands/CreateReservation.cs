@@ -19,7 +19,13 @@ public sealed record CreateReservationCommand(
     Guid UserId,
     Guid DockId,
     DateOnly Date,
-    TimeSlot TimeSlot) : IRequest<Result<Guid>>;
+    TimeSlot TimeSlot) : IRequest<Result<Guid>>, IAuditableRequest
+{
+    Guid? IAuditableRequest.PerformedByUserId => UserId;
+    AuditAction IAuditableRequest.AuditAction => AuditAction.ReservationCreated;
+    string IAuditableRequest.BuildAuditDetails() =>
+        $"Reserva en puesto {DockId} para {Date:dd/MM/yyyy}, franja {TimeSlot}";
+}
 
 /// <summary>
 /// Handler que implementa las reglas de negocio para la creación de reservas.

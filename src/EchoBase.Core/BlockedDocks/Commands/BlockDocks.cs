@@ -1,5 +1,6 @@
 using EchoBase.Core.Common;
 using EchoBase.Core.Entities;
+using EchoBase.Core.Entities.Enums;
 using EchoBase.Core.Interfaces;
 using EchoBase.Core.Reservations.Notifications;
 using MediatR;
@@ -29,7 +30,13 @@ public sealed record BlockDocksCommand(
     IReadOnlyList<Guid> DockIds,
     DateOnly StartDate,
     DateOnly EndDate,
-    string Reason) : IRequest<Result<BlockDocksResult>>;
+    string Reason) : IRequest<Result<BlockDocksResult>>, IAuditableRequest
+{
+    Guid? IAuditableRequest.PerformedByUserId => ManagerUserId;
+    AuditAction IAuditableRequest.AuditAction => AuditAction.DockBlocked;
+    string IAuditableRequest.BuildAuditDetails() =>
+        $"Bloqueo de {DockIds.Count} puesto(s) del {StartDate:dd/MM/yyyy} al {EndDate:dd/MM/yyyy}. Motivo: {Reason}";
+}
 
 /// <summary>
 /// Handler que implementa las reglas de negocio para el bloqueo de puestos de trabajo.

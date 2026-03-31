@@ -34,6 +34,12 @@ internal sealed class DevAuthHandler(
         if (configuration.GetValue<bool>("Authentication:DevUserIsManager"))
             claims.Add(new Claim(ClaimTypes.Role, "Manager"));
 
+        if (configuration.GetValue<bool>("Authentication:DevUserIsSystemAdmin"))
+        {
+            claims.Add(new Claim(ClaimTypes.Role, "Manager"));
+            claims.Add(new Claim(ClaimTypes.Role, "SystemAdmin"));
+        }
+
         var identity = new ClaimsIdentity(claims, SchemeName);
         var principal = new ClaimsPrincipal(identity);
         var ticket = new AuthenticationTicket(principal, SchemeName);

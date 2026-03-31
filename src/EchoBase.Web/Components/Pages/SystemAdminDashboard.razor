@@ -1,0 +1,917 @@
+@page "/system-admin"
+@attribute [Authorize(Roles = "SystemAdmin")]
+@rendermode InteractiveServer
+
+@using EchoBase.Core.BlockedDocks.Queries
+@using EchoBase.Core.Entities.Enums
+@using EchoBase.Core.Interfaces
+@using EchoBase.Core.Reservations.Queries
+@using EchoBase.Core.SystemAdmin.Commands
+@using EchoBase.Core.SystemAdmin.Queries
+@using EchoBase.Web.Services
+@using MediatR
+
+@inject IMediator Mediator
+@inject BlazorCurrentUserService CurrentUser
+
+<PageTitle>Administración del sistema — Echo Base</PageTitle>
+
+<!-- ═══════════════════════════════════════════════════
+     CABECERA DE PÁGINA
+═══════════════════════════════════════════════════ -->
+<div class="eb-page-header text-white py-2 mb-3">
+    <div class="container-fluid px-3">
+        <p class="eb-page-eyebrow text-uppercase fw-semibold mb-0">Echo Base</p>
+        <h1 class="h4 fw-bold mb-0">
+            <i class="bi bi-shield-lock-fill me-2"></i>Administración del sistema
+        </h1>
+    </div>
+</div>
+
+<div class="container-fluid px-3">
+
+@if (_loading)
+{
+    <div class="d-flex justify-content-center py-5">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Cargando...</span>
+        </div>
+    </div>
+}
+else
+{
+    <!-- ═══════════════ FILA 1: MANTENIMIENTO + CANCELACIÓN MASIVA ═══════════════ -->
+    <div class="row g-3 mb-3">
+
+        <!-- ── Modo mantenimiento ── -->
+        <div class="col-md-6 col-xl-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header eb-zone-header d-flex align-items-center gap-2 py-2">
+                    <i class="bi bi-tools @(_maintenanceActive ? "text-warning" : "text-secondary") fs-5"></i>
+                    <span class="fw-semibold">Modo mantenimiento</span>
+                    @if (_maintenanceActive)
+                    {
+                        <span class="badge bg-warning text-dark ms-auto">ACTIVO</span>
+                    }
+                    else
+                    {
+                        <span class="badge bg-secondary ms-auto">Inactivo</span>
+                    }
+                </div>
+                <div class="card-body">
+                    <p class="small text-muted mb-3">
+                        Cuando está activo, los usuarios no pueden realizar reservas ni acceder al sistema.
+                        Los SystemAdmins no se ven afectados.
+                    </p>
+                    <div class="mb-3">
+                        <label for="maintReason" class="form-label form-label-sm fw-semibold">Motivo</label>
+                        <input type="text" id="maintReason" class="form-control form-control-sm"
+                               placeholder="Ej: Actualización de servidores..."
+                               @bind="_maintenanceReason" />
+                    </div>
+                    @if (_maintError is not null)
+                    {
+                        <div class="alert alert-danger d-flex align-items-center gap-2 py-2 mb-2">
+                            <i class="bi bi-x-circle-fill flex-shrink-0"></i>
+                            <span class="small">@_maintError</span>
+                        </div>
+                    }
+                    @if (_maintSuccess is not null)
+                    {
+                        <div class="alert alert-success d-flex align-items-center gap-2 py-2 mb-2">
+                            <i class="bi bi-check-circle-fill flex-shrink-0"></i>
+                            <span class="small">@_maintSuccess</span>
+                        </div>
+                    }
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-warning btn-sm flex-fill"
+                                disabled="@(_settingMaintenance || _maintenanceActive)"
+                                @onclick="ActivateMaintenance">
+                            @if (_settingMaintenance && !_maintenanceActive)
+                            {
+                                <span class="spinner-border spinner-border-sm me-1"></span>
+                            }
+                            else
+                            {
+                                <i class="bi bi-tools me-1"></i>
+                            }
+                            Activar
+                        </button>
+                        <button class="btn btn-outline-secondary btn-sm flex-fill"
+                                disabled="@(_settingMaintenance || !_maintenanceActive)"
+                                @onclick="DeactivateMaintenance">
+                            @if (_settingMaintenance && _maintenanceActive)
+                            {
+                                <span class="spinner-border spinner-border-sm me-1"></span>
+                            }
+                            else
+                            {
+                                <i class="bi bi-check2-circle me-1"></i>
+                            }
+                            Desactivar
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ── Cancelación masiva ── -->
+        <div class="col-md-6 col-xl-8">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header eb-zone-header d-flex align-items-center gap-2 py-2">
+                    <i class="bi bi-calendar-x text-danger fs-5"></i>
+                    <span class="fw-semibold">Cancelación masiva de reservas</span>
+                </div>
+                <div class="card-body">
+                    <p class="small text-muted mb-3">
+                        Cancela todas las reservas activas en el rango de fechas indicado.
+                        Deja los puestos vacíos para filtrar solo algunos.
+                    </p>
+                    <div class="row g-2 mb-2">
+                        <div class="col-sm-6 col-lg-3">
+                            <label for="bulkStart" class="form-label form-label-sm fw-semibold">Fecha inicio</label>
+                            <input type="date" id="bulkStart" class="form-control form-control-sm"
+                                   value="@_bulkStartDate.ToString("yyyy-MM-dd")"
+                                   @onchange="e => { if (DateOnly.TryParse(e.Value?.ToString(), out var d)) _bulkStartDate = d; }" />
+                        </div>
+                        <div class="col-sm-6 col-lg-3">
+                            <label for="bulkEnd" class="form-label form-label-sm fw-semibold">Fecha fin</label>
+                            <input type="date" id="bulkEnd" class="form-control form-control-sm"
+                                   value="@_bulkEndDate.ToString("yyyy-MM-dd")"
+                                   min="@_bulkStartDate.ToString("yyyy-MM-dd")"
+                                   @onchange="e => { if (DateOnly.TryParse(e.Value?.ToString(), out var d)) _bulkEndDate = d; }" />
+                        </div>
+                        <div class="col-lg-6">
+                            <label for="bulkReason" class="form-label form-label-sm fw-semibold">Motivo</label>
+                            <input type="text" id="bulkReason" class="form-control form-control-sm"
+                                   placeholder="Ej: Cierre por condiciones climáticas..."
+                                   @bind="_bulkReason" />
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label form-label-sm fw-semibold">
+                            Puestos específicos
+                            <span class="text-muted fw-normal">(vacío = todos)</span>
+                        </label>
+                        @if (_allDocks.Count > 0)
+                        {
+                            <div class="d-flex flex-wrap gap-1">
+                                @foreach (var dock in _allDocks)
+                                {
+                                    <div class="form-check form-check-inline me-0">
+                                        <input class="form-check-input" type="checkbox" id="dock-@dock.Id"
+                                               checked="@_bulkSelectedDockIds.Contains(dock.Id)"
+                                               @onchange="() => ToggleBulkDock(dock.Id)" />
+                                        <label class="form-check-label small" for="dock-@dock.Id">
+                                            @dock.Code
+                                        </label>
+                                    </div>
+                                }
+                            </div>
+                        }
+                    </div>
+                    @if (_bulkError is not null)
+                    {
+                        <div class="alert alert-danger d-flex align-items-center gap-2 py-2 mb-2">
+                            <i class="bi bi-x-circle-fill flex-shrink-0"></i>
+                            <span class="small">@_bulkError</span>
+                        </div>
+                    }
+                    @if (_bulkSuccess is not null)
+                    {
+                        <div class="alert alert-success d-flex align-items-center gap-2 py-2 mb-2">
+                            <i class="bi bi-check-circle-fill flex-shrink-0"></i>
+                            <span class="small">@_bulkSuccess</span>
+                        </div>
+                    }
+                    @if (_confirmBulkCancel)
+                    {
+                        <div class="alert alert-warning d-flex align-items-center gap-2 py-2 mb-2">
+                            <i class="bi bi-exclamation-triangle-fill flex-shrink-0"></i>
+                            <span class="small flex-fill">
+                                ¿Confirmas la cancelación masiva del @_bulkStartDate.ToString("dd/MM/yyyy")
+                                al @_bulkEndDate.ToString("dd/MM/yyyy")?
+                                Esta acción notificará a todos los afectados.
+                            </span>
+                            <div class="d-flex gap-1 ms-2">
+                                <button class="btn btn-danger btn-sm" @onclick="ConfirmBulkCancel">Sí, cancelar</button>
+                                <button class="btn btn-outline-secondary btn-sm" @onclick="() => _confirmBulkCancel = false">No</button>
+                            </div>
+                        </div>
+                    }
+                    else
+                    {
+                        <button class="btn btn-danger btn-sm"
+                                disabled="@(string.IsNullOrWhiteSpace(_bulkReason) || _bulkCancelling)"
+                                @onclick="RequestBulkCancel">
+                            @if (_bulkCancelling)
+                            {
+                                <span class="spinner-border spinner-border-sm me-1"></span>
+                            }
+                            else
+                            {
+                                <i class="bi bi-calendar-x me-1"></i>
+                            }
+                            Cancelar reservas
+                        </button>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══════════════ FILA 2: RESERVA DE EMERGENCIA ═══════════════ -->
+    <div class="row g-3 mb-3">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header eb-zone-header d-flex align-items-center gap-2 py-2">
+                    <i class="bi bi-lightning-charge-fill text-warning fs-5"></i>
+                    <span class="fw-semibold">Reserva de emergencia</span>
+                </div>
+                <div class="card-body">
+                    <p class="small text-muted mb-3">
+                        Crea una reserva en nombre de un usuario. Se aplican todas las validaciones normales.
+                    </p>
+                    <div class="row g-2 align-items-end">
+                        <div class="col-sm-6 col-lg-3">
+                            <label for="erUser" class="form-label form-label-sm fw-semibold">Usuario</label>
+                            <select id="erUser" class="form-select form-select-sm" @bind="_emergencyTargetUserId">
+                                <option value="">— Selecciona usuario —</option>
+                                @foreach (var u in _allUsers)
+                                {
+                                    <option value="@u.Id">@u.Name (@u.Email)</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-sm-6 col-lg-2">
+                            <label for="erDock" class="form-label form-label-sm fw-semibold">Puesto</label>
+                            <select id="erDock" class="form-select form-select-sm" @bind="_emergencyDockId">
+                                <option value="">— Puesto —</option>
+                                @foreach (var dock in _allDocks)
+                                {
+                                    <option value="@dock.Id">@dock.Code</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-sm-6 col-lg-2">
+                            <label for="erDate" class="form-label form-label-sm fw-semibold">Fecha</label>
+                            <input type="date" id="erDate" class="form-control form-control-sm"
+                                   value="@_emergencyDate.ToString("yyyy-MM-dd")"
+                                   min="@_today.ToString("yyyy-MM-dd")"
+                                   max="@_today.AddDays(7).ToString("yyyy-MM-dd")"
+                                   @onchange="e => { if (DateOnly.TryParse(e.Value?.ToString(), out var d)) _emergencyDate = d; }" />
+                        </div>
+                        <div class="col-sm-6 col-lg-2">
+                            <label class="form-label form-label-sm fw-semibold">Franja</label>
+                            <div class="d-flex gap-2">
+                                @foreach (var slot in Enum.GetValues<TimeSlot>())
+                                {
+                                    <div>
+                                        <input class="btn-check" type="radio" name="erSlot"
+                                               id="er-@slot" value="@slot"
+                                               checked="@(_emergencySlot == slot)"
+                                               @onchange="() => _emergencySlot = slot" />
+                                        <label class="btn btn-outline-primary btn-sm" for="er-@slot">
+                                            @FormatSlot(slot)
+                                        </label>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                        <div class="col-lg-3">
+                            @if (_emergencyError is not null)
+                            {
+                                <div class="alert alert-danger d-flex align-items-center gap-2 py-1 mb-2">
+                                    <i class="bi bi-x-circle-fill flex-shrink-0"></i>
+                                    <span class="small">@_emergencyError</span>
+                                </div>
+                            }
+                            @if (_emergencySuccess is not null)
+                            {
+                                <div class="alert alert-success d-flex align-items-center gap-2 py-1 mb-2">
+                                    <i class="bi bi-check-circle-fill flex-shrink-0"></i>
+                                    <span class="small">@_emergencySuccess</span>
+                                </div>
+                            }
+                            <button class="btn btn-warning btn-sm w-100"
+                                    disabled="@(_emergencyTargetUserId == Guid.Empty || _emergencyDockId == Guid.Empty || _emergencyReserving)"
+                                    @onclick="CreateEmergencyReservation">
+                                @if (_emergencyReserving)
+                                {
+                                    <span class="spinner-border spinner-border-sm me-1"></span>
+                                }
+                                else
+                                {
+                                    <i class="bi bi-lightning-charge me-1"></i>
+                                }
+                                Crear reserva
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══════════════ FILA 3: GESTIÓN DE USUARIOS ═══════════════ -->
+    <div class="row g-3 mb-3">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header eb-zone-header d-flex align-items-center gap-2 py-2">
+                    <i class="bi bi-people-fill text-primary fs-5"></i>
+                    <span class="fw-semibold">Gestión de usuarios</span>
+                    <span class="badge bg-secondary ms-auto">@_allUsers.Count</span>
+                </div>
+                <div class="card-body p-0">
+                    @if (_allUsers.Count == 0)
+                    {
+                        <p class="text-muted small p-3 mb-0">
+                            <i class="bi bi-info-circle me-1"></i>No hay usuarios registrados.
+                        </p>
+                    }
+                    else
+                    {
+                        <div class="table-responsive">
+                            <table class="table table-sm table-hover align-middle mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th class="ps-3">Nombre</th>
+                                        <th>Email</th>
+                                        <th>Roles</th>
+                                        <th class="pe-3 text-end">Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var user in _allUsers)
+                                    {
+                                        var uid = user.Id;
+                                        var hasManager = user.Roles.Contains("Manager");
+                                        var hasAdmin = user.Roles.Contains("SystemAdmin");
+                                        <tr>
+                                            <td class="ps-3 fw-semibold small">@user.Name</td>
+                                            <td class="small text-muted">@user.Email</td>
+                                            <td>
+                                                @foreach (var role in user.Roles)
+                                                {
+                                                    <span class="badge @GetRoleBadgeClass(role) me-1">@role</span>
+                                                }
+                                                @if (!user.Roles.Any())
+                                                {
+                                                    <span class="text-muted small">—</span>
+                                                }
+                                            </td>
+                                            <td class="pe-3 text-end">
+                                                <div class="d-flex gap-1 justify-content-end">
+                                                    @if (hasManager)
+                                                    {
+                                                        <button class="btn btn-outline-secondary btn-sm"
+                                                                title="Quitar rol Manager"
+                                                                @onclick="() => RemoveRole(uid, RoleManager)">
+                                                            <i class="bi bi-person-dash"></i> Manager
+                                                        </button>
+                                                    }
+                                                    else
+                                                    {
+                                                        <button class="btn btn-outline-primary btn-sm"
+                                                                title="Asignar rol Manager"
+                                                                @onclick="() => AssignRole(uid, RoleManager)">
+                                                            <i class="bi bi-person-plus"></i> Manager
+                                                        </button>
+                                                    }
+                                                    @if (hasAdmin)
+                                                    {
+                                                        <button class="btn btn-outline-secondary btn-sm"
+                                                                title="Quitar rol SystemAdmin"
+                                                                @onclick="() => RemoveRole(uid, RoleSystemAdmin)">
+                                                            <i class="bi bi-shield-dash"></i> Admin
+                                                        </button>
+                                                    }
+                                                    else
+                                                    {
+                                                        <button class="btn btn-outline-danger btn-sm"
+                                                                title="Asignar rol SystemAdmin"
+                                                                @onclick="() => AssignRole(uid, RoleSystemAdmin)">
+                                                            <i class="bi bi-shield-plus"></i> Admin
+                                                        </button>
+                                                    }
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                    @if (_roleError is not null)
+                    {
+                        <div class="alert alert-danger d-flex align-items-center gap-2 py-2 m-3">
+                            <i class="bi bi-x-circle-fill flex-shrink-0"></i>
+                            <span class="small">@_roleError</span>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══════════════ FILA 4: LOG DE AUDITORÍA ═══════════════ -->
+    <div class="row g-3">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header eb-zone-header d-flex align-items-center gap-2 py-2">
+                    <i class="bi bi-journal-text text-primary fs-5"></i>
+                    <span class="fw-semibold">Log de auditoría</span>
+                    <span class="badge bg-secondary ms-auto">@_auditLog.TotalCount total</span>
+                </div>
+                <!-- Filtros -->
+                <div class="card-body border-bottom pb-3">
+                    <div class="row g-2 align-items-end">
+                        <div class="col-sm-6 col-md-3">
+                            <label for="logFrom" class="form-label form-label-sm fw-semibold">Desde</label>
+                            <input type="date" id="logFrom" class="form-control form-control-sm"
+                                   @bind="_auditFromDate" />
+                        </div>
+                        <div class="col-sm-6 col-md-3">
+                            <label for="logTo" class="form-label form-label-sm fw-semibold">Hasta</label>
+                            <input type="date" id="logTo" class="form-control form-control-sm"
+                                   @bind="_auditToDate" />
+                        </div>
+                        <div class="col-sm-6 col-md-3">
+                            <label for="logAction" class="form-label form-label-sm fw-semibold">Acción</label>
+                            <select id="logAction" class="form-select form-select-sm" @bind="_auditActionFilter">
+                                <option value="">— Todas —</option>
+                                @foreach (var action in Enum.GetValues<AuditAction>())
+                                {
+                                    <option value="@((int)action)">@FormatAuditAction(action)</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-sm-6 col-md-3">
+                            <label for="logUser" class="form-label form-label-sm fw-semibold">Usuario</label>
+                            <div class="input-group input-group-sm">
+                                <input type="text" id="logUser" class="form-control form-control-sm"
+                                       placeholder="Buscar..." @bind="_auditUserSearch" />
+                                <button class="btn btn-primary btn-sm" @onclick="ApplyAuditFilter">
+                                    <i class="bi bi-search"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- Tabla -->
+                <div class="card-body p-0">
+                    @if (_auditLog.Items.Count == 0)
+                    {
+                        <p class="text-muted small p-3 mb-0">
+                            <i class="bi bi-info-circle me-1"></i>No hay registros para los filtros aplicados.
+                        </p>
+                    }
+                    else
+                    {
+                        <div class="table-responsive">
+                            <table class="table table-sm table-hover align-middle mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th class="ps-3">Fecha / Hora</th>
+                                        <th>Usuario</th>
+                                        <th>Acción</th>
+                                        <th>Detalles</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var entry in _auditLog.Items)
+                                    {
+                                        <tr>
+                                            <td class="ps-3 small text-muted text-nowrap">
+                                                @entry.Timestamp.ToLocalTime().ToString("dd/MM/yy HH:mm")
+                                            </td>
+                                            <td class="small">@(entry.PerformedByName ?? "Sistema")</td>
+                                            <td>
+                                                <span class="badge @GetActionBadgeClass(entry.Action)">
+                                                    @FormatAuditAction(entry.Action)
+                                                </span>
+                                            </td>
+                                            <td class="small text-muted">@entry.Details</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                        <!-- Paginación -->
+                        <div class="d-flex align-items-center justify-content-between px-3 py-2 border-top">
+                            <small class="text-muted">
+                                Página @_auditPage de @_auditLog.TotalPages
+                                (@_auditLog.TotalCount registros totales)
+                            </small>
+                            <div class="d-flex gap-1">
+                                <button class="btn btn-outline-secondary btn-sm"
+                                        disabled="@(_auditPage <= 1)"
+                                        @onclick="AuditPrevPage">
+                                    <i class="bi bi-chevron-left"></i>
+                                </button>
+                                <button class="btn btn-outline-secondary btn-sm"
+                                        disabled="@(_auditPage >= _auditLog.TotalPages)"
+                                        @onclick="AuditNextPage">
+                                    <i class="bi bi-chevron-right"></i>
+                                </button>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+</div>
+
+@code {
+    // ── Constantes de roles (evitan literales en lambdas Razor) ─────
+    private const string RoleManager = "Manager";
+    private const string RoleSystemAdmin = "SystemAdmin";
+
+    // ── Estado general ─────────────────────────────────────────────
+    private DateOnly _today;
+    private bool _loading = true;
+
+    // ── Datos maestros ─────────────────────────────────────────────
+    private List<DockSimpleDto> _allDocks = [];
+    private List<UserWithRolesDto> _allUsers = [];
+
+    // ── Modo mantenimiento ─────────────────────────────────────────
+    private bool _maintenanceActive;
+    private string _maintenanceReason = string.Empty;
+    private string? _maintError;
+    private string? _maintSuccess;
+    private bool _settingMaintenance;
+
+    // ── Cancelación masiva ─────────────────────────────────────────
+    private DateOnly _bulkStartDate;
+    private DateOnly _bulkEndDate;
+    private string _bulkReason = string.Empty;
+    private readonly HashSet<Guid> _bulkSelectedDockIds = new();
+    private string? _bulkError;
+    private string? _bulkSuccess;
+    private bool _bulkCancelling;
+    private bool _confirmBulkCancel;
+
+    // ── Reserva de emergencia ──────────────────────────────────────
+    private Guid _emergencyTargetUserId;
+    private Guid _emergencyDockId;
+    private DateOnly _emergencyDate;
+    private TimeSlot _emergencySlot = TimeSlot.Morning;
+    private string? _emergencyError;
+    private string? _emergencySuccess;
+    private bool _emergencyReserving;
+
+    // ── Gestión de roles ───────────────────────────────────────────
+    private string? _roleError;
+
+    // ── Log de auditoría ───────────────────────────────────────────
+    private PagedResult<AuditLogDto> _auditLog = new([], 0, 1, 20);
+    private int _auditPage = 1;
+    private const int AuditPageSize = 20;
+    private string? _auditFromDateStr;
+    private string? _auditToDateStr;
+    private string? _auditActionFilterStr;
+    private string? _auditUserSearch;
+
+    // Bindable helpers para los inputs de fecha y filtro de auditoría
+    private string? _auditFromDateBind
+    {
+        get => _auditFromDateStr;
+        set { _auditFromDateStr = value; }
+    }
+
+    private DateOnly? _auditFromDate
+    {
+        get => DateOnly.TryParse(_auditFromDateStr, out var d) ? d : null;
+        set => _auditFromDateStr = value?.ToString("yyyy-MM-dd");
+    }
+
+    private DateOnly? _auditToDate
+    {
+        get => DateOnly.TryParse(_auditToDateStr, out var d) ? d : null;
+        set => _auditToDateStr = value?.ToString("yyyy-MM-dd");
+    }
+
+    private AuditAction? _auditActionFilter
+    {
+        get => int.TryParse(_auditActionFilterStr, out var i) ? (AuditAction)i : null;
+        set => _auditActionFilterStr = value.HasValue ? ((int)value.Value).ToString() : null;
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // Ciclo de vida
+    // ══════════════════════════════════════════════════════════════
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CurrentUser.InitializeAsync();
+        _today = DateOnly.FromDateTime(DateTime.UtcNow);
+        _bulkStartDate = _today;
+        _bulkEndDate = _today;
+        _emergencyDate = _today;
+        await LoadDataAsync();
+    }
+
+    private async Task LoadDataAsync()
+    {
+        _loading = true;
+
+        // Cargar en paralelo mantenimiento, usuarios, puestos y log de auditoría
+        var maintTask = Mediator.Send(new GetMaintenanceModeQuery());
+        var usersTask = Mediator.Send(new GetAllUsersWithRolesQuery());
+        var docksTask = Mediator.Send(new GetDockMapQuery(_today));
+        var auditTask = LoadAuditLogAsync();
+
+        await Task.WhenAll(maintTask, usersTask, docksTask, auditTask);
+
+        var maint = await maintTask;
+        _maintenanceActive = maint.IsActive;
+        _maintenanceReason = maint.Reason ?? string.Empty;
+
+        _allUsers = (List<UserWithRolesDto>)(await usersTask);
+
+        var dockMap = await docksTask;
+        _allDocks = dockMap.Zones
+            .SelectMany(z => z.Tables)
+            .SelectMany(t => t.SideA.Concat(t.SideB))
+            .Select(s => new DockSimpleDto(s.Id, s.Code))
+            .ToList();
+
+        _loading = false;
+    }
+
+    private async Task LoadAuditLogAsync()
+    {
+        _auditLog = await Mediator.Send(new GetAuditLogsQuery(
+            _auditFromDate,
+            _auditToDate,
+            _auditActionFilter,
+            _auditUserSearch,
+            _auditPage,
+            AuditPageSize));
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // Modo mantenimiento
+    // ══════════════════════════════════════════════════════════════
+
+    private async Task ActivateMaintenance()
+    {
+        _maintError = null;
+        _maintSuccess = null;
+        _settingMaintenance = true;
+
+        var result = await Mediator.Send(new SetMaintenanceModeCommand(
+            CurrentUser.UserId, true, _maintenanceReason.Trim()));
+
+        if (result.IsSuccess)
+        {
+            _maintenanceActive = true;
+            _maintSuccess = "Modo mantenimiento activado.";
+        }
+        else
+        {
+            _maintError = MapSystemAdminError(result.Error!);
+        }
+
+        _settingMaintenance = false;
+    }
+
+    private async Task DeactivateMaintenance()
+    {
+        _maintError = null;
+        _maintSuccess = null;
+        _settingMaintenance = true;
+
+        var result = await Mediator.Send(new SetMaintenanceModeCommand(
+            CurrentUser.UserId, false, null));
+
+        if (result.IsSuccess)
+        {
+            _maintenanceActive = false;
+            _maintenanceReason = string.Empty;
+            _maintSuccess = "Modo mantenimiento desactivado.";
+        }
+        else
+        {
+            _maintError = MapSystemAdminError(result.Error!);
+        }
+
+        _settingMaintenance = false;
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // Cancelación masiva
+    // ══════════════════════════════════════════════════════════════
+
+    private void ToggleBulkDock(Guid dockId)
+    {
+        if (!_bulkSelectedDockIds.Remove(dockId))
+            _bulkSelectedDockIds.Add(dockId);
+    }
+
+    private void RequestBulkCancel()
+    {
+        _bulkError = null;
+        _bulkSuccess = null;
+        _confirmBulkCancel = true;
+    }
+
+    private async Task ConfirmBulkCancel()
+    {
+        _confirmBulkCancel = false;
+        _bulkCancelling = true;
+        _bulkError = null;
+        _bulkSuccess = null;
+
+        var dockIds = _bulkSelectedDockIds.Count > 0
+            ? _bulkSelectedDockIds.ToList()
+            : null;
+
+        var result = await Mediator.Send(new BulkCancelReservationsCommand(
+            CurrentUser.UserId,
+            _bulkStartDate,
+            _bulkEndDate,
+            _bulkReason.Trim(),
+            dockIds));
+
+        if (result.IsSuccess)
+        {
+            _bulkSuccess = $"Se han cancelado {result.Value!.CancelledCount} reserva(s) correctamente.";
+            _bulkReason = string.Empty;
+            _bulkSelectedDockIds.Clear();
+            await LoadAuditLogAsync();
+        }
+        else
+        {
+            _bulkError = MapSystemAdminError(result.Error!);
+        }
+
+        _bulkCancelling = false;
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // Reserva de emergencia
+    // ══════════════════════════════════════════════════════════════
+
+    private async Task CreateEmergencyReservation()
+    {
+        if (_emergencyTargetUserId == Guid.Empty || _emergencyDockId == Guid.Empty) return;
+
+        _emergencyError = null;
+        _emergencySuccess = null;
+        _emergencyReserving = true;
+
+        var result = await Mediator.Send(new CreateEmergencyReservationCommand(
+            CurrentUser.UserId,
+            _emergencyTargetUserId,
+            _emergencyDockId,
+            _emergencyDate,
+            _emergencySlot));
+
+        if (result.IsSuccess)
+        {
+            _emergencySuccess = "Reserva de emergencia creada correctamente.";
+            _emergencyTargetUserId = Guid.Empty;
+            _emergencyDockId = Guid.Empty;
+            await LoadAuditLogAsync();
+        }
+        else
+        {
+            _emergencyError = MapReservationError(result.Error!);
+        }
+
+        _emergencyReserving = false;
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // Gestión de roles
+    // ══════════════════════════════════════════════════════════════
+
+    private async Task AssignRole(Guid userId, string roleName)
+    {
+        _roleError = null;
+        var result = await Mediator.Send(new AssignUserRoleCommand(CurrentUser.UserId, userId, roleName));
+
+        if (result.IsSuccess)
+            _allUsers = (List<UserWithRolesDto>)await Mediator.Send(new GetAllUsersWithRolesQuery());
+        else
+            _roleError = MapSystemAdminError(result.Error!);
+    }
+
+    private async Task RemoveRole(Guid userId, string roleName)
+    {
+        _roleError = null;
+        var result = await Mediator.Send(new RemoveUserRoleCommand(CurrentUser.UserId, userId, roleName));
+
+        if (result.IsSuccess)
+            _allUsers = (List<UserWithRolesDto>)await Mediator.Send(new GetAllUsersWithRolesQuery());
+        else
+            _roleError = MapSystemAdminError(result.Error!);
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // Log de auditoría
+    // ══════════════════════════════════════════════════════════════
+
+    private async Task ApplyAuditFilter()
+    {
+        _auditPage = 1;
+        await LoadAuditLogAsync();
+    }
+
+    private async Task AuditPrevPage()
+    {
+        if (_auditPage > 1)
+        {
+            _auditPage--;
+            await LoadAuditLogAsync();
+        }
+    }
+
+    private async Task AuditNextPage()
+    {
+        if (_auditPage < _auditLog.TotalPages)
+        {
+            _auditPage++;
+            await LoadAuditLogAsync();
+        }
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // Helpers visuales
+    // ══════════════════════════════════════════════════════════════
+
+    private static string GetRoleBadgeClass(string role) => role switch
+    {
+        "SystemAdmin" => "bg-danger",
+        "Manager"     => "bg-primary",
+        "BasicUser"   => "bg-secondary",
+        _             => "bg-light text-dark"
+    };
+
+    private static string GetActionBadgeClass(AuditAction action) => action switch
+    {
+        AuditAction.ReservationCreated         => "bg-success",
+        AuditAction.ReservationCancelled       => "bg-warning text-dark",
+        AuditAction.DockBlocked                => "bg-danger",
+        AuditAction.DockUnblocked              => "bg-secondary",
+        AuditAction.BulkReservationsCancelled  => "bg-danger",
+        AuditAction.MaintenanceModeChanged     => "bg-warning text-dark",
+        AuditAction.EmergencyReservationCreated => "bg-info text-dark",
+        AuditAction.UserRoleAssigned           => "bg-primary",
+        AuditAction.UserRoleRemoved            => "bg-secondary",
+        _                                      => "bg-light text-dark"
+    };
+
+    private static string FormatAuditAction(AuditAction action) => action switch
+    {
+        AuditAction.ReservationCreated          => "Reserva creada",
+        AuditAction.ReservationCancelled        => "Reserva cancelada",
+        AuditAction.DockBlocked                 => "Puesto bloqueado",
+        AuditAction.DockUnblocked               => "Puesto desbloqueado",
+        AuditAction.BulkReservationsCancelled   => "Cancelación masiva",
+        AuditAction.MaintenanceModeChanged      => "Modo mantenimiento",
+        AuditAction.EmergencyReservationCreated => "Reserva emergencia",
+        AuditAction.UserRoleAssigned            => "Rol asignado",
+        AuditAction.UserRoleRemoved             => "Rol retirado",
+        _                                       => action.ToString()
+    };
+
+    private static string FormatSlot(TimeSlot slot) => slot switch
+    {
+        TimeSlot.Morning   => "Mañana",
+        TimeSlot.Afternoon => "Tarde",
+        TimeSlot.Both      => "Ambas",
+        _                  => slot.ToString()
+    };
+
+    private static string MapSystemAdminError(string error) => error switch
+    {
+        "NOT_SYSTEM_ADMIN"    => "No tienes permisos de SystemAdmin para realizar esta acción.",
+        "USER_NOT_FOUND"      => "El usuario seleccionado no existe.",
+        "INVALID_ROLE"        => "El rol indicado no es válido.",
+        "ROLE_ALREADY_ASSIGNED" => "El usuario ya tiene ese rol asignado.",
+        "ROLE_NOT_ASSIGNED"   => "El usuario no tiene ese rol.",
+        "INVALID_DATE_RANGE"  => "La fecha de fin no puede ser anterior a la de inicio.",
+        _                     => $"Error inesperado: {error}"
+    };
+
+    private static string MapReservationError(string error) => error switch
+    {
+        "DATE_IN_THE_PAST"       => "La fecha no puede ser anterior a hoy.",
+        "DATE_TOO_FAR_AHEAD"     => "La fecha no puede superar los 7 días de antelación.",
+        "DOCK_NOT_FOUND"         => "El puesto seleccionado no existe.",
+        "DOCK_BLOCKED"           => "El puesto está bloqueado para esa fecha.",
+        "DOCK_NOT_AVAILABLE"     => "El puesto ya está reservado en esa franja.",
+        "USER_MAX_SLOTS_EXCEEDED" => "El usuario ha alcanzado el máximo de franjas diarias.",
+        "USER_SLOT_CONFLICT"     => "El usuario ya tiene una reserva que se solaparía.",
+        _                        => $"Error: {error}"
+    };
+
+    // ── DTO local para simplificar la lista de puestos ─────────────
+    private sealed record DockSimpleDto(Guid Id, string Code);
+}

@@ -1,18 +1,43 @@
-# Spec: Sistema de Reserva de Puestos (Hot Desking)
+# 🚀 Spec: Sistema de Reserva de Puestos (Hot Desking)
 
-## Objetivo
+## 📑 Tabla de contenido
+
+- [🎯 Objetivo](#-objetivo)
+- [🛠️ Stack técnico](#️-stack-técnico)
+- [📐 Convenciones de implementación](#-convenciones-de-implementación)
+- [🎨 Diseño y UX (UI Guidelines)](#-diseño-y-ux-ui-guidelines)
+  - [🖼️ Galería de Pantallas](#️-galería-de-pantallas-uiux)
+- [🗃️ Modelo de datos](#️-modelo-de-datos)
+- [🔐 Modelo de autenticación y autorización](#-modelo-de-autenticación-y-autorización)
+- [📋 Reglas de negocio generales](#-reglas-de-negocio-generales)
+- [👥 Funcionalidad 0: Gestión cuentas de usuario](#-funcionalidad-0-gestión-cuentas-de-usuario-parcialmente-implementada-pendiente-de-configuración-de-acceso-al-tennant-de-azure-ad)
+- [⚙️ Funcionalidad 1: Configuración de cuenta de usuario](#️-funcionalidad-1-configuración-de-cuenta-de-usuario-implementada)
+- [📌 Funcionalidad 2: Reserva de puesto de trabajo](#-funcionalidad-2-reserva-de-puesto-de-trabajo-implementada)
+- [🛡️ Funcionalidad 3: Cuadro de mando para administración](#️-funcionalidad-3-cuadro-de-mando-para-administración-implementada)
+- [🗓️ Funcionalidad 4: Gestión de reservas](#️-funcionalidad-4-gestión-de-reservas-implementada)
+- [📊 Funcionalidad 5: Reportes y estadísticas](#-funcionalidad-5-reportes-y-estadísticas-pendiente-de-implementación)
+- [🔧 Funcionalidad 6: Reporte de incidencias](#-funcionalidad-6-reporte-de-incidencias-en-los-puestos-de-trabajo-pendiente-de-implementación)
+- [🚩 Funcionalidad 7: Feature Flags de sistema](#-funcionalidad-7-feature-flags-de-sistema-implementada)
+  - [🔔 Flag: TeamsNotificationsEnabled](#-flag-featuresteamsnotificationsenabled)
+- [🛠️ Funcionalidad 8: Funciones de administración del sistema](#️-funcionalidad-8-funciones-de-administración-del-sistema-implementada)
+- [🧪 Estrategia de pruebas](#-estrategia-de-pruebas)
+  - [🔬 Pruebas unitarias](#-pruebas-unitarias-echobasetestsunit)
+  - [🔗 Pruebas de integración](#-pruebas-de-integración-echobasetestsintegration)
+
+---
+
+## 🎯 Objetivo
 App interna para que 70 empleados reserven 24 puestos físicos, permitiendo cada puesto dos franjas horarias, mañana o tarde.
 
-## Stack técnico
+## 🛠️ Stack técnico
 - Framework: .NET 10
 - Frontend: Blazor Web App (Interactive Server)
 - Estilo: Bootstrap 5 + Bootstrap Icons + CSS scoped por componente
 - Persistencia: Entity Framework Core con SQLite (Local) / Azure SQL (Prod)
 
-## Convenciones de implementación
+## 📐 Convenciones de implementación
 *   Usa Clean Code y sigue las convenciones de estilo de C#.
 *   Aplica principios SOLID y patrones de diseño cuando sea apropiado.
-*
 *   Documenta con XML comments y mantén el código legible.
 *   Escribe tests para cada nueva funcionalidad o cambio significativo.
 *   Utiliza GitHub Copilot Pro para generar código boilerplate, pero siempre revisa y ajusta según el contexto específico del proyecto.
@@ -22,7 +47,7 @@ App interna para que 70 empleados reserven 24 puestos físicos, permitiendo cada
 *   Usa el patrón Mediator para manejar la lógica de negocio y las interacciones entre componentes, promoviendo un código más limpio y desacoplado. Esto facilitará la gestión de comandos y consultas, así como la implementación de nuevas funcionalidades sin afectar otras partes del sistema. Usa la librería MediatR para facilitar la implementación de este patrón en toda la aplicación.
 *   Para la capa de acceso a datos, implementa el patrón Repository para abstraer la lógica de acceso a la base de datos y facilitar la gestión de entidades. Esto permitirá una mayor flexibilidad y mantenibilidad del código, ya que las operaciones de acceso a datos estarán centralizadas y desacopladas del resto de la aplicación.
 
-## Diseño y UX (UI Guidelines)
+## 🎨 Diseño y UX (UI Guidelines)
 Para mantener coherencia en el rediseño y ampliaciones futuras de Echo Base, se establecieron las siguientes bases de UX/UI en el desarrollo interactivo de `Home.razor`, `DockMap.razor`, `MyReservations.razor`, `About.razor` y `UserProfile.razor`:
 
 1. **Cabeceras de página (`eb-page-header`, `eb-hero`)**
@@ -46,27 +71,27 @@ Para mantener coherencia en el rediseño y ampliaciones futuras de Echo Base, se
    - **Datos históricos**: Manejo diferenciado visualmente. Los elementos cancelados o pasados bajan su opacidad y tienen efecto tachado sobre los listados.
    - **Formularios de perfil**: Separación clara entre datos corporativos de solo lectura (gestionados por Azure AD) y datos editables del usuario (línea de negocio, teléfono y preferencias), usando tarjetas diferenciadas, campos compactos y switches visuales para preferencias booleanas.
 
-### Galería de Pantallas (UI/UX)
+### 🖼️ Galería de Pantallas (UI/UX)
 
 A continuación se muestran capturas de las pantallas principales del sistema, que reflejan la aplicación de los principios de diseño mencionados:
 
-#### 1. Home (`Home.razor`)
+#### 🏠 1. Home (`Home.razor`)
 ![Home](001.Home.png)
 
-#### 2. Mapa de Bahías (`DockMap.razor`)
+#### 🗺️ 2. Mapa de Bahías (`DockMap.razor`)
 ![Mapa de bahías](002.DockMap.png)
 
-#### 3. Mis Reservas (`MyReservations.razor`)
+#### 📅 3. Mis Reservas (`MyReservations.razor`)
 ![Mis Reservas](003.MyReservations.png)
 
-#### 4. Acerca de (`About.razor`)
+#### ℹ️ 4. Acerca de (`About.razor`)
 ![Acerca de - Parte 1](004.About_01.png)
 ![Acerca de - Parte 2](004.About_02.png)
 
-#### 5. Perfil de Usuario (`UserProfile.razor`)
+#### 👤 5. Perfil de Usuario (`UserProfile.razor`)
 ![Perfil de Usuario](005.UserProfile.png)
 
-## Modelo de datos
+## 🗃️ Modelo de datos
 1. **User** (Empleado que reserva espacio): Id, Nombre, Email, Línea de negocio (Core, Energía, Scrap/Waste, Transversal), Teléfono de contacto (opcional), NotificaciónEmail (bool), NotificaciónTeams (bool).
 2. **Dock** (Puesto de trabajo): Id, Código (ej: A-01), Ubicación, Equipamiento (Monitor doble, etc.).
 3. **Reservation** (Reserva de espacio de trabajo): Id, UserId, DockId, Fecha (Solo fecha, sin hora), Estado (Activa, Cancelada).
@@ -87,25 +112,25 @@ A continuación se muestran capturas de las pantallas principales del sistema, q
 18. **BlockedDockHistory** (Historial de bloqueos de puestos de trabajo): Id, BlockedDockId, UserId, Acción (Bloqueado, Desbloqueado), Timestamp.
 
 
-## Modelo de autenticación y autorización
+## 🔐 Modelo de autenticación y autorización
 - **Autenticación**: Azure AD (Single Sign-On)
 - **Roles/Claims**: BasicUser (puede reservar), Manager (puede reservar de modo normal y bloquear puestos)
 
 Integración con Azure AD (tennant de nuestra compañía) para autenticación y autorización basada en roles. Los usuarios con rol "Manager" tendrán acceso a funcionalidades adicionales para bloquear puestos de trabajo.
 
-## Reglas de negocio generales
+## 📋 Reglas de negocio generales
 - Un usuario solo puede reservar 1 puesto por día, y puede indicar la franja o franjas horarias en la que va a usar el puesto (mañanas hasta las 14 y tardes de 14 fin de jornada), de modo que otro empleado pueda reservar el puesto en una franja horaria diferente el mismo día si está disponible, pero un empleado puede reservar como máximo dos franjas horarias en el mismo puesto de trabajo o en dos puestos de trabajo distintos.
 - Las reservas se abren con 7 días de antelación.
 - Capacidad máxima: 24 puestos de trabajo
 - Interfaz visual: Mapa de puestos de trabajo, agrupados en dos zonas: Nostromo tiene 12 puestos de trabajo en una mesa corrida con 6 puestos a cada lado, Derelict tiene 12 puestos de trabajo, en dos mesas corridas con 3 puestos a cada lado en cada una de las mesas
 - Existirá un cuadro de mando para usuarios con privilegios de administración, que permitirá bloquear varios puestos de trabajo en un día o un período de días más largo, lo que bloqueará (impedirá reservar) esos puestos de trabajo para su reserva al resto de usuarios con privilegios normales.
 
-## Funcionalidad 0: Gestión cuentas de usuario [Parcialmente implementada, pendiente de configuración de acceso al tennant de Azure AD]
+## 👥 Funcionalidad 0: Gestión cuentas de usuario [Parcialmente implementada, pendiente de configuración de acceso al tennant de Azure AD]
 - El sistema se integra con Azure AD para la autenticación de usuarios.
 - Los usuarios se asignan automáticamente al rol "BasicUser" al iniciar sesión por primera vez.
 - Un administrador puede asignar el rol "Manager" a usuarios específicos desde el portal de Azure AD, lo que les otorga privilegios adicionales para gestionar reservas y bloquear puestos de trabajo.
 
-## Funcionalidad 1: Configuración de cuenta de usuario [Implementada]
+## ⚙️ Funcionalidad 1: Configuración de cuenta de usuario [Implementada]
 - El usuario inicia sesión en la aplicación utilizando su cuenta de Azure AD.
 - El usuario accede a su perfil de usuario desde un enlace persistente en la barra superior, identificado con su nombre de usuario autenticado.
 - El perfil muestra los datos corporativos básicos sincronizados con Azure AD (nombre y correo) en modo de solo lectura.
@@ -114,7 +139,7 @@ Integración con Azure AD (tennant de nuestra compañía) para autenticación y 
 - La edición del perfil se realiza en una pantalla dedicada, coherente con la UI principal de la aplicación, con feedback visual inmediato de guardado y validaciones básicas de entrada.
 - La opción de configuración de notificaciones por Teams solo se muestra al usuario si el feature flag `Features:TeamsNotificationsEnabled` está activado. Si está desactivado, la tarjeta Teams desaparece de la pantalla de perfil y no se persiste la preferencia.
 
-## Funcionalidad 2: Reserva de puesto de trabajo [Implementada]
+## 📌 Funcionalidad 2: Reserva de puesto de trabajo [Implementada]
 - El usuario inicia sesión en la aplicación utilizando su cuenta de Azure AD.
 - El usuario ve un mapa visual de los 24 puestos de trabajo, agrupados en dos zonas: Nostromo (12 puestos) y Derelict (12 puestos).
 - El usuario selecciona un puesto de trabajo disponible para la fecha deseada.
@@ -128,7 +153,7 @@ Integración con Azure AD (tennant de nuestra compañía) para autenticación y 
   - **Bloqueado**: nombre del Manager que realizó el bloqueo y el motivo.
 - Al abrir el modal de reserva de un puesto parcialmente ocupado, se indica explícitamente quién tiene reservada la franja ya ocupada.
 
-## Funcionalidad 3: Cuadro de mando para administración [Implementada]
+## 🛡️ Funcionalidad 3: Cuadro de mando para administración [Implementada]
 - Un usuario con rol de Manager inicia sesión en la aplicación.
 - El Manager accede a un cuadro de mando que muestra el mapa de puestos de trabajo con la capacidad de seleccionar uno o varios puestos de trabajo.
 - El Manager selecciona los puestos de trabajo que desea bloquear para un día específico o un período de días.
@@ -136,29 +161,29 @@ Integración con Azure AD (tennant de nuestra compañía) para autenticación y 
 - El Manager puede desbloquear los puestos de trabajo bloqueados desde el mismo cuadro de mando.
 - El mapa de selección del cuadro de mando muestra en los tooltips quién tiene reservado cada puesto y en qué franja, diferenciando reservas de mañana y tarde con el nombre del reservador. Esto permite al Manager conocer el impacto sobre las reservas existentes antes de proceder al bloqueo.
 
-## Funcionalidad 4: Gestión de reservas [Implementada]
+## 🗓️ Funcionalidad 4: Gestión de reservas [Implementada]
 - El usuario puede ver un historial de sus reservas pasadas y futuras.
 - El usuario puede cancelar una reserva activa desde su historial en cualquier momento, sin restricción de antelación. Las cancelaciones de última hora son bienvenidas, ya que liberan el puesto para otros compañeros.
 - El sistema envía notificaciones por correo electrónico al usuario para confirmar la creación, modificación o cancelación de una reserva.
 - El sistema envía recordatorios automáticos a los usuarios sobre sus reservas próximas, con opciones para modificar o cancelar la reserva directamente desde la notificación.
 - Las notificaciones por Microsoft Teams solo se envían si el feature flag `Features:TeamsNotificationsEnabled` está activo a nivel global (ver Funcionalidad 7).
 
-## Funcionalidad 5: Reportes y estadísticas [Pendiente de implementación]
+## 📊 Funcionalidad 5: Reportes y estadísticas [Pendiente de implementación]
 - El Manager puede acceder a un panel de reportes que muestra estadísticas de uso de los puestos de trabajo, como el porcentaje de ocupación por día, semana o mes.
 - El Manager puede exportar los datos de reservas en formato CSV para análisis adicionales.
 - El sistema genera alertas automáticas para el Manager si se detecta un patrón de reservas inusuales, como un aumento repentino en la demanda de ciertos puestos de trabajo o una alta tasa de cancelaciones.
 
-## Funcionalidad 6: Reporte de incidencias en los puestos de trabajo [Pendiente de implementación]
+## 🔧 Funcionalidad 6: Reporte de incidencias en los puestos de trabajo [Pendiente de implementación]
 - El usuario puede reportar incidencias relacionadas con los puestos de trabajo (por ejemplo, problemas de equipamiento o limpieza) a través de la aplicación.
 - El usuario selecciona el puesto de trabajo afectado y describe la incidencia en un formulario.
 - El sistema registra la incidencia y notifica a los usuarios con rol de Manager para que puedan tomar medidas correctivas. El usuario recibe una confirmación de que su reporte ha sido registrado y se le informa sobre el proceso de seguimiento de la incidencia.
 - El usuario puede hacer seguimiento del estado de su reporte de incidencia desde su perfil de usuario, recibiendo notificaciones sobre el progreso y la resolución de la incidencia.
 
-## Funcionalidad 7: Feature Flags de sistema [Implementada]
+## 🚩 Funcionalidad 7: Feature Flags de sistema [Implementada]
 
 El sistema incluye un mecanismo de feature flags basado en configuración para activar o desactivar funcionalidades sin necesidad de redespliegue. Los flags se declaran en la sección `Features` de `appsettings.json` y pueden sobreescribirse en `appsettings.Development.json` o en las variables de entorno del host.
 
-### Flag: `Features:TeamsNotificationsEnabled`
+### 🔔 Flag: `Features:TeamsNotificationsEnabled`
 
 | Valor | Comportamiento |
 |---|---|
@@ -195,19 +220,86 @@ El sistema incluye un mecanismo de feature flags basado en configuración para a
 - Con flag `true` y stubs activos, se registra `LogTeamsNotificationService`.
 - Con flag `true` y stubs desactivados, se registra `GraphTeamsNotificationService`.
 - Sin flag declarado, el valor por defecto (`true`) preserva el comportamiento original.
+
+## 🛠️ Funcionalidad 8: Funciones de administración del sistema [Implementada]
+- El Administrador o administradores pueden gestionar los usuarios del sistema, asignar roles y revisar logs de auditoría para acciones críticas como reservas, cancelaciones y bloqueos de puestos de trabajo.
+- El sistema registra en un log de auditoría todas las acciones relevantes, incluyendo quién realizó la acción, qué acción se realizó, detalles adicionales y la marca de tiempo. Este log es accesible para los administradores a través de una interfaz dedicada, con opciones de filtrado y exportación para análisis.
+- El sistema incluye una función de "modo mantenimiento" que los administradores pueden activar para realizar tareas de mantenimiento sin afectar a los usuarios finales. Cuando el modo mantenimiento está activo, los usuarios reciben una notificación de que el sistema está temporalmente fuera de servicio y no pueden realizar reservas ni acceder a sus perfiles hasta que se desactive el modo mantenimiento.
+- El sistema permite a los administradores cancelar reservas concretas y en masa para un día específico o un período de días, lo que es útil en situaciones como cierres de oficina por condiciones climáticas adversas o eventos especiales. Los usuarios afectados por la cancelación masiva reciben notificaciones individuales informándoles de la cancelación y el motivo.
+- El sistema incluye una función de "reserva de emergencia" que los administradores pueden usar para reservar puestos de trabajo en nombre de los usuarios en situaciones excepcionales, como problemas técnicos o solicitudes urgentes. Esta función permite a los administradores seleccionar un usuario, un puesto de trabajo y una fecha, y realizar la reserva directamente desde el cuadro de mando de administración.
+
+### Detalles de implementación
+
+#### Rol SystemAdmin
+- Semilla de BD: `Id = d0000000-0000-0000-0000-000000000003`, `Name = "SystemAdmin"`.
+- Todos los comandos y queries protegidos verifican `UserHasRoleAsync(userId, "SystemAdmin")` via `IBlockedDockRepository`.
+- En modo desarrollo, la clave `Authentication:DevUserIsSystemAdmin = true` en `appsettings.Development.json` asigna el rol SystemAdmin al usuario de desarrollo.
+
+#### Modo de mantenimiento (`SystemSetting`)
+La entidad `SystemSetting` (clave primaria: `Key: string`) persiste la configuración del sistema como pares clave/valor con auditoría:
+
+| Clave | Descripción |
+|---|---|
+| `"MaintenanceMode"` | `"true"` / `"false"` |
+| `"MaintenanceModeReason"` | Texto libre (vacío si desactivado) |
+
+El handler `GetMaintenanceModeHandler` lee el ajuste completo (incluido `UpdatedAt` y `UpdatedByUserId`) con `GetSettingAsync`.
+
+#### Log de auditoría (`AuditLog`)
+La entidad `AuditLog` se genera automáticamente vía `AuditLoggingBehavior<TRequest, TResponse>` (pipeline de MediatR) cuando:
+- La solicitud implementa `IAuditableRequest`, Y
+- La respuesta es un `Result` o `Result<T>` con `IsSuccess = true`.
+
+Valores del enum `AuditAction`:
+
+| Valor | Descripción |
+|---|---|
+| `ReservationCreated` | Reserva creada |
+| `ReservationCancelled` | Reserva cancelada |
+| `DockBlocked` | Puesto bloqueado |
+| `DockUnblocked` | Puesto desbloqueado |
+| `RoleAssigned` | Rol asignado a usuario |
+| `RoleRemoved` | Rol eliminado de usuario |
+| `MaintenanceModeChanged` | Modo mantenimiento cambiado |
+| `BulkCancellation` | Cancelación masiva ejecutada |
+| `EmergencyReservationCreated` | Reserva de emergencia creada |
+
+#### Comandos y queries implementados
+
+| Artefacto | Ubicación |
+|---|---|
+| `SetMaintenanceModeCommand` | `EchoBase.Core/SystemAdmin/Commands/` |
+| `BulkCancelReservationsCommand` | `EchoBase.Core/SystemAdmin/Commands/` |
+| `CreateEmergencyReservationCommand` | `EchoBase.Core/SystemAdmin/Commands/` |
+| `AssignUserRoleCommand` | `EchoBase.Core/SystemAdmin/Commands/` |
+| `RemoveUserRoleCommand` | `EchoBase.Core/SystemAdmin/Commands/` |
+| `GetMaintenanceModeQuery` | `EchoBase.Core/SystemAdmin/Queries/` |
+| `GetAuditLogsQuery` | `EchoBase.Core/SystemAdmin/Queries/` |
+| `AuditLoggingBehavior<,>` | `EchoBase.Core/SystemAdmin/` |
+
+#### Página de administración
+`/system-admin` (`SystemAdminDashboard.razor`) — requiere rol `SystemAdmin`. Secciones:
+1. **Modo mantenimiento** — activar/desactivar con motivo.
+2. **Cancelación masiva** — rango de fechas + filtro de puesto opcional + confirmación.
+3. **Reserva de emergencia** — selector usuario, puesto, fecha y franja.
+4. **Gestión de usuarios** — tabla de usuarios con asignación/revocación de roles Manager y SystemAdmin.
+5. **Log de auditoría** — tabla paginada con filtros de fecha, acción y nombre de usuario.
+
+
+
 ---
 
-## Estrategia de pruebas
+## 🧪 Estrategia de pruebas
 
-### Pruebas unitarias (`EchoBase.Tests.Unit`)
+### 🔬 Pruebas unitarias (`EchoBase.Tests.Unit`)
 
 - **Framework:** xUnit + NSubstitute
 - **Alcance:** Handlers MediatR de forma aislada; cada dependencia externa (repositorios, servicios de notificación) se sustituye por un doble de prueba con NSubstitute.
 - **Cobertura actual:** Handlers de comandos/queries de Reservaciones, Usuarios y BlockedDocks; feature flags de Teams.
 
-### Pruebas de integración (`EchoBase.Tests.Integration`)
+### 🔗 Pruebas de integración (`EchoBase.Tests.Integration`)
 
-#### Herramientas elegidas
+#### 🧰 Herramientas elegidas
 
 | Capa | Decisión | Justificación |
 |---|---|---|
@@ -217,7 +309,7 @@ El sistema incluye un mecanismo de feature flags basado en configuración para a
 | Servicios externos | Stubs no-operativos en `Infrastructure/Stubs/` | `NullEmailService` y `NullTeamsNotificationService` implementan las interfaces reales sin efecto secundario; permiten que los handlers de notificación se ejecuten sin SMTP ni Graph API. |
 | Tiempo | `FrozenTimeProvider` | Subclase de `TimeProvider` congelada al inicio del día UTC. Hace deterministas las comprobaciones de "hoy" y "máximo 7 días vista". |
 
-#### Patrón de aislamiento
+#### 🔒 Patrón de aislamiento
 
 Cada clase de tests hereda de `IntegrationTestBase : IAsyncLifetime`.
 
@@ -228,7 +320,7 @@ Cada clase de tests hereda de `IntegrationTestBase : IAsyncLifetime`.
 
 Cada instancia de clase de tests obtiene su propia base de datos en memoria, por lo que los tests son completamente independientes entre sí.
 
-#### Cobertura actual — Funcionalidad 2: Reserva de puesto de trabajo
+#### ✅ Cobertura actual — Funcionalidad 2: Reserva de puesto de trabajo
 
 **`CreateReservationIntegrationTests`** (9 casos):
 
@@ -252,3 +344,114 @@ Cada instancia de clase de tests obtiene su propia base de datos en memoria, por
 | IT-CA-02 | No propietario intenta cancelar → `ReservationErrors.NotReservationOwner`, reserva permanece activa |
 | IT-CA-03 | Reserva ya cancelada → `ReservationErrors.AlreadyCancelled` |
 | IT-CA-04 | Reserva no encontrada → `ReservationErrors.ReservationNotFound` |
+
+#### ✅ Cobertura actual — Funcionalidad 8: Funciones de administración del sistema
+
+**Pruebas unitarias**
+
+**`SetMaintenanceModeTests`** (5 casos):
+
+| ID | Caso |
+|---|---|
+| UT-SA-01 | AdminUserId con rol SystemAdmin → mode activado, devuelve `Result.Success` |
+| UT-SA-02 | AdminUserId con rol SystemAdmin → mode desactivado, devuelve `Result.Success` |
+| UT-SA-03 | `SetAsync` llamado con `MaintenanceModeKey` y valor `"true"` |
+| UT-SA-04 | Al desactivar, `reason` almacenado como cadena vacía |
+| UT-SA-05 | `AdminUserId` sin rol SystemAdmin → `SystemAdminErrors.NotSystemAdmin` |
+
+**`BulkCancelReservationsTests`** (6 casos):
+
+| ID | Caso |
+|---|---|
+| UT-SA-06 | Cancela todas las reservas activas del rango → devuelve `Result.Success(count)` |
+| UT-SA-07 | Sin reservas en el rango → devuelve `Result.Success(0)` |
+| UT-SA-08 | Filtro de DockId se pasa al repositorio correctamente |
+| UT-SA-09 | No es SystemAdmin → `SystemAdminErrors.NotSystemAdmin` |
+| UT-SA-10 | Fecha desde > hasta → `SystemAdminErrors.InvalidDateRange` |
+| UT-SA-11 | Fecha desde == hasta → se procesa correctamente |
+
+**`AssignRemoveUserRoleTests`** (9 casos):
+
+| ID | Caso |
+|---|---|
+| UT-SA-12 | Asignar rol `"Manager"` a usuario existente → éxito |
+| UT-SA-13 | Rol `"Manager"` queda en la colección del usuario |
+| UT-SA-14 | Asignar siendo no SystemAdmin → `SystemAdminErrors.NotSystemAdmin` |
+| UT-SA-15 | Asignar rol inválido → `SystemAdminErrors.InvalidRole` |
+| UT-SA-16 | Asignar a usuario no encontrado → `SystemAdminErrors.UserNotFound` |
+| UT-SA-17 | Asignar rol ya asignado → `SystemAdminErrors.RoleAlreadyAssigned` |
+| UT-SA-18 | Eliminar rol existente → éxito |
+| UT-SA-19 | Eliminar rol no asignado → `SystemAdminErrors.RoleNotAssigned` |
+| UT-SA-20 | Eliminar siendo no SystemAdmin → `SystemAdminErrors.NotSystemAdmin` |
+
+**`CreateEmergencyReservationTests`** (11 casos):
+
+| ID | Caso |
+|---|---|
+| UT-SA-21 | Franja `Morning` → reserva creada, devuelve `Result.Success(Guid)` |
+| UT-SA-22 | Franja `Afternoon` → reserva creada |
+| UT-SA-23 | Franja `Both` → reserva creada |
+| UT-SA-24 | `ITeamsNotificationService` notificado al usuario destinatario |
+| UT-SA-25 | No es SystemAdmin → `SystemAdminErrors.NotSystemAdmin` |
+| UT-SA-26 | Fecha en el pasado → `ReservationErrors.DateInThePast` |
+| UT-SA-27 | Fecha a más de 7 días → `ReservationErrors.DateTooFarAhead` |
+| UT-SA-28 | Fecha exactamente hoy (límite inferior) → éxito |
+| UT-SA-29 | Puesto no encontrado → `ReservationErrors.DockNotFound` |
+| UT-SA-30 | Puesto bloqueado → `ReservationErrors.DockBlocked` |
+| UT-SA-31 | Puesto ya reservado en ambas franjas → `ReservationErrors.DockNotAvailable` |
+
+**`AuditLoggingBehaviorTests`** (7 casos):
+
+| ID | Caso |
+|---|---|
+| UT-SA-32 | Solicitud auditable + `Result.Success` → `AuditLogRepository.AddAsync` llamado |
+| UT-SA-33 | Solicitud auditable + `Result<Guid>.Success` → entrada de auditoría registrada |
+| UT-SA-34 | Solicitud auditable + `Result.Failure` → no se registra auditoría |
+| UT-SA-35 | Solicitud auditable + `Result<Guid>.Failure` → no se registra |
+| UT-SA-36 | Solicitud NO auditable → `AddAsync` nunca llamado |
+| UT-SA-37 | Behavior no altera la respuesta del handler |
+| UT-SA-38 | Timestamp de la entrada proviene del `TimeProvider` |
+
+**Pruebas de integración**
+
+**`SetMaintenanceModeIntegrationTests`** (5 casos):
+
+| ID | Caso |
+|---|---|
+| IT-SA-01 | Activar → `SystemSetting` con `Key = "MaintenanceMode"` y valor `"true"` persistido |
+| IT-SA-02 | Activar luego desactivar → valor pasa a `"false"`, reason vacío |
+| IT-SA-03 | Activar y consultar `GetMaintenanceModeQuery` → DTO correcto con `IsActive`, `Reason`, `UpdatedAt`, `UpdatedByUserId` |
+| IT-SA-04 | No SystemAdmin → `SystemAdminErrors.NotSystemAdmin` |
+| IT-SA-05 | Activar → entrada de auditoría con `Action = MaintenanceModeChanged` persistida |
+
+**`BulkCancelReservationsIntegrationTests`** (6 casos):
+
+| ID | Caso |
+|---|---|
+| IT-SA-06 | Dos reservas en rango → ambas canceladas, devuelve `Result.Success(2)` |
+| IT-SA-07 | Sin reservas en rango → devuelve `Result.Success(0)` |
+| IT-SA-08 | Cancela solo el rango especificado (reserva fuera de rango intacta) |
+| IT-SA-09 | Filtro de puesto → solo cancela la reserva de ese puesto |
+| IT-SA-10 | No SystemAdmin → `SystemAdminErrors.NotSystemAdmin` |
+| IT-SA-11 | Fecha desde > hasta → `SystemAdminErrors.InvalidDateRange` |
+
+**`CreateEmergencyReservationIntegrationTests`** (5 casos):
+
+| ID | Caso |
+|---|---|
+| IT-SA-12 | Solicitud válida → reserva persistida con `UserId` y `DockId` correctos |
+| IT-SA-13 | No SystemAdmin → `SystemAdminErrors.NotSystemAdmin` |
+| IT-SA-14 | Fecha en el pasado → `ReservationErrors.DateInThePast` |
+| IT-SA-15 | Puesto no encontrado → `ReservationErrors.DockNotFound` |
+| IT-SA-16 | Puesto ya reservado en Both → `ReservationErrors.DockNotAvailable` |
+
+**`AuditLogIntegrationTests`** (6 casos):
+
+| ID | Caso |
+|---|---|
+| IT-SA-17 | Comando exitoso → entrada de auditoría persistida en BD |
+| IT-SA-18 | Comando fallido (no SystemAdmin) → no se escribe entrada |
+| IT-SA-19 | Dos comandos → dos entradas, ordenadas por `Timestamp` descendente |
+| IT-SA-20 | Filtro por `Action` devuelve solo los registros coincidentes |
+| IT-SA-21 | Paginación: solicitar página 2 devuelve los registros correctos |
+| IT-SA-22 | Filtro por nombre de usuario devuelve solo entradas de ese usuario |

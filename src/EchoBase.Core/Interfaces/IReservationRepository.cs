@@ -59,4 +59,22 @@ public interface IReservationRepository
 
     /// <summary>Persiste los cambios pendientes en la base de datos.</summary>
     Task SaveChangesAsync(CancellationToken ct = default);
+
+    /// <summary>
+    /// Obtiene todas las reservas activas cuya fecha cae dentro del rango especificado,
+    /// opcionalmente limitadas a los puestos indicados.
+    /// Carga las propiedades de navegación <see cref="Reservation.User"/> y <see cref="Reservation.Dock"/>.
+    /// Se usa para la cancelación masiva de reservas por el SystemAdmin.
+    /// </summary>
+    /// <param name="startDate">Fecha de inicio del rango (inclusiva).</param>
+    /// <param name="endDate">Fecha de fin del rango (inclusiva).</param>
+    /// <param name="dockIds">
+    /// Si se proporciona, solo devuelve reservas de esos puestos concretos.
+    /// Si es <see langword="null"/> o vacío, devuelve reservas de todos los puestos.
+    /// </param>
+    Task<List<Reservation>> GetActiveReservationsInRangeAsync(
+        DateOnly startDate,
+        DateOnly endDate,
+        IReadOnlyList<Guid>? dockIds,
+        CancellationToken ct = default);
 }

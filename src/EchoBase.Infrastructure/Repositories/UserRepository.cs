@@ -58,4 +58,34 @@ internal sealed class UserRepository(EchoBaseDbContext context) : IUserRepositor
     {
         await context.SaveChangesAsync(ct);
     }
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<UserWithRolesDto>> GetAllWithRolesAsync(CancellationToken ct = default)
+    {
+        return await context.Users
+            .AsNoTracking()
+            .Include(u => u.Roles)
+            .OrderBy(u => u.Name)
+            .Select(u => new UserWithRolesDto(
+                u.Id,
+                u.Name,
+                u.Email,
+                u.Roles.Select(r => r.Name).ToList()))
+            .ToListAsync(ct);
+    }
+
+    /// <inheritdoc />
+    public async Task<User?> GetWithRolesAsync(Guid userId, CancellationToken ct = default)
+    {
+        return await context.Users
+            .Include(u => u.Roles)
+            .FirstOrDefaultAsync(u => u.Id == userId, ct);
+    }
+
+    /// <inheritdoc />
+    public async Task<Role?> GetRoleByNameAsync(string roleName, CancellationToken ct = default)
+    {
+        return await context.Roles
+            .FirstOrDefaultAsync(r => r.Name == roleName, ct);
+    }
 }

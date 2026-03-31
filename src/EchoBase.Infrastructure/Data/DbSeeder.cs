@@ -83,6 +83,7 @@ public static class DbSeeder
 
     private static readonly Guid BasicUserRoleId = new("d0000000-0000-0000-0000-000000000001");
     private static readonly Guid ManagerRoleId   = new("d0000000-0000-0000-0000-000000000002");
+    private static readonly Guid SystemAdminRoleId = new("d0000000-0000-0000-0000-000000000003");
 
     // GUID del usuario de desarrollo (coincide con DevAuthHandler)
     private static readonly Guid DevUserId = new("00000000-0000-0000-0000-000000000001");
@@ -165,6 +166,9 @@ public static class DbSeeder
         if (!existingRoleIds.Contains(ManagerRoleId))
             context.Roles.Add(new Role(ManagerRoleId) { Name = "Manager" });
 
+        if (!existingRoleIds.Contains(SystemAdminRoleId))
+            context.Roles.Add(new Role(SystemAdminRoleId) { Name = "SystemAdmin" });
+
         await context.SaveChangesAsync();
     }
 
@@ -191,6 +195,14 @@ public static class DbSeeder
             var managerRole = await context.Roles.FindAsync(ManagerRoleId);
             if (managerRole is not null)
                 devUser.Roles.Add(managerRole);
+        }
+
+        bool hasSystemAdminRole = devUser.Roles.Any(r => r.Id == SystemAdminRoleId);
+        if (!hasSystemAdminRole)
+        {
+            var systemAdminRole = await context.Roles.FindAsync(SystemAdminRoleId);
+            if (systemAdminRole is not null)
+                devUser.Roles.Add(systemAdminRole);
         }
 
         await context.SaveChangesAsync();

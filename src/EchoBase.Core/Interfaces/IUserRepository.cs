@@ -23,6 +23,15 @@ public sealed record UserProfileDto(
     bool TeamsNotifications);
 
 /// <summary>
+/// DTO para listar usuarios con sus roles asignados.
+/// </summary>
+public sealed record UserWithRolesDto(
+    Guid Id,
+    string Name,
+    string Email,
+    IReadOnlyList<string> Roles);
+
+/// <summary>
 /// Abstracción para obtener y actualizar datos de usuarios.
 /// </summary>
 public interface IUserRepository
@@ -44,4 +53,20 @@ public interface IUserRepository
 
     /// <summary>Persiste los cambios pendientes en la unidad de trabajo.</summary>
     Task SaveChangesAsync(CancellationToken ct = default);
+
+    /// <summary>
+    /// Obtiene todos los usuarios del sistema junto con sus roles asignados.
+    /// Usado por el cuadro de mando de SystemAdmin.
+    /// </summary>
+    Task<IReadOnlyList<UserWithRolesDto>> GetAllWithRolesAsync(CancellationToken ct = default);
+
+    /// <summary>
+    /// Obtiene la entidad <see cref="User"/> con sus roles cargados para operaciones de asignación/retirada de roles.
+    /// </summary>
+    Task<User?> GetWithRolesAsync(Guid userId, CancellationToken ct = default);
+
+    /// <summary>
+    /// Obtiene un rol por su nombre.
+    /// </summary>
+    Task<Role?> GetRoleByNameAsync(string roleName, CancellationToken ct = default);
 }
