@@ -164,24 +164,26 @@ else
                                                     <div class="d-flex gap-2 mb-1">
                                                         @foreach (var seat in table.SideA)
                                                         {
-                                                            <button class="btn @GetSeatBtnClass(seat) eb-dock-seat"
-                                                                    disabled="@IsSeatDisabled(seat)"
-                                                                    title="@GetAdminTooltip(seat)"
-                                                                    @onclick="() => ToggleDock(seat.Id)">
-                                                                @seat.Code
-                                                            </button>
+                                                            <span title="@GetAdminTooltip(seat)" style="display:inline-block">
+                                                                <button class="btn @GetSeatBtnClass(seat) eb-dock-seat"
+                                                                        disabled="@IsSeatDisabled(seat)"
+                                                                        @onclick="() => ToggleDock(seat.Id)">
+                                                                    @seat.Code
+                                                                </button>
+                                                            </span>
                                                         }
                                                     </div>
                                                     <hr class="eb-dock-divider my-1" />
                                                     <div class="d-flex gap-2">
                                                         @foreach (var seat in table.SideB)
                                                         {
-                                                            <button class="btn @GetSeatBtnClass(seat) eb-dock-seat"
-                                                                    disabled="@IsSeatDisabled(seat)"
-                                                                    title="@GetAdminTooltip(seat)"
-                                                                    @onclick="() => ToggleDock(seat.Id)">
-                                                                @seat.Code
-                                                            </button>
+                                                            <span title="@GetAdminTooltip(seat)" style="display:inline-block">
+                                                                <button class="btn @GetSeatBtnClass(seat) eb-dock-seat"
+                                                                        disabled="@IsSeatDisabled(seat)"
+                                                                        @onclick="() => ToggleDock(seat.Id)">
+                                                                    @seat.Code
+                                                                </button>
+                                                            </span>
                                                         }
                                                     </div>
                                                 </div>

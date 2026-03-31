@@ -90,24 +90,26 @@ else if (_dockMap is not null)
                                         <div class="d-flex gap-2 mb-1">
                                             @foreach (var seat in table.SideA)
                                             {
-                                                <button class="btn @GetBtnClass(seat) eb-dock-seat"
-                                                        disabled="@(seat.Status is DockStatus.FullyBooked or DockStatus.Blocked)"
-                                                        title="@GetTooltip(seat)"
-                                                        @onclick="() => OnSeatClicked(seat)">
-                                                    @seat.Code
-                                                </button>
+                                                <span title="@GetTooltip(seat)" style="display:inline-block">
+                                                    <button class="btn @GetBtnClass(seat) eb-dock-seat"
+                                                            disabled="@(seat.Status is DockStatus.FullyBooked or DockStatus.Blocked)"
+                                                            @onclick="() => OnSeatClicked(seat)">
+                                                        @seat.Code
+                                                    </button>
+                                                </span>
                                             }
                                         </div>
                                         <hr class="eb-dock-divider my-1" />
                                         <div class="d-flex gap-2">
                                             @foreach (var seat in table.SideB)
                                             {
-                                                <button class="btn @GetBtnClass(seat) eb-dock-seat"
-                                                        disabled="@(seat.Status is DockStatus.FullyBooked or DockStatus.Blocked)"
-                                                        title="@GetTooltip(seat)"
-                                                        @onclick="() => OnSeatClicked(seat)">
-                                                    @seat.Code
-                                                </button>
+                                                <span title="@GetTooltip(seat)" style="display:inline-block">
+                                                    <button class="btn @GetBtnClass(seat) eb-dock-seat"
+                                                            disabled="@(seat.Status is DockStatus.FullyBooked or DockStatus.Blocked)"
+                                                            @onclick="() => OnSeatClicked(seat)">
+                                                        @seat.Code
+                                                    </button>
+                                                </span>
                                             }
                                         </div>
                                     </div>
