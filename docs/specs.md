@@ -278,12 +278,15 @@ Valores del enum `AuditAction`:
 | `AuditLoggingBehavior<,>` | `EchoBase.Core/SystemAdmin/` |
 
 #### Página de administración
-`/system-admin` (`SystemAdminDashboard.razor`) — requiere rol `SystemAdmin`. Secciones:
-1. **Modo mantenimiento** — activar/desactivar con motivo.
-2. **Cancelación masiva** — rango de fechas + filtro de puesto opcional + confirmación.
-3. **Reserva de emergencia** — selector usuario, puesto, fecha y franja.
-4. **Gestión de usuarios** — tabla de usuarios con asignación/revocación de roles Manager y SystemAdmin.
-5. **Log de auditoría** — tabla paginada con filtros de fecha, acción y nombre de usuario.
+`/system-admin` (`SystemAdminDashboard.razor`) — requiere rol `SystemAdmin`. La página se organiza en **5 pestañas Bootstrap (`nav-tabs`)**; solo el contenido de la pestaña activa se renderiza. El log de auditoría carga sus datos de forma diferida (lazy) la primera vez que se selecciona la pestaña.
+
+| Pestaña | Contenido |
+|---|---|
+| **Mantenimiento** | Activar / desactivar modo mantenimiento con motivo. Badge `ACTIVO` visible en la pestaña cuando está habilitado. |
+| **Cancelación masiva** | Rango de fechas + motivo + mapa visual de puestos (mismo layout y estilos que `DockMap.razor`): los puestos actúan como botones toggle (`btn-outline-secondary` ↔ `btn-danger`); sin selección = cancelar todos. Contador de puestos seleccionados con botón "Limpiar selección". Diálogo de confirmación antes de ejecutar. |
+| **Reserva de emergencia** | Selector de usuario + selector de fecha con flechas de navegación por días (recarga el mapa al cambiar). Mapa visual interactivo idéntico al de `DockMap.razor` (colores libres/parcial/completo/bloqueado, tooltips). Al hacer clic en un puesto disponible se abre un **modal** (mismo estilo que DockMap) con información del puesto, usuario seleccionado, selector de franja horaria (`btn-check`) y botón "Crear reserva". |
+| **Usuarios** | Tabla de usuarios con sus roles actuales (badges de color). Botones de asignar/retirar rol **Manager** (`bi-person-plus` / `bi-person-dash`) y **SystemAdmin** (`bi-shield-plus` / `bi-shield-dash`). El texto del botón muestra el nombre completo del rol (`SystemAdmin`, no `Admin`). |
+| **Log de auditoría** | Tabla paginada con filtros de fecha (desde/hasta), tipo de acción y nombre de usuario. Paginación con flechas. |
 
 
 

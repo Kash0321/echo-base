@@ -15,3 +15,86 @@
     background: rgba(13, 27, 42, .04);
     border-bottom: 1px solid rgba(0,0,0,.07);
 }
+
+/* ── Leyenda ────────────────────────────────────────────── */
+.eb-legend-dot {
+    display: inline-block;
+    width: .65rem;
+    height: .65rem;
+    border-radius: 50%;
+}
+
+/* ── Mesa de puestos (igual que DockMap) ────────────────── */
+.eb-table-block {
+    display: inline-block;
+}
+
+.eb-dock-table {
+    background: #f8f9fa;
+    border: 2px solid #dee2e6;
+    border-radius: .5rem;
+    padding: .6rem .75rem;
+    display: inline-block;
+}
+
+.eb-dock-seat {
+    min-width: 5.5rem;
+    font-weight: 600;
+    font-size: .82rem;
+    transition: transform .1s ease;
+}
+
+.eb-dock-seat:not(:disabled):hover {
+    transform: translateY(-2px);
+}
+
+/* Puestos en modo toggle (cancelación masiva) */
+.eb-dock-seat-toggle {
+    min-width: 5.5rem;
+    font-weight: 600;
+    font-size: .82rem;
+    transition: transform .1s ease, box-shadow .1s ease;
+}
+
+.eb-dock-seat-toggle:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 .2rem .5rem rgba(0,0,0,.15);
+}
+
+.eb-dock-divider {
+    border-top: 3px solid #adb5bd;
+}
+
+/* ── Botones navegación de fecha (emergencia) ───────────── */
+.eb-date-nav-btn {
+    background: #e9ecef;
+    border: 1px solid #ced4da;
+    color: #495057;
+    padding: .25rem .45rem;
+    line-height: 1;
+}
+
+.eb-date-nav-btn:hover:not(:disabled) {
+    background: #dee2e6;
+    border-color: #adb5bd;
+    color: #212529;
+}
+
+.eb-date-nav-btn:disabled {
+    opacity: .4;
+    pointer-events: none;
+}
+
+/* ── Modal de emergencia ────────────────────────────────── */
+.eb-modal-header {
+    background: linear-gradient(135deg, #0d1b2a 0%, #1a3a5c 100%);
+    border-bottom: none;
+    border-radius: calc(.375rem - 1px) calc(.375rem - 1px) 0 0;
+}
+
+.eb-modal-info-chip {
+    background: #f1f3f5;
+    border-radius: .375rem;
+    padding: .25rem .6rem;
+    font-size: .85rem;
+}

@@ -40,492 +40,721 @@
 }
 else
 {
-    <!-- ═══════════════ FILA 1: MANTENIMIENTO + CANCELACIÓN MASIVA ═══════════════ -->
-    <div class="row g-3 mb-3">
+    <!-- ═══ PESTAÑAS DE NAVEGACIÓN ═══════════════════════════════════ -->
+    <ul class="nav nav-tabs mb-3" id="adminTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link @(_activeTab == Tab.Maintenance ? "active" : "")"
+                    @onclick='() => _activeTab = Tab.Maintenance'>
+                <i class="bi bi-tools me-1 @(_maintenanceActive ? "text-warning" : "")"></i>
+                Mantenimiento
+                @if (_maintenanceActive)
+                {
+                    <span class="badge bg-warning text-dark ms-1" style="font-size:.65rem;">ACTIVO</span>
+                }
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link @(_activeTab == Tab.BulkCancel ? "active" : "")"
+                    @onclick='() => _activeTab = Tab.BulkCancel'>
+                <i class="bi bi-calendar-x text-danger me-1"></i>Cancelación masiva
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link @(_activeTab == Tab.Emergency ? "active" : "")"
+                    @onclick='() => _activeTab = Tab.Emergency'>
+                <i class="bi bi-lightning-charge-fill text-warning me-1"></i>Reserva de emergencia
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link @(_activeTab == Tab.Users ? "active" : "")"
+                    @onclick='() => _activeTab = Tab.Users'>
+                <i class="bi bi-people-fill text-primary me-1"></i>Usuarios
+                <span class="badge bg-secondary ms-1" style="font-size:.65rem;">@_allUsers.Count</span>
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link @(_activeTab == Tab.AuditLog ? "active" : "")"
+                    @onclick='() => SwitchToAuditTab()'>
+                <i class="bi bi-journal-text text-primary me-1"></i>Log de auditoría
+            </button>
+        </li>
+    </ul>
 
-        <!-- ── Modo mantenimiento ── -->
-        <div class="col-md-6 col-xl-4">
-            <div class="card border-0 shadow-sm h-100">
-                <div class="card-header eb-zone-header d-flex align-items-center gap-2 py-2">
-                    <i class="bi bi-tools @(_maintenanceActive ? "text-warning" : "text-secondary") fs-5"></i>
-                    <span class="fw-semibold">Modo mantenimiento</span>
-                    @if (_maintenanceActive)
-                    {
-                        <span class="badge bg-warning text-dark ms-auto">ACTIVO</span>
-                    }
-                    else
-                    {
-                        <span class="badge bg-secondary ms-auto">Inactivo</span>
-                    }
-                </div>
-                <div class="card-body">
-                    <p class="small text-muted mb-3">
-                        Cuando está activo, los usuarios no pueden realizar reservas ni acceder al sistema.
-                        Los SystemAdmins no se ven afectados.
-                    </p>
-                    <div class="mb-3">
-                        <label for="maintReason" class="form-label form-label-sm fw-semibold">Motivo</label>
-                        <input type="text" id="maintReason" class="form-control form-control-sm"
-                               placeholder="Ej: Actualización de servidores..."
-                               @bind="_maintenanceReason" />
-                    </div>
-                    @if (_maintError is not null)
-                    {
-                        <div class="alert alert-danger d-flex align-items-center gap-2 py-2 mb-2">
-                            <i class="bi bi-x-circle-fill flex-shrink-0"></i>
-                            <span class="small">@_maintError</span>
-                        </div>
-                    }
-                    @if (_maintSuccess is not null)
-                    {
-                        <div class="alert alert-success d-flex align-items-center gap-2 py-2 mb-2">
-                            <i class="bi bi-check-circle-fill flex-shrink-0"></i>
-                            <span class="small">@_maintSuccess</span>
-                        </div>
-                    }
-                    <div class="d-flex gap-2">
-                        <button class="btn btn-warning btn-sm flex-fill"
-                                disabled="@(_settingMaintenance || _maintenanceActive)"
-                                @onclick="ActivateMaintenance">
-                            @if (_settingMaintenance && !_maintenanceActive)
-                            {
-                                <span class="spinner-border spinner-border-sm me-1"></span>
-                            }
-                            else
-                            {
-                                <i class="bi bi-tools me-1"></i>
-                            }
-                            Activar
-                        </button>
-                        <button class="btn btn-outline-secondary btn-sm flex-fill"
-                                disabled="@(_settingMaintenance || !_maintenanceActive)"
-                                @onclick="DeactivateMaintenance">
-                            @if (_settingMaintenance && _maintenanceActive)
-                            {
-                                <span class="spinner-border spinner-border-sm me-1"></span>
-                            }
-                            else
-                            {
-                                <i class="bi bi-check2-circle me-1"></i>
-                            }
-                            Desactivar
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- ── Cancelación masiva ── -->
-        <div class="col-md-6 col-xl-8">
-            <div class="card border-0 shadow-sm h-100">
-                <div class="card-header eb-zone-header d-flex align-items-center gap-2 py-2">
-                    <i class="bi bi-calendar-x text-danger fs-5"></i>
-                    <span class="fw-semibold">Cancelación masiva de reservas</span>
-                </div>
-                <div class="card-body">
-                    <p class="small text-muted mb-3">
-                        Cancela todas las reservas activas en el rango de fechas indicado.
-                        Deja los puestos vacíos para filtrar solo algunos.
-                    </p>
-                    <div class="row g-2 mb-2">
-                        <div class="col-sm-6 col-lg-3">
-                            <label for="bulkStart" class="form-label form-label-sm fw-semibold">Fecha inicio</label>
-                            <input type="date" id="bulkStart" class="form-control form-control-sm"
-                                   value="@_bulkStartDate.ToString("yyyy-MM-dd")"
-                                   @onchange="e => { if (DateOnly.TryParse(e.Value?.ToString(), out var d)) _bulkStartDate = d; }" />
-                        </div>
-                        <div class="col-sm-6 col-lg-3">
-                            <label for="bulkEnd" class="form-label form-label-sm fw-semibold">Fecha fin</label>
-                            <input type="date" id="bulkEnd" class="form-control form-control-sm"
-                                   value="@_bulkEndDate.ToString("yyyy-MM-dd")"
-                                   min="@_bulkStartDate.ToString("yyyy-MM-dd")"
-                                   @onchange="e => { if (DateOnly.TryParse(e.Value?.ToString(), out var d)) _bulkEndDate = d; }" />
-                        </div>
-                        <div class="col-lg-6">
-                            <label for="bulkReason" class="form-label form-label-sm fw-semibold">Motivo</label>
-                            <input type="text" id="bulkReason" class="form-control form-control-sm"
-                                   placeholder="Ej: Cierre por condiciones climáticas..."
-                                   @bind="_bulkReason" />
-                        </div>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label form-label-sm fw-semibold">
-                            Puestos específicos
-                            <span class="text-muted fw-normal">(vacío = todos)</span>
-                        </label>
-                        @if (_allDocks.Count > 0)
+    <!-- ═══ PESTAÑA: MODO MANTENIMIENTO ══════════════════════════════ -->
+    @if (_activeTab == Tab.Maintenance)
+    {
+        <div class="row g-3">
+            <div class="col-md-6 col-xl-5">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-header eb-zone-header d-flex align-items-center gap-2 py-2">
+                        <i class="bi bi-tools @(_maintenanceActive ? "text-warning" : "text-secondary") fs-5"></i>
+                        <span class="fw-semibold">Modo mantenimiento</span>
+                        @if (_maintenanceActive)
                         {
-                            <div class="d-flex flex-wrap gap-1">
-                                @foreach (var dock in _allDocks)
-                                {
-                                    <div class="form-check form-check-inline me-0">
-                                        <input class="form-check-input" type="checkbox" id="dock-@dock.Id"
-                                               checked="@_bulkSelectedDockIds.Contains(dock.Id)"
-                                               @onchange="() => ToggleBulkDock(dock.Id)" />
-                                        <label class="form-check-label small" for="dock-@dock.Id">
-                                            @dock.Code
-                                        </label>
-                                    </div>
-                                }
-                            </div>
+                            <span class="badge bg-warning text-dark ms-auto">ACTIVO</span>
+                        }
+                        else
+                        {
+                            <span class="badge bg-secondary ms-auto">Inactivo</span>
                         }
                     </div>
-                    @if (_bulkError is not null)
-                    {
-                        <div class="alert alert-danger d-flex align-items-center gap-2 py-2 mb-2">
-                            <i class="bi bi-x-circle-fill flex-shrink-0"></i>
-                            <span class="small">@_bulkError</span>
+                    <div class="card-body">
+                        <p class="small text-muted mb-3">
+                            Cuando está activo, los usuarios no pueden realizar reservas ni acceder al sistema.
+                            Los SystemAdmins no se ven afectados.
+                        </p>
+                        <div class="mb-3">
+                            <label for="maintReason" class="form-label form-label-sm fw-semibold">Motivo</label>
+                            <input type="text" id="maintReason" class="form-control form-control-sm"
+                                   placeholder="Ej: Actualización de servidores..."
+                                   @bind="_maintenanceReason" />
                         </div>
-                    }
-                    @if (_bulkSuccess is not null)
-                    {
-                        <div class="alert alert-success d-flex align-items-center gap-2 py-2 mb-2">
-                            <i class="bi bi-check-circle-fill flex-shrink-0"></i>
-                            <span class="small">@_bulkSuccess</span>
-                        </div>
-                    }
-                    @if (_confirmBulkCancel)
-                    {
-                        <div class="alert alert-warning d-flex align-items-center gap-2 py-2 mb-2">
-                            <i class="bi bi-exclamation-triangle-fill flex-shrink-0"></i>
-                            <span class="small flex-fill">
-                                ¿Confirmas la cancelación masiva del @_bulkStartDate.ToString("dd/MM/yyyy")
-                                al @_bulkEndDate.ToString("dd/MM/yyyy")?
-                                Esta acción notificará a todos los afectados.
-                            </span>
-                            <div class="d-flex gap-1 ms-2">
-                                <button class="btn btn-danger btn-sm" @onclick="ConfirmBulkCancel">Sí, cancelar</button>
-                                <button class="btn btn-outline-secondary btn-sm" @onclick="() => _confirmBulkCancel = false">No</button>
+                        @if (_maintError is not null)
+                        {
+                            <div class="alert alert-danger d-flex align-items-center gap-2 py-2 mb-2">
+                                <i class="bi bi-x-circle-fill flex-shrink-0"></i>
+                                <span class="small">@_maintError</span>
                             </div>
-                        </div>
-                    }
-                    else
-                    {
-                        <button class="btn btn-danger btn-sm"
-                                disabled="@(string.IsNullOrWhiteSpace(_bulkReason) || _bulkCancelling)"
-                                @onclick="RequestBulkCancel">
-                            @if (_bulkCancelling)
-                            {
-                                <span class="spinner-border spinner-border-sm me-1"></span>
-                            }
-                            else
-                            {
-                                <i class="bi bi-calendar-x me-1"></i>
-                            }
-                            Cancelar reservas
-                        </button>
-                    }
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- ═══════════════ FILA 2: RESERVA DE EMERGENCIA ═══════════════ -->
-    <div class="row g-3 mb-3">
-        <div class="col-12">
-            <div class="card border-0 shadow-sm">
-                <div class="card-header eb-zone-header d-flex align-items-center gap-2 py-2">
-                    <i class="bi bi-lightning-charge-fill text-warning fs-5"></i>
-                    <span class="fw-semibold">Reserva de emergencia</span>
-                </div>
-                <div class="card-body">
-                    <p class="small text-muted mb-3">
-                        Crea una reserva en nombre de un usuario. Se aplican todas las validaciones normales.
-                    </p>
-                    <div class="row g-2 align-items-end">
-                        <div class="col-sm-6 col-lg-3">
-                            <label for="erUser" class="form-label form-label-sm fw-semibold">Usuario</label>
-                            <select id="erUser" class="form-select form-select-sm" @bind="_emergencyTargetUserId">
-                                <option value="">— Selecciona usuario —</option>
-                                @foreach (var u in _allUsers)
-                                {
-                                    <option value="@u.Id">@u.Name (@u.Email)</option>
-                                }
-                            </select>
-                        </div>
-                        <div class="col-sm-6 col-lg-2">
-                            <label for="erDock" class="form-label form-label-sm fw-semibold">Puesto</label>
-                            <select id="erDock" class="form-select form-select-sm" @bind="_emergencyDockId">
-                                <option value="">— Puesto —</option>
-                                @foreach (var dock in _allDocks)
-                                {
-                                    <option value="@dock.Id">@dock.Code</option>
-                                }
-                            </select>
-                        </div>
-                        <div class="col-sm-6 col-lg-2">
-                            <label for="erDate" class="form-label form-label-sm fw-semibold">Fecha</label>
-                            <input type="date" id="erDate" class="form-control form-control-sm"
-                                   value="@_emergencyDate.ToString("yyyy-MM-dd")"
-                                   min="@_today.ToString("yyyy-MM-dd")"
-                                   max="@_today.AddDays(7).ToString("yyyy-MM-dd")"
-                                   @onchange="e => { if (DateOnly.TryParse(e.Value?.ToString(), out var d)) _emergencyDate = d; }" />
-                        </div>
-                        <div class="col-sm-6 col-lg-2">
-                            <label class="form-label form-label-sm fw-semibold">Franja</label>
-                            <div class="d-flex gap-2">
-                                @foreach (var slot in Enum.GetValues<TimeSlot>())
-                                {
-                                    <div>
-                                        <input class="btn-check" type="radio" name="erSlot"
-                                               id="er-@slot" value="@slot"
-                                               checked="@(_emergencySlot == slot)"
-                                               @onchange="() => _emergencySlot = slot" />
-                                        <label class="btn btn-outline-primary btn-sm" for="er-@slot">
-                                            @FormatSlot(slot)
-                                        </label>
-                                    </div>
-                                }
+                        }
+                        @if (_maintSuccess is not null)
+                        {
+                            <div class="alert alert-success d-flex align-items-center gap-2 py-2 mb-2">
+                                <i class="bi bi-check-circle-fill flex-shrink-0"></i>
+                                <span class="small">@_maintSuccess</span>
                             </div>
-                        </div>
-                        <div class="col-lg-3">
-                            @if (_emergencyError is not null)
-                            {
-                                <div class="alert alert-danger d-flex align-items-center gap-2 py-1 mb-2">
-                                    <i class="bi bi-x-circle-fill flex-shrink-0"></i>
-                                    <span class="small">@_emergencyError</span>
-                                </div>
-                            }
-                            @if (_emergencySuccess is not null)
-                            {
-                                <div class="alert alert-success d-flex align-items-center gap-2 py-1 mb-2">
-                                    <i class="bi bi-check-circle-fill flex-shrink-0"></i>
-                                    <span class="small">@_emergencySuccess</span>
-                                </div>
-                            }
-                            <button class="btn btn-warning btn-sm w-100"
-                                    disabled="@(_emergencyTargetUserId == Guid.Empty || _emergencyDockId == Guid.Empty || _emergencyReserving)"
-                                    @onclick="CreateEmergencyReservation">
-                                @if (_emergencyReserving)
+                        }
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-warning btn-sm flex-fill"
+                                    disabled="@(_settingMaintenance || _maintenanceActive)"
+                                    @onclick="ActivateMaintenance">
+                                @if (_settingMaintenance && !_maintenanceActive)
                                 {
                                     <span class="spinner-border spinner-border-sm me-1"></span>
                                 }
                                 else
                                 {
-                                    <i class="bi bi-lightning-charge me-1"></i>
+                                    <i class="bi bi-tools me-1"></i>
                                 }
-                                Crear reserva
+                                Activar
+                            </button>
+                            <button class="btn btn-outline-secondary btn-sm flex-fill"
+                                    disabled="@(_settingMaintenance || !_maintenanceActive)"
+                                    @onclick="DeactivateMaintenance">
+                                @if (_settingMaintenance && _maintenanceActive)
+                                {
+                                    <span class="spinner-border spinner-border-sm me-1"></span>
+                                }
+                                else
+                                {
+                                    <i class="bi bi-check2-circle me-1"></i>
+                                }
+                                Desactivar
                             </button>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
-    </div>
+    }
 
-    <!-- ═══════════════ FILA 3: GESTIÓN DE USUARIOS ═══════════════ -->
-    <div class="row g-3 mb-3">
-        <div class="col-12">
-            <div class="card border-0 shadow-sm">
-                <div class="card-header eb-zone-header d-flex align-items-center gap-2 py-2">
-                    <i class="bi bi-people-fill text-primary fs-5"></i>
-                    <span class="fw-semibold">Gestión de usuarios</span>
-                    <span class="badge bg-secondary ms-auto">@_allUsers.Count</span>
+    <!-- ═══ PESTAÑA: CANCELACIÓN MASIVA ══════════════════════════════ -->
+    @if (_activeTab == Tab.BulkCancel)
+    {
+        <div class="card border-0 shadow-sm mb-3">
+            <div class="card-header eb-zone-header d-flex align-items-center gap-2 py-2">
+                <i class="bi bi-calendar-x text-danger fs-5"></i>
+                <span class="fw-semibold">Cancelación masiva de reservas</span>
+            </div>
+            <div class="card-body">
+                <p class="small text-muted mb-3">
+                    Cancela todas las reservas activas en el rango de fechas indicado.
+                    Selecciona puestos concretos para afectar solo a ellos, o deja todos sin seleccionar para cancelar todos.
+                </p>
+                <!-- Fechas y motivo -->
+                <div class="row g-2 mb-3">
+                    <div class="col-sm-6 col-md-3">
+                        <label for="bulkStart" class="form-label form-label-sm fw-semibold">Fecha inicio</label>
+                        <input type="date" id="bulkStart" class="form-control form-control-sm"
+                               value="@_bulkStartDate.ToString("yyyy-MM-dd")"
+                               @onchange="e => { if (DateOnly.TryParse(e.Value?.ToString(), out var d)) _bulkStartDate = d; }" />
+                    </div>
+                    <div class="col-sm-6 col-md-3">
+                        <label for="bulkEnd" class="form-label form-label-sm fw-semibold">Fecha fin</label>
+                        <input type="date" id="bulkEnd" class="form-control form-control-sm"
+                               value="@_bulkEndDate.ToString("yyyy-MM-dd")"
+                               min="@_bulkStartDate.ToString("yyyy-MM-dd")"
+                               @onchange="e => { if (DateOnly.TryParse(e.Value?.ToString(), out var d)) _bulkEndDate = d; }" />
+                    </div>
+                    <div class="col-md-6">
+                        <label for="bulkReason" class="form-label form-label-sm fw-semibold">Motivo</label>
+                        <input type="text" id="bulkReason" class="form-control form-control-sm"
+                               placeholder="Ej: Cierre por condiciones climáticas..."
+                               @bind="_bulkReason" />
+                    </div>
                 </div>
-                <div class="card-body p-0">
-                    @if (_allUsers.Count == 0)
-                    {
-                        <p class="text-muted small p-3 mb-0">
-                            <i class="bi bi-info-circle me-1"></i>No hay usuarios registrados.
-                        </p>
-                    }
-                    else
-                    {
-                        <div class="table-responsive">
-                            <table class="table table-sm table-hover align-middle mb-0">
-                                <thead class="table-light">
-                                    <tr>
-                                        <th class="ps-3">Nombre</th>
-                                        <th>Email</th>
-                                        <th>Roles</th>
-                                        <th class="pe-3 text-end">Acciones</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @foreach (var user in _allUsers)
-                                    {
-                                        var uid = user.Id;
-                                        var hasManager = user.Roles.Contains("Manager");
-                                        var hasAdmin = user.Roles.Contains("SystemAdmin");
-                                        <tr>
-                                            <td class="ps-3 fw-semibold small">@user.Name</td>
-                                            <td class="small text-muted">@user.Email</td>
-                                            <td>
-                                                @foreach (var role in user.Roles)
-                                                {
-                                                    <span class="badge @GetRoleBadgeClass(role) me-1">@role</span>
-                                                }
-                                                @if (!user.Roles.Any())
-                                                {
-                                                    <span class="text-muted small">—</span>
-                                                }
-                                            </td>
-                                            <td class="pe-3 text-end">
-                                                <div class="d-flex gap-1 justify-content-end">
-                                                    @if (hasManager)
-                                                    {
-                                                        <button class="btn btn-outline-secondary btn-sm"
-                                                                title="Quitar rol Manager"
-                                                                @onclick="() => RemoveRole(uid, RoleManager)">
-                                                            <i class="bi bi-person-dash"></i> Manager
-                                                        </button>
-                                                    }
-                                                    else
-                                                    {
-                                                        <button class="btn btn-outline-primary btn-sm"
-                                                                title="Asignar rol Manager"
-                                                                @onclick="() => AssignRole(uid, RoleManager)">
-                                                            <i class="bi bi-person-plus"></i> Manager
-                                                        </button>
-                                                    }
-                                                    @if (hasAdmin)
-                                                    {
-                                                        <button class="btn btn-outline-secondary btn-sm"
-                                                                title="Quitar rol SystemAdmin"
-                                                                @onclick="() => RemoveRole(uid, RoleSystemAdmin)">
-                                                            <i class="bi bi-shield-dash"></i> Admin
-                                                        </button>
-                                                    }
-                                                    else
-                                                    {
-                                                        <button class="btn btn-outline-danger btn-sm"
-                                                                title="Asignar rol SystemAdmin"
-                                                                @onclick="() => AssignRole(uid, RoleSystemAdmin)">
-                                                            <i class="bi bi-shield-plus"></i> Admin
-                                                        </button>
-                                                    }
+
+                <!-- Mapa de puestos (estilo DockMap) -->
+                @if (_bulkDockMap is not null)
+                {
+                    <div class="mb-3">
+                        <div class="d-flex align-items-center gap-3 mb-2">
+                            <span class="form-label form-label-sm fw-semibold mb-0">
+                                Puestos a cancelar
+                                <span class="text-muted fw-normal">(sin selección = todos)</span>
+                            </span>
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="eb-legend-dot bg-danger"></span><span class="small text-muted">Seleccionado</span>
+                                <span class="eb-legend-dot bg-success"></span><span class="small text-muted">No seleccionado</span>
+                            </div>
+                            @if (_bulkSelectedDockIds.Count > 0)
+                            {
+                                <button class="btn btn-link btn-sm p-0 text-muted" @onclick="() => _bulkSelectedDockIds.Clear()">
+                                    <i class="bi bi-x-circle me-1"></i>Limpiar selección (@_bulkSelectedDockIds.Count)
+                                </button>
+                            }
+                        </div>
+                        <div class="d-flex flex-wrap gap-3">
+                            @foreach (var zone in _bulkDockMap.Zones)
+                            {
+                                <div class="card border-0 shadow-sm">
+                                    <div class="card-header eb-zone-header d-flex align-items-center gap-2 py-1 px-2">
+                                        <i class="bi bi-grid-3x3 text-primary"></i>
+                                        <span class="fw-semibold small">@zone.Name</span>
+                                    </div>
+                                    <div class="card-body py-2 px-3">
+                                        <div class="d-flex flex-wrap gap-3">
+                                            @foreach (var table in zone.Tables)
+                                            {
+                                                <div class="eb-table-block">
+                                                    <p class="text-muted small fw-semibold mb-1 text-center">@table.Name</p>
+                                                    <div class="eb-dock-table">
+                                                        <div class="d-flex gap-2 mb-1">
+                                                            @foreach (var seat in table.SideA)
+                                                            {
+                                                                var isSelected = _bulkSelectedDockIds.Contains(seat.Id);
+                                                                <button class="btn @(isSelected ? "btn-danger" : "btn-outline-secondary") eb-dock-seat eb-dock-seat-toggle"
+                                                                        title="@seat.Code — @(isSelected ? "clic para deseleccionar" : "clic para seleccionar")"
+                                                                        @onclick="() => ToggleBulkDock(seat.Id)">
+                                                                    @seat.Code
+                                                                </button>
+                                                            }
+                                                        </div>
+                                                        <hr class="eb-dock-divider my-1" />
+                                                        <div class="d-flex gap-2">
+                                                            @foreach (var seat in table.SideB)
+                                                            {
+                                                                var isSelected = _bulkSelectedDockIds.Contains(seat.Id);
+                                                                <button class="btn @(isSelected ? "btn-danger" : "btn-outline-secondary") eb-dock-seat eb-dock-seat-toggle"
+                                                                        title="@seat.Code — @(isSelected ? "clic para deseleccionar" : "clic para seleccionar")"
+                                                                        @onclick="() => ToggleBulkDock(seat.Id)">
+                                                                    @seat.Code
+                                                                </button>
+                                                            }
+                                                        </div>
+                                                    </div>
                                                 </div>
-                                            </td>
-                                        </tr>
-                                    }
-                                </tbody>
-                            </table>
+                                            }
+                                        </div>
+                                    </div>
+                                </div>
+                            }
                         </div>
-                    }
-                    @if (_roleError is not null)
-                    {
-                        <div class="alert alert-danger d-flex align-items-center gap-2 py-2 m-3">
-                            <i class="bi bi-x-circle-fill flex-shrink-0"></i>
-                            <span class="small">@_roleError</span>
+                    </div>
+                }
+
+                @if (_bulkError is not null)
+                {
+                    <div class="alert alert-danger d-flex align-items-center gap-2 py-2 mb-2">
+                        <i class="bi bi-x-circle-fill flex-shrink-0"></i>
+                        <span class="small">@_bulkError</span>
+                    </div>
+                }
+                @if (_bulkSuccess is not null)
+                {
+                    <div class="alert alert-success d-flex align-items-center gap-2 py-2 mb-2">
+                        <i class="bi bi-check-circle-fill flex-shrink-0"></i>
+                        <span class="small">@_bulkSuccess</span>
+                    </div>
+                }
+                @if (_confirmBulkCancel)
+                {
+                    <div class="alert alert-warning d-flex align-items-center gap-2 py-2 mb-2">
+                        <i class="bi bi-exclamation-triangle-fill flex-shrink-0"></i>
+                        <span class="small flex-fill">
+                            ¿Confirmas la cancelación masiva del @_bulkStartDate.ToString("dd/MM/yyyy")
+                            al @_bulkEndDate.ToString("dd/MM/yyyy")
+                            @(_bulkSelectedDockIds.Count > 0 ? $"({_bulkSelectedDockIds.Count} puesto(s) seleccionado(s))" : "(todos los puestos)")?
+                            Esta acción notificará a todos los afectados.
+                        </span>
+                        <div class="d-flex gap-1 ms-2">
+                            <button class="btn btn-danger btn-sm" @onclick="ConfirmBulkCancel">Sí, cancelar</button>
+                            <button class="btn btn-outline-secondary btn-sm" @onclick="() => _confirmBulkCancel = false">No</button>
                         </div>
-                    }
-                </div>
+                    </div>
+                }
+                else
+                {
+                    <button class="btn btn-danger btn-sm"
+                            disabled="@(string.IsNullOrWhiteSpace(_bulkReason) || _bulkCancelling)"
+                            @onclick="RequestBulkCancel">
+                        @if (_bulkCancelling)
+                        {
+                            <span class="spinner-border spinner-border-sm me-1"></span>
+                        }
+                        else
+                        {
+                            <i class="bi bi-calendar-x me-1"></i>
+                        }
+                        Cancelar reservas
+                    </button>
+                }
             </div>
         </div>
-    </div>
+    }
 
-    <!-- ═══════════════ FILA 4: LOG DE AUDITORÍA ═══════════════ -->
-    <div class="row g-3">
-        <div class="col-12">
-            <div class="card border-0 shadow-sm">
-                <div class="card-header eb-zone-header d-flex align-items-center gap-2 py-2">
-                    <i class="bi bi-journal-text text-primary fs-5"></i>
-                    <span class="fw-semibold">Log de auditoría</span>
-                    <span class="badge bg-secondary ms-auto">@_auditLog.TotalCount total</span>
-                </div>
-                <!-- Filtros -->
-                <div class="card-body border-bottom pb-3">
-                    <div class="row g-2 align-items-end">
-                        <div class="col-sm-6 col-md-3">
-                            <label for="logFrom" class="form-label form-label-sm fw-semibold">Desde</label>
-                            <input type="date" id="logFrom" class="form-control form-control-sm"
-                                   @bind="_auditFromDate" />
+    <!-- ═══ PESTAÑA: RESERVA DE EMERGENCIA ═══════════════════════════ -->
+    @if (_activeTab == Tab.Emergency)
+    {
+        <div class="card border-0 shadow-sm mb-3">
+            <div class="card-header eb-zone-header d-flex align-items-center gap-2 py-2">
+                <i class="bi bi-lightning-charge-fill text-warning fs-5"></i>
+                <span class="fw-semibold">Reserva de emergencia</span>
+            </div>
+            <div class="card-body">
+                <p class="small text-muted mb-3">
+                    Crea una reserva en nombre de un usuario. Se aplican todas las validaciones normales.
+                    Selecciona el usuario, la fecha y haz clic en un puesto del mapa.
+                </p>
+                <!-- Usuario y fecha -->
+                <div class="row g-2 mb-3">
+                    <div class="col-sm-6 col-lg-4">
+                        <label for="erUser" class="form-label form-label-sm fw-semibold">Usuario</label>
+                        <select id="erUser" class="form-select form-select-sm"
+                                @onchange="OnEmergencyUserChanged">
+                            <option value="">— Selecciona usuario —</option>
+                            @foreach (var u in _allUsers)
+                            {
+                                <option value="@u.Id" selected="@(_emergencyTargetUserId == u.Id)">@u.Name (@u.Email)</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-sm-6 col-lg-3">
+                        <label for="erDate" class="form-label form-label-sm fw-semibold">Fecha</label>
+                        <div class="d-flex align-items-center gap-1">
+                            <button class="btn btn-sm eb-date-nav-btn" @onclick="EmergencyPrevDay"
+                                    disabled="@(_emergencyDate <= _today)" title="Día anterior">
+                                <i class="bi bi-chevron-left"></i>
+                            </button>
+                            <input type="date" id="erDate" class="form-control form-control-sm"
+                                   value="@_emergencyDate.ToString("yyyy-MM-dd")"
+                                   min="@_today.ToString("yyyy-MM-dd")"
+                                   max="@_today.AddDays(7).ToString("yyyy-MM-dd")"
+                                   @onchange="OnEmergencyDateChanged" />
+                            <button class="btn btn-sm eb-date-nav-btn" @onclick="EmergencyNextDay"
+                                    disabled="@(_emergencyDate >= _today.AddDays(7))" title="Día siguiente">
+                                <i class="bi bi-chevron-right"></i>
+                            </button>
                         </div>
-                        <div class="col-sm-6 col-md-3">
-                            <label for="logTo" class="form-label form-label-sm fw-semibold">Hasta</label>
-                            <input type="date" id="logTo" class="form-control form-control-sm"
-                                   @bind="_auditToDate" />
-                        </div>
-                        <div class="col-sm-6 col-md-3">
-                            <label for="logAction" class="form-label form-label-sm fw-semibold">Acción</label>
-                            <select id="logAction" class="form-select form-select-sm" @bind="_auditActionFilter">
-                                <option value="">— Todas —</option>
-                                @foreach (var action in Enum.GetValues<AuditAction>())
-                                {
-                                    <option value="@((int)action)">@FormatAuditAction(action)</option>
-                                }
-                            </select>
-                        </div>
-                        <div class="col-sm-6 col-md-3">
-                            <label for="logUser" class="form-label form-label-sm fw-semibold">Usuario</label>
-                            <div class="input-group input-group-sm">
-                                <input type="text" id="logUser" class="form-control form-control-sm"
-                                       placeholder="Buscar..." @bind="_auditUserSearch" />
-                                <button class="btn btn-primary btn-sm" @onclick="ApplyAuditFilter">
-                                    <i class="bi bi-search"></i>
-                                </button>
-                            </div>
+                    </div>
+                    <div class="col-lg-5 d-flex align-items-end">
+                        <div class="d-flex align-items-center gap-2 pb-1 flex-wrap">
+                            <span class="eb-legend-dot bg-success"></span><span class="small text-muted">Libre</span>
+                            <span class="eb-legend-dot bg-warning"></span><span class="small text-muted">Parcial</span>
+                            <span class="eb-legend-dot bg-danger"></span><span class="small text-muted">Completo</span>
+                            <span class="eb-legend-dot bg-secondary"></span><span class="small text-muted">Bloqueado</span>
                         </div>
                     </div>
                 </div>
-                <!-- Tabla -->
-                <div class="card-body p-0">
-                    @if (_auditLog.Items.Count == 0)
-                    {
-                        <p class="text-muted small p-3 mb-0">
-                            <i class="bi bi-info-circle me-1"></i>No hay registros para los filtros aplicados.
-                        </p>
-                    }
-                    else
-                    {
-                        <div class="table-responsive">
-                            <table class="table table-sm table-hover align-middle mb-0">
-                                <thead class="table-light">
-                                    <tr>
-                                        <th class="ps-3">Fecha / Hora</th>
-                                        <th>Usuario</th>
-                                        <th>Acción</th>
-                                        <th>Detalles</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @foreach (var entry in _auditLog.Items)
-                                    {
-                                        <tr>
-                                            <td class="ps-3 small text-muted text-nowrap">
-                                                @entry.Timestamp.ToLocalTime().ToString("dd/MM/yy HH:mm")
-                                            </td>
-                                            <td class="small">@(entry.PerformedByName ?? "Sistema")</td>
-                                            <td>
-                                                <span class="badge @GetActionBadgeClass(entry.Action)">
-                                                    @FormatAuditAction(entry.Action)
-                                                </span>
-                                            </td>
-                                            <td class="small text-muted">@entry.Details</td>
-                                        </tr>
-                                    }
-                                </tbody>
-                            </table>
-                        </div>
-                        <!-- Paginación -->
-                        <div class="d-flex align-items-center justify-content-between px-3 py-2 border-top">
-                            <small class="text-muted">
-                                Página @_auditPage de @_auditLog.TotalPages
-                                (@_auditLog.TotalCount registros totales)
-                            </small>
-                            <div class="d-flex gap-1">
-                                <button class="btn btn-outline-secondary btn-sm"
-                                        disabled="@(_auditPage <= 1)"
-                                        @onclick="AuditPrevPage">
-                                    <i class="bi bi-chevron-left"></i>
-                                </button>
-                                <button class="btn btn-outline-secondary btn-sm"
-                                        disabled="@(_auditPage >= _auditLog.TotalPages)"
-                                        @onclick="AuditNextPage">
-                                    <i class="bi bi-chevron-right"></i>
-                                </button>
+
+                <!-- Mapa de puestos (igual que DockMap) -->
+                @if (_emergencyDockMap is not null)
+                {
+                    <div class="d-flex flex-wrap gap-3 mb-3">
+                        @foreach (var zone in _emergencyDockMap.Zones)
+                        {
+                            <div class="card border-0 shadow-sm">
+                                <div class="card-header eb-zone-header d-flex align-items-center gap-2 py-1 px-2">
+                                    <i class="bi bi-grid-3x3 text-primary"></i>
+                                    <span class="fw-semibold small">@zone.Name</span>
+                                </div>
+                                <div class="card-body py-2 px-3">
+                                    <div class="d-flex flex-wrap gap-3">
+                                        @foreach (var table in zone.Tables)
+                                        {
+                                            <div class="eb-table-block">
+                                                <p class="text-muted small fw-semibold mb-1 text-center">@table.Name</p>
+                                                <div class="eb-dock-table">
+                                                    <div class="d-flex gap-2 mb-1">
+                                                        @foreach (var seat in table.SideA)
+                                                        {
+                                                            <span title="@GetTooltip(seat)" style="display:inline-block">
+                                                                <button class="btn @GetBtnClass(seat) eb-dock-seat"
+                                                                        disabled="@(seat.Status is DockStatus.FullyBooked or DockStatus.Blocked)"
+                                                                        @onclick="() => OnEmergencySeatClicked(seat)">
+                                                                    @seat.Code
+                                                                </button>
+                                                            </span>
+                                                        }
+                                                    </div>
+                                                    <hr class="eb-dock-divider my-1" />
+                                                    <div class="d-flex gap-2">
+                                                        @foreach (var seat in table.SideB)
+                                                        {
+                                                            <span title="@GetTooltip(seat)" style="display:inline-block">
+                                                                <button class="btn @GetBtnClass(seat) eb-dock-seat"
+                                                                        disabled="@(seat.Status is DockStatus.FullyBooked or DockStatus.Blocked)"
+                                                                        @onclick="() => OnEmergencySeatClicked(seat)">
+                                                                    @seat.Code
+                                                                </button>
+                                                            </span>
+                                                        }
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        }
+                                    </div>
+                                </div>
                             </div>
+                        }
+                    </div>
+                }
+                @if (_emergencyError is not null)
+                {
+                    <div class="alert alert-danger d-flex align-items-center gap-2 py-2 mb-2">
+                        <i class="bi bi-x-circle-fill flex-shrink-0"></i>
+                        <span class="small">@_emergencyError</span>
+                    </div>
+                }
+                @if (_emergencySuccess is not null)
+                {
+                    <div class="alert alert-success d-flex align-items-center gap-2 py-2 mb-2">
+                        <i class="bi bi-check-circle-fill flex-shrink-0"></i>
+                        <span class="small">@_emergencySuccess</span>
+                    </div>
+                }
+            </div>
+        </div>
+    }
+
+    <!-- ═══ PESTAÑA: GESTIÓN DE USUARIOS ══════════════════════════════ -->
+    @if (_activeTab == Tab.Users)
+    {
+        <div class="card border-0 shadow-sm">
+            <div class="card-header eb-zone-header d-flex align-items-center gap-2 py-2">
+                <i class="bi bi-people-fill text-primary fs-5"></i>
+                <span class="fw-semibold">Gestión de usuarios</span>
+                <span class="badge bg-secondary ms-auto">@_allUsers.Count</span>
+            </div>
+            <div class="card-body p-0">
+                @if (_allUsers.Count == 0)
+                {
+                    <p class="text-muted small p-3 mb-0">
+                        <i class="bi bi-info-circle me-1"></i>No hay usuarios registrados.
+                    </p>
+                }
+                else
+                {
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th class="ps-3">Nombre</th>
+                                    <th>Email</th>
+                                    <th>Roles</th>
+                                    <th class="pe-3 text-end">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var user in _allUsers)
+                                {
+                                    var uid = user.Id;
+                                    var hasManager = user.Roles.Contains("Manager");
+                                    var hasAdmin = user.Roles.Contains("SystemAdmin");
+                                    <tr>
+                                        <td class="ps-3 fw-semibold small">@user.Name</td>
+                                        <td class="small text-muted">@user.Email</td>
+                                        <td>
+                                            @foreach (var role in user.Roles)
+                                            {
+                                                <span class="badge @GetRoleBadgeClass(role) me-1">@role</span>
+                                            }
+                                            @if (!user.Roles.Any())
+                                            {
+                                                <span class="text-muted small">—</span>
+                                            }
+                                        </td>
+                                        <td class="pe-3 text-end">
+                                            <div class="d-flex gap-1 justify-content-end">
+                                                @if (hasManager)
+                                                {
+                                                    <button class="btn btn-outline-secondary btn-sm"
+                                                            title="Quitar rol Manager"
+                                                            @onclick="() => RemoveRole(uid, RoleManager)">
+                                                        <i class="bi bi-person-dash me-1"></i>Manager
+                                                    </button>
+                                                }
+                                                else
+                                                {
+                                                    <button class="btn btn-outline-primary btn-sm"
+                                                            title="Asignar rol Manager"
+                                                            @onclick="() => AssignRole(uid, RoleManager)">
+                                                        <i class="bi bi-person-plus me-1"></i>Manager
+                                                    </button>
+                                                }
+                                                @if (hasAdmin)
+                                                {
+                                                    <button class="btn btn-outline-secondary btn-sm"
+                                                            title="Quitar rol SystemAdmin"
+                                                            @onclick="() => RemoveRole(uid, RoleSystemAdmin)">
+                                                        <i class="bi bi-shield-dash me-1"></i>SystemAdmin
+                                                    </button>
+                                                }
+                                                else
+                                                {
+                                                    <button class="btn btn-outline-danger btn-sm"
+                                                            title="Asignar rol SystemAdmin"
+                                                            @onclick="() => AssignRole(uid, RoleSystemAdmin)">
+                                                        <i class="bi bi-shield-plus me-1"></i>SystemAdmin
+                                                    </button>
+                                                }
+                                            </div>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+                @if (_roleError is not null)
+                {
+                    <div class="alert alert-danger d-flex align-items-center gap-2 py-2 m-3">
+                        <i class="bi bi-x-circle-fill flex-shrink-0"></i>
+                        <span class="small">@_roleError</span>
+                    </div>
+                }
+            </div>
+        </div>
+    }
+
+    <!-- ═══ PESTAÑA: LOG DE AUDITORÍA ════════════════════════════════ -->
+    @if (_activeTab == Tab.AuditLog)
+    {
+        <div class="card border-0 shadow-sm">
+            <div class="card-header eb-zone-header d-flex align-items-center gap-2 py-2">
+                <i class="bi bi-journal-text text-primary fs-5"></i>
+                <span class="fw-semibold">Log de auditoría</span>
+                <span class="badge bg-secondary ms-auto">@_auditLog.TotalCount total</span>
+            </div>
+            <!-- Filtros -->
+            <div class="card-body border-bottom pb-3">
+                <div class="row g-2 align-items-end">
+                    <div class="col-sm-6 col-md-3">
+                        <label for="logFrom" class="form-label form-label-sm fw-semibold">Desde</label>
+                        <input type="date" id="logFrom" class="form-control form-control-sm"
+                               @bind="_auditFromDate" />
+                    </div>
+                    <div class="col-sm-6 col-md-3">
+                        <label for="logTo" class="form-label form-label-sm fw-semibold">Hasta</label>
+                        <input type="date" id="logTo" class="form-control form-control-sm"
+                               @bind="_auditToDate" />
+                    </div>
+                    <div class="col-sm-6 col-md-3">
+                        <label for="logAction" class="form-label form-label-sm fw-semibold">Acción</label>
+                        <select id="logAction" class="form-select form-select-sm" @bind="_auditActionFilter">
+                            <option value="">— Todas —</option>
+                            @foreach (var action in Enum.GetValues<AuditAction>())
+                            {
+                                <option value="@((int)action)">@FormatAuditAction(action)</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-sm-6 col-md-3">
+                        <label for="logUser" class="form-label form-label-sm fw-semibold">Usuario</label>
+                        <div class="input-group input-group-sm">
+                            <input type="text" id="logUser" class="form-control form-control-sm"
+                                   placeholder="Buscar..." @bind="_auditUserSearch" />
+                            <button class="btn btn-primary btn-sm" @onclick="ApplyAuditFilter">
+                                <i class="bi bi-search"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- Tabla -->
+            <div class="card-body p-0">
+                @if (_auditLog.Items.Count == 0)
+                {
+                    <p class="text-muted small p-3 mb-0">
+                        <i class="bi bi-info-circle me-1"></i>No hay registros para los filtros aplicados.
+                    </p>
+                }
+                else
+                {
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th class="ps-3">Fecha / Hora</th>
+                                    <th>Usuario</th>
+                                    <th>Acción</th>
+                                    <th>Detalles</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var entry in _auditLog.Items)
+                                {
+                                    <tr>
+                                        <td class="ps-3 small text-muted text-nowrap">
+                                            @entry.Timestamp.ToLocalTime().ToString("dd/MM/yy HH:mm")
+                                        </td>
+                                        <td class="small">@(entry.PerformedByName ?? "Sistema")</td>
+                                        <td>
+                                            <span class="badge @GetActionBadgeClass(entry.Action)">
+                                                @FormatAuditAction(entry.Action)
+                                            </span>
+                                        </td>
+                                        <td class="small text-muted">@entry.Details</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                    <!-- Paginación -->
+                    <div class="d-flex align-items-center justify-content-between px-3 py-2 border-top">
+                        <small class="text-muted">
+                            Página @_auditPage de @_auditLog.TotalPages
+                            (@_auditLog.TotalCount registros totales)
+                        </small>
+                        <div class="d-flex gap-1">
+                            <button class="btn btn-outline-secondary btn-sm"
+                                    disabled="@(_auditPage <= 1)"
+                                    @onclick="AuditPrevPage">
+                                <i class="bi bi-chevron-left"></i>
+                            </button>
+                            <button class="btn btn-outline-secondary btn-sm"
+                                    disabled="@(_auditPage >= _auditLog.TotalPages)"
+                                    @onclick="AuditNextPage">
+                                <i class="bi bi-chevron-right"></i>
+                            </button>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    }
+}
+
+</div>
+
+<!-- ═══════════════════════════════════════════════════
+     MODAL RESERVA DE EMERGENCIA
+═══════════════════════════════════════════════════ -->
+@if (_emergencySelectedSeat is not null)
+{
+    <div class="modal d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header eb-modal-header">
+                    <div>
+                        <p class="eb-page-eyebrow text-uppercase fw-semibold text-white-50 mb-0" style="font-size:.65rem;letter-spacing:.15em;">Reserva de emergencia</p>
+                        <h5 class="modal-title text-white fw-bold mb-0">
+                            <i class="bi bi-lightning-charge-fill me-2"></i>Puesto @_emergencySelectedSeat.Code
+                        </h5>
+                    </div>
+                    <button type="button" class="btn-close btn-close-white" @onclick="CloseEmergencyModal"></button>
+                </div>
+                <div class="modal-body">
+                    <!-- Info chip -->
+                    <div class="d-flex gap-3 mb-3">
+                        <div class="eb-modal-info-chip">
+                            <i class="bi bi-calendar3 text-primary me-1"></i>
+                            <span class="fw-semibold">@_emergencyDate.ToString("dd/MM/yyyy")</span>
+                        </div>
+                        <div class="eb-modal-info-chip">
+                            <i class="bi bi-geo-alt text-primary me-1"></i>
+                            <span class="fw-semibold">@_emergencySelectedSeat.Code</span>
+                        </div>
+                        @if (_emergencyTargetUserId != Guid.Empty)
+                        {
+                            var userName = _allUsers.FirstOrDefault(u => u.Id == _emergencyTargetUserId)?.Name;
+                            @if (userName is not null)
+                            {
+                                <div class="eb-modal-info-chip">
+                                    <i class="bi bi-person text-primary me-1"></i>
+                                    <span class="fw-semibold">@userName</span>
+                                </div>
+                            }
+                        }
+                    </div>
+
+                    @if (_emergencySelectedSeat.Status == DockStatus.PartiallyBooked)
+                    {
+                        var occupiedUser = _emergencySelectedSeat.BookedSlot!.Value == TimeSlot.Morning
+                            ? _emergencySelectedSeat.MorningBookedBy
+                            : _emergencySelectedSeat.AfternoonBookedBy;
+                        <div class="alert alert-warning d-flex align-items-center gap-2 py-2">
+                            <i class="bi bi-exclamation-triangle-fill flex-shrink-0"></i>
+                            <span>
+                                Franja <strong>@FormatSlot(_emergencySelectedSeat.BookedSlot!.Value)</strong> ya está ocupada
+                                @if (!string.IsNullOrEmpty(occupiedUser))
+                                {
+                                    <span> por <strong>@occupiedUser</strong></span>
+                                }
+                            </span>
                         </div>
                     }
+
+                    <label class="form-label fw-semibold mb-2">Franja horaria</label>
+                    <div class="d-flex gap-2 flex-wrap">
+                        @foreach (var slot in GetAvailableSlots(_emergencySelectedSeat))
+                        {
+                            <div>
+                                <input type="radio" class="btn-check" name="erModalSlot"
+                                       id="@($"er-modal-{slot}")"
+                                       checked="@(_emergencySlot == slot)"
+                                       @onchange="() => _emergencySlot = slot" />
+                                <label class="btn btn-outline-primary btn-sm" for="@($"er-modal-{slot}")">
+                                    <i class="bi @GetSlotIcon(slot) me-1"></i>@FormatSlot(slot)
+                                </label>
+                            </div>
+                        }
+                    </div>
+
+                    @if (_emergencyTargetUserId == Guid.Empty)
+                    {
+                        <div class="alert alert-info d-flex align-items-center gap-2 py-2 mt-3">
+                            <i class="bi bi-info-circle-fill flex-shrink-0"></i>
+                            <span class="small">Selecciona un usuario antes de confirmar la reserva.</span>
+                        </div>
+                    }
+                </div>
+                <div class="modal-footer border-0 pt-0">
+                    <button type="button" class="btn btn-outline-secondary btn-sm" @onclick="CloseEmergencyModal">
+                        <i class="bi bi-x me-1"></i>Cerrar
+                    </button>
+                    <button type="button" class="btn btn-warning btn-sm"
+                            disabled="@(_emergencyTargetUserId == Guid.Empty || _emergencyReserving)"
+                            @onclick="CreateEmergencyReservation">
+                        @if (_emergencyReserving)
+                        {
+                            <span class="spinner-border spinner-border-sm me-1"></span>
+                        }
+                        else
+                        {
+                            <i class="bi bi-lightning-charge me-1"></i>
+                        }
+                        Crear reserva
+                    </button>
                 </div>
             </div>
         </div>
     </div>
 }
 
-</div>
-
 @code {
+    // ── Enum de pestañas ────────────────────────────────────────────
+    private enum Tab { Maintenance, BulkCancel, Emergency, Users, AuditLog }
+
     // ── Constantes de roles (evitan literales en lambdas Razor) ─────
     private const string RoleManager = "Manager";
     private const string RoleSystemAdmin = "SystemAdmin";
@@ -533,9 +762,9 @@ else
     // ── Estado general ─────────────────────────────────────────────
     private DateOnly _today;
     private bool _loading = true;
+    private Tab _activeTab = Tab.Maintenance;
 
     // ── Datos maestros ─────────────────────────────────────────────
-    private List<DockSimpleDto> _allDocks = [];
     private List<UserWithRolesDto> _allUsers = [];
 
     // ── Modo mantenimiento ─────────────────────────────────────────
@@ -554,15 +783,17 @@ else
     private string? _bulkSuccess;
     private bool _bulkCancelling;
     private bool _confirmBulkCancel;
+    private DockMapDto? _bulkDockMap;
 
     // ── Reserva de emergencia ──────────────────────────────────────
     private Guid _emergencyTargetUserId;
-    private Guid _emergencyDockId;
     private DateOnly _emergencyDate;
     private TimeSlot _emergencySlot = TimeSlot.Morning;
     private string? _emergencyError;
     private string? _emergencySuccess;
     private bool _emergencyReserving;
+    private DockMapDto? _emergencyDockMap;
+    private DockSeatDto? _emergencySelectedSeat;
 
     // ── Gestión de roles ───────────────────────────────────────────
     private string? _roleError;
@@ -575,13 +806,6 @@ else
     private string? _auditToDateStr;
     private string? _auditActionFilterStr;
     private string? _auditUserSearch;
-
-    // Bindable helpers para los inputs de fecha y filtro de auditoría
-    private string? _auditFromDateBind
-    {
-        get => _auditFromDateStr;
-        set { _auditFromDateStr = value; }
-    }
 
     private DateOnly? _auditFromDate
     {
@@ -619,13 +843,11 @@ else
     {
         _loading = true;
 
-        // Cargar en paralelo mantenimiento, usuarios, puestos y log de auditoría
-        var maintTask = Mediator.Send(new GetMaintenanceModeQuery());
-        var usersTask = Mediator.Send(new GetAllUsersWithRolesQuery());
-        var docksTask = Mediator.Send(new GetDockMapQuery(_today));
-        var auditTask = LoadAuditLogAsync();
+        var maintTask  = Mediator.Send(new GetMaintenanceModeQuery());
+        var usersTask  = Mediator.Send(new GetAllUsersWithRolesQuery());
+        var bulkMapTask = Mediator.Send(new GetDockMapQuery(_today));
 
-        await Task.WhenAll(maintTask, usersTask, docksTask, auditTask);
+        await Task.WhenAll(maintTask, usersTask, bulkMapTask);
 
         var maint = await maintTask;
         _maintenanceActive = maint.IsActive;
@@ -633,12 +855,8 @@ else
 
         _allUsers = (List<UserWithRolesDto>)(await usersTask);
 
-        var dockMap = await docksTask;
-        _allDocks = dockMap.Zones
-            .SelectMany(z => z.Tables)
-            .SelectMany(t => t.SideA.Concat(t.SideB))
-            .Select(s => new DockSimpleDto(s.Id, s.Code))
-            .ToList();
+        _bulkDockMap = await bulkMapTask;
+        _emergencyDockMap = _bulkDockMap; // same initial map; reloads per date later
 
         _loading = false;
     }
@@ -754,12 +972,68 @@ else
     }
 
     // ══════════════════════════════════════════════════════════════
-    // Reserva de emergencia
+    // Reserva de emergencia — mapa interactivo
     // ══════════════════════════════════════════════════════════════
+
+    private void OnEmergencyUserChanged(ChangeEventArgs e)
+    {
+        if (Guid.TryParse(e.Value?.ToString(), out var id))
+            _emergencyTargetUserId = id;
+        else
+            _emergencyTargetUserId = Guid.Empty;
+    }
+
+    private async Task OnEmergencyDateChanged(ChangeEventArgs e)
+    {
+        if (DateOnly.TryParse(e.Value?.ToString(), out var d))
+        {
+            _emergencyDate = d;
+            await LoadEmergencyMapAsync();
+        }
+    }
+
+    private async Task EmergencyPrevDay()
+    {
+        if (_emergencyDate > _today)
+        {
+            _emergencyDate = _emergencyDate.AddDays(-1);
+            await LoadEmergencyMapAsync();
+        }
+    }
+
+    private async Task EmergencyNextDay()
+    {
+        if (_emergencyDate < _today.AddDays(7))
+        {
+            _emergencyDate = _emergencyDate.AddDays(1);
+            await LoadEmergencyMapAsync();
+        }
+    }
+
+    private async Task LoadEmergencyMapAsync()
+    {
+        _emergencyDockMap = await Mediator.Send(new GetDockMapQuery(_emergencyDate));
+    }
+
+    private void OnEmergencySeatClicked(DockSeatDto seat)
+    {
+        if (seat.Status is DockStatus.FullyBooked or DockStatus.Blocked) return;
+        _emergencySelectedSeat = seat;
+        _emergencySlot = seat.Status == DockStatus.Free ? TimeSlot.Both : GetAvailableSlots(seat).First();
+        _emergencyError = null;
+        _emergencySuccess = null;
+    }
+
+    private void CloseEmergencyModal()
+    {
+        _emergencySelectedSeat = null;
+        _emergencyError = null;
+        _emergencySuccess = null;
+    }
 
     private async Task CreateEmergencyReservation()
     {
-        if (_emergencyTargetUserId == Guid.Empty || _emergencyDockId == Guid.Empty) return;
+        if (_emergencySelectedSeat is null || _emergencyTargetUserId == Guid.Empty) return;
 
         _emergencyError = null;
         _emergencySuccess = null;
@@ -768,15 +1042,15 @@ else
         var result = await Mediator.Send(new CreateEmergencyReservationCommand(
             CurrentUser.UserId,
             _emergencyTargetUserId,
-            _emergencyDockId,
+            _emergencySelectedSeat.Id,
             _emergencyDate,
             _emergencySlot));
 
         if (result.IsSuccess)
         {
             _emergencySuccess = "Reserva de emergencia creada correctamente.";
-            _emergencyTargetUserId = Guid.Empty;
-            _emergencyDockId = Guid.Empty;
+            _emergencySelectedSeat = null;
+            await LoadEmergencyMapAsync();
             await LoadAuditLogAsync();
         }
         else
@@ -817,6 +1091,13 @@ else
     // Log de auditoría
     // ══════════════════════════════════════════════════════════════
 
+    private async Task SwitchToAuditTab()
+    {
+        _activeTab = Tab.AuditLog;
+        if (_auditLog.TotalCount == 0)
+            await LoadAuditLogAsync();
+    }
+
     private async Task ApplyAuditFilter()
     {
         _auditPage = 1;
@@ -845,6 +1126,63 @@ else
     // Helpers visuales
     // ══════════════════════════════════════════════════════════════
 
+    private static string GetBtnClass(DockSeatDto seat) => seat.Status switch
+    {
+        DockStatus.Free           => "btn-success",
+        DockStatus.PartiallyBooked => "btn-warning",
+        DockStatus.FullyBooked    => "btn-danger",
+        DockStatus.Blocked        => "btn-secondary",
+        _                         => "btn-outline-secondary"
+    };
+
+    private static string GetTooltip(DockSeatDto seat) => seat.Status switch
+    {
+        DockStatus.Free           => "Libre — haz clic para reservar",
+        DockStatus.PartiallyBooked => BuildPartialTooltip(seat),
+        DockStatus.FullyBooked    => BuildFullBookedTooltip(seat),
+        DockStatus.Blocked        => BuildBlockedTooltip(seat),
+        _                         => seat.Code
+    };
+
+    private static string BuildPartialTooltip(DockSeatDto seat)
+    {
+        var slot = FormatSlot(seat.BookedSlot!.Value);
+        var who = seat.BookedSlot!.Value == TimeSlot.Morning ? seat.MorningBookedBy : seat.AfternoonBookedBy;
+        return string.IsNullOrEmpty(who) ? $"Parcial — {slot} ocupada" : $"Parcial — {slot} ocupada ({who})";
+    }
+
+    private static string BuildFullBookedTooltip(DockSeatDto seat)
+    {
+        if (seat.MorningBookedBy is null && seat.AfternoonBookedBy is null) return "Completo";
+        if (seat.MorningBookedBy == seat.AfternoonBookedBy && seat.MorningBookedBy is not null)
+            return $"Completo — {seat.MorningBookedBy}";
+        var parts = new List<string>();
+        if (seat.MorningBookedBy is not null) parts.Add($"Mañana: {seat.MorningBookedBy}");
+        if (seat.AfternoonBookedBy is not null) parts.Add($"Tarde: {seat.AfternoonBookedBy}");
+        return "Completo — " + string.Join(", ", parts);
+    }
+
+    private static string BuildBlockedTooltip(DockSeatDto seat)
+    {
+        var by = string.IsNullOrEmpty(seat.BlockedByName) ? "" : $" por {seat.BlockedByName}";
+        var reason = string.IsNullOrEmpty(seat.BlockReason) ? "" : $": {seat.BlockReason}";
+        return $"Bloqueado{by}{reason}";
+    }
+
+    private static IEnumerable<TimeSlot> GetAvailableSlots(DockSeatDto seat)
+    {
+        if (seat.Status == DockStatus.Free)
+        {
+            yield return TimeSlot.Morning;
+            yield return TimeSlot.Afternoon;
+            yield return TimeSlot.Both;
+        }
+        else if (seat.Status == DockStatus.PartiallyBooked && seat.BookedSlot is not null)
+        {
+            yield return seat.BookedSlot.Value == TimeSlot.Morning ? TimeSlot.Afternoon : TimeSlot.Morning;
+        }
+    }
+
     private static string GetRoleBadgeClass(string role) => role switch
     {
         "SystemAdmin" => "bg-danger",
@@ -855,16 +1193,16 @@ else
 
     private static string GetActionBadgeClass(AuditAction action) => action switch
     {
-        AuditAction.ReservationCreated         => "bg-success",
-        AuditAction.ReservationCancelled       => "bg-warning text-dark",
-        AuditAction.DockBlocked                => "bg-danger",
-        AuditAction.DockUnblocked              => "bg-secondary",
-        AuditAction.BulkReservationsCancelled  => "bg-danger",
-        AuditAction.MaintenanceModeChanged     => "bg-warning text-dark",
+        AuditAction.ReservationCreated          => "bg-success",
+        AuditAction.ReservationCancelled        => "bg-warning text-dark",
+        AuditAction.DockBlocked                 => "bg-danger",
+        AuditAction.DockUnblocked               => "bg-secondary",
+        AuditAction.BulkReservationsCancelled   => "bg-danger",
+        AuditAction.MaintenanceModeChanged      => "bg-warning text-dark",
         AuditAction.EmergencyReservationCreated => "bg-info text-dark",
-        AuditAction.UserRoleAssigned           => "bg-primary",
-        AuditAction.UserRoleRemoved            => "bg-secondary",
-        _                                      => "bg-light text-dark"
+        AuditAction.UserRoleAssigned            => "bg-primary",
+        AuditAction.UserRoleRemoved             => "bg-secondary",
+        _                                       => "bg-light text-dark"
     };
 
     private static string FormatAuditAction(AuditAction action) => action switch
@@ -889,29 +1227,36 @@ else
         _                  => slot.ToString()
     };
 
+    private static string GetSlotIcon(TimeSlot slot) => slot switch
+    {
+        TimeSlot.Morning   => "bi-sunrise",
+        TimeSlot.Afternoon => "bi-sunset",
+        TimeSlot.Both      => "bi-sun",
+        _                  => "bi-clock"
+    };
+
     private static string MapSystemAdminError(string error) => error switch
     {
-        "NOT_SYSTEM_ADMIN"    => "No tienes permisos de SystemAdmin para realizar esta acción.",
-        "USER_NOT_FOUND"      => "El usuario seleccionado no existe.",
-        "INVALID_ROLE"        => "El rol indicado no es válido.",
+        "NOT_SYSTEM_ADMIN"      => "No tienes permisos de SystemAdmin para realizar esta acción.",
+        "USER_NOT_FOUND"        => "El usuario seleccionado no existe.",
+        "INVALID_ROLE"          => "El rol indicado no es válido.",
         "ROLE_ALREADY_ASSIGNED" => "El usuario ya tiene ese rol asignado.",
-        "ROLE_NOT_ASSIGNED"   => "El usuario no tiene ese rol.",
-        "INVALID_DATE_RANGE"  => "La fecha de fin no puede ser anterior a la de inicio.",
-        _                     => $"Error inesperado: {error}"
+        "ROLE_NOT_ASSIGNED"     => "El usuario no tiene ese rol.",
+        "INVALID_DATE_RANGE"    => "La fecha de fin no puede ser anterior a la de inicio.",
+        _                       => $"Error inesperado: {error}"
     };
 
     private static string MapReservationError(string error) => error switch
     {
-        "DATE_IN_THE_PAST"       => "La fecha no puede ser anterior a hoy.",
-        "DATE_TOO_FAR_AHEAD"     => "La fecha no puede superar los 7 días de antelación.",
-        "DOCK_NOT_FOUND"         => "El puesto seleccionado no existe.",
-        "DOCK_BLOCKED"           => "El puesto está bloqueado para esa fecha.",
-        "DOCK_NOT_AVAILABLE"     => "El puesto ya está reservado en esa franja.",
+        "DATE_IN_THE_PAST"        => "La fecha no puede ser anterior a hoy.",
+        "DATE_TOO_FAR_AHEAD"      => "La fecha no puede superar los 7 días de antelación.",
+        "DOCK_NOT_FOUND"          => "El puesto seleccionado no existe.",
+        "DOCK_BLOCKED"            => "El puesto está bloqueado para esa fecha.",
+        "DOCK_NOT_AVAILABLE"      => "El puesto ya está reservado en esa franja.",
         "USER_MAX_SLOTS_EXCEEDED" => "El usuario ha alcanzado el máximo de franjas diarias.",
-        "USER_SLOT_CONFLICT"     => "El usuario ya tiene una reserva que se solaparía.",
-        _                        => $"Error: {error}"
+        "USER_SLOT_CONFLICT"      => "El usuario ya tiene una reserva que se solaparía.",
+        _                         => $"Error: {error}"
     };
-
-    // ── DTO local para simplificar la lista de puestos ─────────────
-    private sealed record DockSimpleDto(Guid Id, string Code);
 }
+
+
