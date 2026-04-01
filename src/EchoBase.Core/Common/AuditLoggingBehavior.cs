@@ -30,7 +30,7 @@ public sealed class AuditLoggingBehavior<TRequest, TResponse>(
 
         if (request is IAuditableRequest auditable && IsSuccess(response))
         {
-            var entry = new AuditLog(Guid.NewGuid())
+            var entry = new AuditLog(Guid.CreateVersion7())
             {
                 PerformedByUserId = auditable.PerformedByUserId,
                 Action = auditable.AuditAction,

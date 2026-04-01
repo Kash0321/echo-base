@@ -188,4 +188,20 @@ public sealed class CreateReservationIntegrationTests : IntegrationTestBase
         var saved = await DbContext.Reservations.SingleAsync(r => r.Id == result.Value);
         Assert.Equal(TimeSlot.Both, saved.TimeSlot);
     }
+
+    // ── IT-CR-10 ──────────────────────────────────────────────────────────────
+    [Fact]
+    public async Task CreateReservation_ValidRequest_ReturnsUuidVersion7Id()
+    {
+        // Arrange
+        var command = new CreateReservationCommand(TestUserId, DockNA01, Today, TimeSlot.Morning);
+
+        // Act
+        var result = await Mediator.Send(command);
+
+        // Assert
+        Assert.True(result.IsSuccess);
+        // En el formato canánico xxxxxxxx-xxxx-Mxxx-..., la posición [14] es el dígito de versión
+        Assert.Equal('7', result.Value.ToString()[14]);
+    }
 }

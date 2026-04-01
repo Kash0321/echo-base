@@ -115,7 +115,7 @@ public sealed class BlockDocksHandler(
         // 8. Crear los bloqueos
         var blocks = request.DockIds.Select(dockId =>
             new BlockedDock(
-                Guid.NewGuid(),
+                Guid.CreateVersion7(),
                 dockId,
                 request.ManagerUserId,
                 request.StartDate,

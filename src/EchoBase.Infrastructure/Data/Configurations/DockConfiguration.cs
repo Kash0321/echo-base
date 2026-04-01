@@ -1,4 +1,5 @@
 using EchoBase.Core.Entities;
+using EchoBase.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -17,6 +18,10 @@ internal sealed class DockConfiguration : IEntityTypeConfiguration<Dock>
         builder.ToTable("Docks");
 
         builder.HasKey(d => d.Id);
+
+        builder.Property(d => d.Id)
+            .ValueGeneratedOnAdd()
+            .HasValueGenerator<UuidV7ValueGenerator>();
 
         builder.Property(d => d.Code)
             .IsRequired()

@@ -1,4 +1,5 @@
 using EchoBase.Core.Entities;
+using EchoBase.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -16,6 +17,10 @@ internal sealed class DockZoneConfiguration : IEntityTypeConfiguration<DockZone>
         builder.ToTable("DockZones");
 
         builder.HasKey(dz => dz.Id);
+
+        builder.Property(dz => dz.Id)
+            .ValueGeneratedOnAdd()
+            .HasValueGenerator<UuidV7ValueGenerator>();
 
         builder.Property(dz => dz.Name)
             .IsRequired()

@@ -105,7 +105,7 @@ public sealed class CreateReservationHandler(
 
         // 6. Crear la reserva
         var reservation = new Reservation(
-            Guid.NewGuid(),
+            Guid.CreateVersion7(),
             request.UserId,
             request.DockId,
             request.Date,

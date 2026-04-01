@@ -298,6 +298,36 @@ public class CreateReservationHandlerTests
         Assert.Equal(expected, CreateReservationHandler.TimeSlotsOverlap(a, b));
     }
 
+    // ──────────────────────────────────────────────────────────────
+    // UUID v7 — versión y ordenabilidad cronológica
+    // ──────────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task Handle_ValidRequest_ReturnsUuidVersion7()
+    {
+        var result = await _handler.Handle(Cmd(), CancellationToken.None);
+
+        Assert.True(result.IsSuccess);
+        // En el formato canónico xxxxxxxx-xxxx-Mxxx-..., la posición [14] es el dígito de versión
+        Assert.Equal('7', result.Value.ToString()[14]);
+    }
+
+    [Fact]
+    public void UuidV7_DifferentTimestamps_AreChronologicallyOrdered()
+    {
+        // UUID v7 embebe la marca de tiempo en los bits de mayor peso, lo que garantiza
+        // orden lexicográfico (y por tanto cronológico) para timestamps distintos.
+        var t1 = new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero);
+        var t2 = t1.AddMilliseconds(100);
+
+        var guid1 = Guid.CreateVersion7(t1);
+        var guid2 = Guid.CreateVersion7(t2);
+
+        Assert.True(
+            string.Compare(guid1.ToString(), guid2.ToString(), StringComparison.Ordinal) < 0,
+            "UUID v7 debe ser ordenable cronológicamente para timestamps diferentes");
+    }
+
     [Theory]
     [InlineData(TimeSlot.Morning, 1)]
     [InlineData(TimeSlot.Afternoon, 1)]

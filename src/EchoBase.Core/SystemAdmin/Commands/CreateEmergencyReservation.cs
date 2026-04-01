@@ -110,7 +110,7 @@ public sealed class CreateEmergencyReservationHandler(
 
         // 8. Crear la reserva en nombre del usuario destino
         var reservation = new Reservation(
-            Guid.NewGuid(),
+            Guid.CreateVersion7(),
             request.TargetUserId,
             request.DockId,
             request.Date,

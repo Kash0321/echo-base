@@ -1,4 +1,5 @@
 using EchoBase.Core.Entities;
+using EchoBase.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -17,6 +18,10 @@ internal sealed class BlockedDockConfiguration : IEntityTypeConfiguration<Blocke
         builder.ToTable("BlockedDocks");
 
         builder.HasKey(b => b.Id);
+
+        builder.Property(b => b.Id)
+            .ValueGeneratedOnAdd()
+            .HasValueGenerator<UuidV7ValueGenerator>();
 
         builder.Property(b => b.StartDate)
             .IsRequired();

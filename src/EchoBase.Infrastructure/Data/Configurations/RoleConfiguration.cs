@@ -1,4 +1,5 @@
 using EchoBase.Core.Entities;
+using EchoBase.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -17,6 +18,10 @@ internal sealed class RoleConfiguration : IEntityTypeConfiguration<Role>
         builder.ToTable("Roles");
 
         builder.HasKey(r => r.Id);
+
+        builder.Property(r => r.Id)
+            .ValueGeneratedOnAdd()
+            .HasValueGenerator<UuidV7ValueGenerator>();
 
         builder.Property(r => r.Name)
             .IsRequired()
