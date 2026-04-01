@@ -91,6 +91,23 @@ A continuación se muestran capturas de las pantallas principales del sistema, q
 #### 👤 5. Perfil de Usuario (`UserProfile.razor`)
 ![Perfil de Usuario](005.UserProfile.png)
 
+#### 🛡️ 6. Administración del Sistema (`SystemAdminDashboard.razor`)
+
+##### 🔧 Modo Mantenimiento
+![Administración - Modo Mantenimiento](006.SystemAdmin01_MaintenanceMode.png)
+
+##### 🗑️ Cancelación Masiva
+![Administración - Cancelación Masiva](006.SystemAdmin02_BulkCancel.png)
+
+##### ⚡ Reserva de Emergencia
+![Administración - Reserva de Emergencia](006.SystemAdmin03_EmergencyReservation.png)
+
+##### 👥 Gestión de Usuarios
+![Administración - Gestión de Usuarios](006.SystemAdmin04_UsersManagement.png)
+
+##### 📋 Log de Auditoría
+![Administración - Log de Auditoría](006.SystemAdmin05_LOG.png)
+
 ## 🗃️ Modelo de datos
 1. **User** (Empleado que reserva espacio): Id, Nombre, Email, Línea de negocio (Core, Energía, Scrap/Waste, Transversal), Teléfono de contacto (opcional), NotificaciónEmail (bool), NotificaciónTeams (bool).
 2. **Dock** (Puesto de trabajo): Id, Código (ej: A-01), Ubicación, Equipamiento (Monitor doble, etc.).
