@@ -235,6 +235,31 @@ El hook ejecuta el calculo tras cada commit y enmienda el mismo commit para incl
 
 <!-- LOC_REPORT_HISTORY_START -->
 
+### 2026-04-02 | commit 8f437b4
+
+Resumen
+
+| Categoria | Ficheros | LoC | % sobre total |
+|---|---:|---:|---:|
+| Codigo de aplicacion | 124 | 9.889 | 68,9% |
+| Codigo de pruebas | 33 | 4.457 | 31,1% |
+| Total | 157 | 14.346 | 100% |
+
+Desglose de codigo de aplicacion
+
+| Proyecto | Ficheros | LoC |
+|---|---:|---:|
+| EchoBase.Core | 62 | 2.959 |
+| EchoBase.Infrastructure | 31 | 1.841 |
+| EchoBase.Web | 31 | 5.089 |
+
+Desglose de pruebas
+
+| Proyecto | Ficheros | LoC |
+|---|---:|---:|
+| EchoBase.Tests.Integration | 12 | 1.153 |
+| EchoBase.Tests.Unit | 21 | 3.304 |
+
 ### 2026-04-02 | commit 1ae8359
 
 Resumen
@@ -686,6 +711,7 @@ Desglose de pruebas
 | EchoBase.Tests.Unit | 12 | 1.795 |
 
 <!-- LOC_REPORT_HISTORY_END -->
+
 
 
 

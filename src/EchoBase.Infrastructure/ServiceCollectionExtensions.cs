@@ -71,6 +71,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IReservationRepository, ReservationRepository>();
         services.AddScoped<IBlockedDockRepository, BlockedDockRepository>();
         services.AddScoped<IDockMapRepository, DockMapRepository>();
+        services.AddScoped<IDockAdminRepository, DockAdminRepository>();
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IAuditLogRepository, AuditLogRepository>();
         services.AddScoped<ISystemSettingRepository, SystemSettingRepository>();

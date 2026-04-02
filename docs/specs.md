@@ -15,7 +15,7 @@
 - [📌 Funcionalidad 2: Reserva de puesto de trabajo](#-funcionalidad-2-reserva-de-puesto-de-trabajo-implementada)
 - [🛡️ Funcionalidad 3: Cuadro de mando para administración](#️-funcionalidad-3-cuadro-de-mando-para-administración-implementada)
 - [🗓️ Funcionalidad 4: Gestión de reservas](#️-funcionalidad-4-gestión-de-reservas-implementada)
-- [🏗️ Funcionalidad 5: Configuración de Zonas, Mesas y Puestos de trabajo](#️-funcionalidad-5-configuración-del-zonas-mesas-y-puestos-de-trabajo-pendiente-de-implementación)
+- [🏗️ Funcionalidad 5: Configuración de Zonas, Mesas y Puestos de trabajo](#️-funcionalidad-5-configuración-del-zonas-mesas-y-puestos-de-trabajo-implementada)
 - [📊 Funcionalidad 6: Reportes y estadísticas](#-funcionalidad-6-reportes-y-estadísticas-pendiente-de-implementación)
 - [🔧 Funcionalidad 7: Reporte de incidencias](#-funcionalidad-7-reporte-de-incidencias-en-los-puestos-de-trabajo-pendiente-de-implementación)
 - [🚩 Funcionalidad 8: Feature Flags de sistema](#-funcionalidad-8-feature-flags-de-sistema-implementada)
@@ -347,6 +347,15 @@ Valores del enum `AuditAction`:
 | `EmergencyReservationCreated` | Reserva de emergencia creada |
 | `UserRoleAssigned` | Rol asignado a un usuario |
 | `UserRoleRemoved` | Rol retirado a un usuario |
+| `DockZoneCreated` | Zona de trabajo creada |
+| `DockZoneUpdated` | Zona de trabajo actualizada |
+| `DockZoneDeleted` | Zona de trabajo eliminada |
+| `DockCreated` | Puesto de trabajo creado |
+| `DockUpdated` | Puesto de trabajo actualizado |
+| `DockDeleted` | Puesto de trabajo eliminado |
+| `DockTableCreated` | Mesa lógica creada |
+| `DockTableUpdated` | Mesa lógica actualizada |
+| `DockTableDeleted` | Mesa lógica eliminada |
 
 ---
 
@@ -448,11 +457,56 @@ Integración con Azure AD (tennant de nuestra compañía) para autenticación y 
 - El sistema envía recordatorios automáticos a los usuarios sobre sus reservas próximas, con opciones para modificar o cancelar la reserva directamente desde la notificación.
 - Las notificaciones por Microsoft Teams solo se envían si el feature flag `Features:TeamsNotificationsEnabled` está activo a nivel global (ver Funcionalidad 7).
 
-## 🏗️ Funcionalidad 5: Configuración del Zonas, Mesas y Puestos de trabajo [Pendiente de implementación]
+## 🏗️ Funcionalidad 5: Configuración del Zonas, Mesas y Puestos de trabajo [Implementada]
 - El SystemAdmin puede configurar (crear, editar y eliminar) las zonas de trabajo, asignar puestos a cada zona y definir la orientación de las mesas (horizontal o vertical) para cada zona desde el cuadro de mando de administración.
 - El SystemAdmin puede definir metadatos de localización para cada mesa (por ejemplo, "Mesa 1", "Mesa 2") que se muestran en el mapa de puestos de trabajo como parte del bloque visual de cada zona. Si no se define un localizador para una mesa, se muestra un nombre inferido basado en la clave lógica (ejemplo: "Mesa N" para la mesa con clave "N").
 - El SystemAdmin puede editar la información de cada puesto de trabajo, incluyendo su código, ubicación y equipamiento disponible, para mantener la información actualizada y precisa para los usuarios al hacer sus reservas.
 - El SystemAdmin puede eliminar puestos de trabajo obsoletos o que ya no estén disponibles, lo que los retirará del mapa de reservas y cancelará automáticamente cualquier reserva futura asociada a esos puestos, notificando a los usuarios afectados sobre la cancelación y el motivo.
+
+### Detalles de implementación
+
+#### Nuevos valores del enum `AuditAction`
+
+| Valor | Descripción |
+|---|---|
+| `DockZoneCreated` (10) | Zona de trabajo creada |
+| `DockZoneUpdated` (11) | Zona de trabajo actualizada |
+| `DockZoneDeleted` (12) | Zona de trabajo eliminada |
+| `DockCreated` (13) | Puesto de trabajo creado |
+| `DockUpdated` (14) | Puesto de trabajo actualizado |
+| `DockDeleted` (15) | Puesto de trabajo eliminado |
+| `DockTableCreated` (16) | Mesa lógica creada |
+| `DockTableUpdated` (17) | Mesa lógica actualizada |
+| `DockTableDeleted` (18) | Mesa lógica eliminada |
+
+#### Comandos y queries implementados
+
+| Artefacto | Ubicación |
+|---|---|
+| `CreateDockZoneCommand` | `EchoBase.Core/DockAdmin/Commands/` |
+| `UpdateDockZoneCommand` | `EchoBase.Core/DockAdmin/Commands/` |
+| `DeleteDockZoneCommand` | `EchoBase.Core/DockAdmin/Commands/` |
+| `CreateDockCommand` | `EchoBase.Core/DockAdmin/Commands/` |
+| `UpdateDockCommand` | `EchoBase.Core/DockAdmin/Commands/` |
+| `DeleteDockCommand` | `EchoBase.Core/DockAdmin/Commands/` |
+| `CreateDockTableCommand` | `EchoBase.Core/DockAdmin/Commands/` |
+| `UpdateDockTableCommand` | `EchoBase.Core/DockAdmin/Commands/` |
+| `DeleteDockTableCommand` | `EchoBase.Core/DockAdmin/Commands/` |
+| `GetDockAdminDataQuery` | `EchoBase.Core/DockAdmin/Queries/` |
+| `DockAdminErrors` | `EchoBase.Core/DockAdmin/` |
+| `IDockAdminRepository` | `EchoBase.Core/Interfaces/` |
+| `DockAdminRepository` | `EchoBase.Infrastructure/Repositories/` |
+
+#### Página de administración
+Se añadió la pestaña **«Zonas y puestos»** (`Tab.DockConfig`) en `/system-admin` (`SystemAdminDashboard.razor`). La pestaña carga sus datos de forma diferida (lazy) la primera vez que se selecciona.
+
+| Sección | Descripción |
+|---|---|
+| Lista de zonas | Una tarjeta por zona con badge de orientación, botón editar (formulario inline), botón eliminar (modal de confirmación) |
+| Mesas por zona | Tabla con clave y localizador; edición inline del localizador; formulario de nueva mesa |
+| Puestos por zona | Tabla con código, ubicación y equipamiento; edición inline; eliminación con aviso de cancelación de reservas |
+| Crear zona | Formulario al pie con campos nombre, descripción, orientación (btn-check Horizontal/Vertical) |
+| Modales | Confirmación antes de eliminar zona, mesa o puesto (el de puesto advierte sobre cancelación de reservas futuras) |
 
 ## 📊 Funcionalidad 6: Reportes y estadísticas [Pendiente de implementación]
 - El Manager puede acceder a un panel de reportes que muestra estadísticas de uso de los puestos de trabajo, como el porcentaje de ocupación por día, semana o mes.
@@ -549,6 +603,15 @@ Valores del enum `AuditAction`:
 | `EmergencyReservationCreated` | Reserva de emergencia creada |
 | `UserRoleAssigned` | Rol asignado a un usuario |
 | `UserRoleRemoved` | Rol retirado a un usuario |
+| `DockZoneCreated` | Zona de trabajo creada |
+| `DockZoneUpdated` | Zona de trabajo actualizada |
+| `DockZoneDeleted` | Zona de trabajo eliminada |
+| `DockCreated` | Puesto de trabajo creado |
+| `DockUpdated` | Puesto de trabajo actualizado |
+| `DockDeleted` | Puesto de trabajo eliminado |
+| `DockTableCreated` | Mesa lógica creada |
+| `DockTableUpdated` | Mesa lógica actualizada |
+| `DockTableDeleted` | Mesa lógica eliminada |
 
 #### Comandos y queries implementados
 
@@ -606,6 +669,91 @@ Cada clase de tests hereda de `IntegrationTestBase : IAsyncLifetime`.
 - En `DisposeAsync`: se libera el `DbContext`, el proveedor de servicios y la conexión SQLite.
 
 Cada instancia de clase de tests obtiene su propia base de datos en memoria, por lo que los tests son completamente independientes entre sí.
+
+#### ✅ Cobertura actual — Funcionalidad 5: Configuración de Zonas, Mesas y Puestos
+
+**Pruebas unitarias**
+
+**`DockAdminCommandTests`** (36 casos — `EchoBase.Tests.Unit/DockAdmin/`):
+
+| ID | Caso |
+|---|---|
+| UT-DA-01 | `CreateDockZone` → success, devuelve Guid no vacío |
+| UT-DA-02 | `CreateDockZone` → no SystemAdmin → `NotSystemAdmin` |
+| UT-DA-03 | `CreateDockZone` → nombre duplicado → `ZoneNameAlreadyExists` |
+| UT-DA-04 | `UpdateDockZone` → success, llama `UpdateZoneAsync` con parámetros correctos |
+| UT-DA-05 | `UpdateDockZone` → no SystemAdmin → `NotSystemAdmin` |
+| UT-DA-06 | `UpdateDockZone` → zona inexistente → `ZoneNotFound` |
+| UT-DA-07 | `UpdateDockZone` → nombre duplicado → `ZoneNameAlreadyExists` |
+| UT-DA-08 | `DeleteDockZone` → zona vacía → success, llama `DeleteZoneAsync` |
+| UT-DA-09 | `DeleteDockZone` → no SystemAdmin → `NotSystemAdmin` |
+| UT-DA-10 | `DeleteDockZone` → zona inexistente → `ZoneNotFound` |
+| UT-DA-11 | `DeleteDockZone` → zona con puestos → `ZoneHasDocks` |
+| UT-DA-12 | `CreateDock` → success, devuelve Guid no vacío |
+| UT-DA-13 | `CreateDock` → no SystemAdmin → `NotSystemAdmin` |
+| UT-DA-14 | `CreateDock` → código vacío → `DockCodeRequired` |
+| UT-DA-15 | `CreateDock` → código duplicado → `DockCodeAlreadyExists` |
+| UT-DA-16 | `CreateDock` → zona inexistente → `ZoneNotFound` |
+| UT-DA-17 | `UpdateDock` → success, llama `UpdateDockAsync` con parámetros correctos |
+| UT-DA-18 | `UpdateDock` → no SystemAdmin → `NotSystemAdmin` |
+| UT-DA-19 | `UpdateDock` → código vacío → `DockCodeRequired` |
+| UT-DA-20 | `UpdateDock` → puesto inexistente → `DockNotFound` |
+| UT-DA-21 | `UpdateDock` → código duplicado → `DockCodeAlreadyExists` |
+| UT-DA-22 | `DeleteDock` → con reservas futuras → cancela (publica notificación × n) + elimina, devuelve count |
+| UT-DA-23 | `DeleteDock` → sin reservas futuras → elimina, devuelve 0 |
+| UT-DA-24 | `DeleteDock` → no SystemAdmin → `NotSystemAdmin` |
+| UT-DA-25 | `DeleteDock` → puesto inexistente → `DockNotFound` |
+| UT-DA-26 | `CreateDockTable` → success, devuelve Guid no vacío |
+| UT-DA-27 | `CreateDockTable` → no SystemAdmin → `NotSystemAdmin` |
+| UT-DA-28 | `CreateDockTable` → clave vacía → `TableKeyRequired` |
+| UT-DA-29 | `CreateDockTable` → zona inexistente → `ZoneNotFound` |
+| UT-DA-30 | `CreateDockTable` → clave duplicada en zona → `TableKeyAlreadyExists` |
+| UT-DA-31 | `UpdateDockTable` → success, llama `UpdateTableLocatorAsync` con params correctos |
+| UT-DA-32 | `UpdateDockTable` → no SystemAdmin → `NotSystemAdmin` |
+| UT-DA-33 | `UpdateDockTable` → mesa inexistente → `TableNotFound` |
+| UT-DA-34 | `DeleteDockTable` → success, llama `DeleteTableAsync` |
+| UT-DA-35 | `DeleteDockTable` → no SystemAdmin → `NotSystemAdmin` |
+| UT-DA-36 | `DeleteDockTable` → mesa inexistente → `TableNotFound` |
+
+**Pruebas de integración**
+
+**`DockAdminIntegrationTests`** (33 casos — `EchoBase.Tests.Integration/DockAdmin/`):
+
+| ID | Caso |
+|---|---|
+| IT-DA-01 | `CreateDockZone` → zona persistida en BD con nombre y orientación correctos |
+| IT-DA-02 | `CreateDockZone` → entrada de auditoría `DockZoneCreated` escrita |
+| IT-DA-03 | `CreateDockZone` → no SystemAdmin → `NotSystemAdmin`, zona no creada |
+| IT-DA-04 | `UpdateDockZone` → cambios persistidos en BD (nombre y orientación) |
+| IT-DA-05 | `UpdateDockZone` → entrada de auditoría `DockZoneUpdated` escrita |
+| IT-DA-06 | `UpdateDockZone` → no SystemAdmin → `NotSystemAdmin` |
+| IT-DA-07 | `DeleteDockZone` → zona vacía eliminada de BD |
+| IT-DA-08 | `DeleteDockZone` → zona con puestos → `ZoneHasDocks`, zona no eliminada |
+| IT-DA-09 | `DeleteDockZone` → no SystemAdmin → `NotSystemAdmin` |
+| IT-DA-10 | `CreateDock` → puesto persistido en BD asignado a zona correcta |
+| IT-DA-11 | `CreateDock` → entrada de auditoría `DockCreated` escrita |
+| IT-DA-12 | `CreateDock` → código duplicado → `DockCodeAlreadyExists` |
+| IT-DA-13 | `CreateDock` → no SystemAdmin → `NotSystemAdmin` |
+| IT-DA-14 | `UpdateDock` → cambios de código, ubicación y equipamiento persistidos en BD |
+| IT-DA-15 | `UpdateDock` → entrada de auditoría `DockUpdated` escrita |
+| IT-DA-16 | `UpdateDock` → no SystemAdmin → `NotSystemAdmin` |
+| IT-DA-17 | `DeleteDock` → sin reservas → puesto eliminado, devuelve 0 |
+| IT-DA-18 | `DeleteDock` → con reserva futura → reserva eliminada de BD, devuelve 1, puesto eliminado |
+| IT-DA-19 | `DeleteDock` → entrada de auditoría `DockDeleted` escrita |
+| IT-DA-20 | `DeleteDock` → puesto inexistente → `DockNotFound` |
+| IT-DA-21 | `DeleteDock` → no SystemAdmin → `NotSystemAdmin` |
+| IT-DA-22 | `CreateDockTable` → mesa persistida en BD con clave, localizador y zona correctos |
+| IT-DA-23 | `CreateDockTable` → entrada de auditoría `DockTableCreated` escrita |
+| IT-DA-24 | `CreateDockTable` → no SystemAdmin → `NotSystemAdmin` |
+| IT-DA-25 | `CreateDockTable` → clave duplicada en zona → `TableKeyAlreadyExists` |
+| IT-DA-26 | `UpdateDockTable` → localizador actualizado en BD |
+| IT-DA-27 | `UpdateDockTable` → entrada de auditoría `DockTableUpdated` escrita |
+| IT-DA-28 | `UpdateDockTable` → no SystemAdmin → `NotSystemAdmin` |
+| IT-DA-29 | `DeleteDockTable` → mesa eliminada de BD |
+| IT-DA-30 | `DeleteDockTable` → entrada de auditoría `DockTableDeleted` escrita |
+| IT-DA-31 | `DeleteDockTable` → no SystemAdmin → `NotSystemAdmin` |
+| IT-DA-32 | `GetDockAdminData` → devuelve todas las zonas sembradas con puestos y mesas |
+| IT-DA-33 | `GetDockAdminData` → zona recién creada aparece en el resultado |
 
 #### ✅ Cobertura actual — Funcionalidad 2: Reserva de puesto de trabajo
 

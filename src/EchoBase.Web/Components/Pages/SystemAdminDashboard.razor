@@ -3,6 +3,8 @@
 @rendermode InteractiveServer
 
 @using EchoBase.Core.BlockedDocks.Queries
+@using EchoBase.Core.DockAdmin.Commands
+@using EchoBase.Core.DockAdmin.Queries
 @using EchoBase.Core.Entities.Enums
 @using EchoBase.Core.Interfaces
 @using EchoBase.Core.Reservations.Queries
@@ -51,6 +53,12 @@ else
                 {
                     <span class="badge bg-warning text-dark ms-1" style="font-size:.65rem;">ACTIVO</span>
                 }
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link @(_activeTab == Tab.DockConfig ? "active" : "")"
+                    @onclick='() => SwitchToDockConfigTab()'>
+                <i class="bi bi-buildings-fill text-primary me-1"></i>Zonas y puestos
             </button>
         </li>
         <li class="nav-item" role="presentation">
@@ -662,9 +670,455 @@ else
             </div>
         </div>
     }
+
+    @if (_activeTab == Tab.DockConfig)
+    {
+        <!-- ═══ PESTAÑA ZONAS Y PUESTOS ═════════════════════════════════════ -->
+        <p class="text-muted small mb-3">
+            <i class="bi bi-info-circle me-1"></i>
+            Gestiona las zonas físicas, las mesas y los puestos de trabajo.
+            Al eliminar un puesto se cancelarán automáticamente sus reservas futuras.
+        </p>
+
+        @if (_dcError is not null)
+        {
+            <div class="alert alert-danger alert-dismissible d-flex align-items-center gap-2 mb-3" role="alert">
+                <i class="bi bi-exclamation-triangle-fill"></i>
+                <span>@_dcError</span>
+                <button type="button" class="btn-close ms-auto" @onclick='() => _dcError = null'></button>
+            </div>
+        }
+        @if (_dcSuccess is not null)
+        {
+            <div class="alert alert-success alert-dismissible d-flex align-items-center gap-2 mb-3" role="alert">
+                <i class="bi bi-check-circle-fill"></i>
+                <span>@_dcSuccess</span>
+                <button type="button" class="btn-close ms-auto" @onclick='() => _dcSuccess = null'></button>
+            </div>
+        }
+
+        <!-- ── Lista de zonas ─────────────────────────────────────────────── -->
+        @if (_dcLoadingZones)
+        {
+            <div class="d-flex justify-content-center py-4">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Cargando zonas…</span>
+                </div>
+            </div>
+        }
+        else
+        {
+            @foreach (var zone in _dockZones)
+            {
+                <div class="card border-0 shadow-sm mb-3">
+                    <!-- Cabecera de zona -->
+                    <div class="card-header eb-zone-header d-flex align-items-center gap-2 py-2">
+                        <i class="bi bi-buildings-fill text-primary fs-5"></i>
+                        @if (_dcEditingZoneId == zone.Id)
+                        {
+                            <!-- Formulario edición de zona inline -->
+                            <div class="d-flex flex-wrap gap-2 align-items-center flex-grow-1">
+                                <input class="form-control form-control-sm" style="max-width:200px;"
+                                       placeholder="Nombre" @bind="_dcZoneName" />
+                                <input class="form-control form-control-sm" style="max-width:280px;"
+                                       placeholder="Descripción (opcional)" @bind="_dcZoneDescription" />
+                                <div class="d-flex gap-1" role="group">
+                                    <input type="radio" class="btn-check" id="ori-h-@zone.Id"
+                                           name="ori-@zone.Id" value="@ZoneOrientation.Horizontal"
+                                           checked="@(_dcZoneOrientation == ZoneOrientation.Horizontal)"
+                                           @onchange='() => _dcZoneOrientation = ZoneOrientation.Horizontal' />
+                                    <label class="btn btn-outline-secondary btn-sm" for="ori-h-@zone.Id">
+                                        <i class="bi bi-arrow-right"></i> H
+                                    </label>
+                                    <input type="radio" class="btn-check" id="ori-v-@zone.Id"
+                                           name="ori-@zone.Id" value="@ZoneOrientation.Vertical"
+                                           checked="@(_dcZoneOrientation == ZoneOrientation.Vertical)"
+                                           @onchange='() => _dcZoneOrientation = ZoneOrientation.Vertical' />
+                                    <label class="btn btn-outline-secondary btn-sm" for="ori-v-@zone.Id">
+                                        <i class="bi bi-arrow-down"></i> V
+                                    </label>
+                                </div>
+                                <button class="btn btn-success btn-sm" disabled="@_dcSaving"
+                                        @onclick="() => SaveEditZoneAsync(zone.Id)">
+                                    @if (_dcSaving) { <span class="spinner-border spinner-border-sm me-1"></span> }
+                                    Guardar
+                                </button>
+                                <button class="btn btn-outline-secondary btn-sm"
+                                        @onclick="CancelEditZone">Cancelar</button>
+                            </div>
+                        }
+                        else
+                        {
+                            <span class="fw-semibold flex-grow-1">
+                                @zone.Name
+                                @if (!string.IsNullOrEmpty(zone.Description))
+                                {
+                                    <small class="text-muted fw-normal ms-2">@zone.Description</small>
+                                }
+                                <span class="badge bg-secondary ms-2" style="font-size:.65rem;">
+                                    @(zone.Orientation == ZoneOrientation.Horizontal ? "Horizontal" : "Vertical")
+                                </span>
+                            </span>
+                            <div class="d-flex gap-1">
+                                <button class="btn btn-outline-secondary btn-sm py-0"
+                                        title="Editar zona"
+                                        @onclick="() => StartEditZone(zone)">
+                                    <i class="bi bi-pencil"></i>
+                                </button>
+                                <button class="btn btn-outline-danger btn-sm py-0"
+                                        title="Eliminar zona"
+                                        @onclick="() => RequestDeleteZone(zone.Id, zone.Name)">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </div>
+                        }
+                    </div>
+
+                    <div class="card-body p-3">
+                        <!-- ── Mesas ─────────────────────────────────────────────────── -->
+                        <h6 class="fw-semibold text-muted text-uppercase small mb-2">
+                            <i class="bi bi-layout-three-columns me-1"></i>Mesas
+                            <span class="badge bg-secondary ms-1">@zone.Tables.Count</span>
+                        </h6>
+
+                        @if (zone.Tables.Count == 0)
+                        {
+                            <p class="text-muted small mb-2">Sin mesas configuradas.</p>
+                        }
+                        else
+                        {
+                            <div class="table-responsive mb-2">
+                                <table class="table table-sm align-middle mb-0">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Clave</th>
+                                            <th>Localizador</th>
+                                            <th class="text-end">Acciones</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var tbl in zone.Tables)
+                                        {
+                                            <tr>
+                                                <td class="font-monospace small">@tbl.TableKey</td>
+                                                @if (_dcEditingTableId == tbl.Id)
+                                                {
+                                                    <td>
+                                                        <input class="form-control form-control-sm"
+                                                               style="max-width:220px;"
+                                                               placeholder="Localizador (opcional)"
+                                                               @bind="_dcTableLocator" />
+                                                    </td>
+                                                    <td class="text-end">
+                                                        <button class="btn btn-success btn-sm"
+                                                                disabled="@_dcSaving"
+                                                                @onclick="() => SaveEditTableAsync(tbl.Id)">
+                                                            @if (_dcSaving) { <span class="spinner-border spinner-border-sm me-1"></span> }
+                                                            Guardar
+                                                        </button>
+                                                        <button class="btn btn-outline-secondary btn-sm"
+                                                                @onclick="CancelEditTable">Cancelar</button>
+                                                    </td>
+                                                }
+                                                else
+                                                {
+                                                    <td class="small text-muted">@(tbl.Locator ?? "—")</td>
+                                                    <td class="text-end">
+                                                        <button class="btn btn-outline-primary btn-sm py-0"
+                                                                title="Editar localizador"
+                                                                @onclick="() => StartEditTable(tbl)">
+                                                            <i class="bi bi-pencil"></i>
+                                                        </button>
+                                                        <button class="btn btn-outline-danger btn-sm py-0"
+                                                                title="Eliminar mesa"
+                                                                @onclick="() => RequestDeleteTable(tbl.Id, tbl.TableKey)">
+                                                            <i class="bi bi-trash"></i>
+                                                        </button>
+                                                    </td>
+                                                }
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        }
+
+                        <!-- Formulario nueva mesa -->
+                        @if (_dcNewTableZoneId == zone.Id)
+                        {
+                            <div class="d-flex gap-2 align-items-center mb-2 flex-wrap">
+                                <input class="form-control form-control-sm" style="max-width:150px;"
+                                       placeholder="Clave (ej: N)" @bind="_dcNewTableKey" />
+                                <input class="form-control form-control-sm" style="max-width:220px;"
+                                       placeholder="Localizador (opcional)" @bind="_dcNewTableLocator" />
+                                <button class="btn btn-success btn-sm" disabled="@_dcSaving"
+                                        @onclick="() => CreateTableAsync(zone.Id)">
+                                    @if (_dcSaving) { <span class="spinner-border spinner-border-sm me-1"></span> }
+                                    <i class="bi bi-plus me-1"></i>Añadir
+                                </button>
+                                <button class="btn btn-outline-secondary btn-sm"
+                                        @onclick="CancelNewTable">Cancelar</button>
+                            </div>
+                        }
+                        else
+                        {
+                            <button class="btn btn-outline-secondary btn-sm mb-2"
+                                    @onclick="() => StartNewTable(zone.Id)">
+                                <i class="bi bi-plus me-1"></i>Nueva mesa
+                            </button>
+                        }
+
+                        <hr class="my-2" />
+
+                        <!-- ── Puestos ────────────────────────────────────────────────── -->
+                        <h6 class="fw-semibold text-muted text-uppercase small mb-2">
+                            <i class="bi bi-person-workspace me-1"></i>Puestos
+                            <span class="badge bg-secondary ms-1">@zone.Docks.Count</span>
+                        </h6>
+
+                        @if (zone.Docks.Count == 0)
+                        {
+                            <p class="text-muted small mb-2">Sin puestos asignados a esta zona.</p>
+                        }
+                        else
+                        {
+                            <div class="table-responsive mb-2">
+                                <table class="table table-sm align-middle mb-0">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Código</th>
+                                            <th>Ubicación</th>
+                                            <th>Equipamiento</th>
+                                            <th class="text-end">Acciones</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var dock in zone.Docks)
+                                        {
+                                            <tr>
+                                                @if (_dcEditingDockId == dock.Id)
+                                                {
+                                                    <td>
+                                                        <input class="form-control form-control-sm"
+                                                               style="max-width:90px;"
+                                                               placeholder="A-01"
+                                                               @bind="_dcDockCode" />
+                                                    </td>
+                                                    <td>
+                                                        <input class="form-control form-control-sm"
+                                                               style="max-width:180px;"
+                                                               placeholder="Ubicación"
+                                                               @bind="_dcDockLocation" />
+                                                    </td>
+                                                    <td>
+                                                        <input class="form-control form-control-sm"
+                                                               style="max-width:200px;"
+                                                               placeholder="Equipamiento"
+                                                               @bind="_dcDockEquipment" />
+                                                    </td>
+                                                    <td class="text-end">
+                                                        <button class="btn btn-success btn-sm"
+                                                                disabled="@_dcSaving"
+                                                                @onclick="() => SaveEditDockAsync(dock.Id)">
+                                                            @if (_dcSaving) { <span class="spinner-border spinner-border-sm me-1"></span> }
+                                                            Guardar
+                                                        </button>
+                                                        <button class="btn btn-outline-secondary btn-sm"
+                                                                @onclick="CancelEditDock">Cancelar</button>
+                                                    </td>
+                                                }
+                                                else
+                                                {
+                                                    <td class="font-monospace small fw-semibold">@dock.Code</td>
+                                                    <td class="small">@dock.Location</td>
+                                                    <td class="small text-muted">@dock.Equipment</td>
+                                                    <td class="text-end">
+                                                        <button class="btn btn-outline-primary btn-sm py-0"
+                                                                title="Editar puesto"
+                                                                @onclick="() => StartEditDock(dock)">
+                                                            <i class="bi bi-pencil"></i>
+                                                        </button>
+                                                        <button class="btn btn-outline-danger btn-sm py-0"
+                                                                title="Eliminar puesto (cancela reservas futuras)"
+                                                                @onclick="() => RequestDeleteDock(dock.Id, dock.Code)">
+                                                            <i class="bi bi-trash"></i>
+                                                        </button>
+                                                    </td>
+                                                }
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        }
+
+                        <!-- Formulario nuevo puesto -->
+                        @if (_dcNewDockZoneId == zone.Id)
+                        {
+                            <div class="d-flex gap-2 align-items-center mb-2 flex-wrap">
+                                <input class="form-control form-control-sm" style="max-width:90px;"
+                                       placeholder="Código" @bind="_dcNewDockCode" />
+                                <input class="form-control form-control-sm" style="max-width:180px;"
+                                       placeholder="Ubicación" @bind="_dcNewDockLocation" />
+                                <input class="form-control form-control-sm" style="max-width:200px;"
+                                       placeholder="Equipamiento" @bind="_dcNewDockEquipment" />
+                                <button class="btn btn-success btn-sm" disabled="@_dcSaving"
+                                        @onclick="() => CreateDockAsync(zone.Id)">
+                                    @if (_dcSaving) { <span class="spinner-border spinner-border-sm me-1"></span> }
+                                    <i class="bi bi-plus me-1"></i>Añadir
+                                </button>
+                                <button class="btn btn-outline-secondary btn-sm"
+                                        @onclick="CancelNewDock">Cancelar</button>
+                            </div>
+                        }
+                        else
+                        {
+                            <button class="btn btn-outline-secondary btn-sm"
+                                    @onclick="() => StartNewDock(zone.Id)">
+                                <i class="bi bi-plus me-1"></i>Nuevo puesto
+                            </button>
+                        }
+                    </div>
+                </div>
+            }
+
+            <!-- ── Crear nueva zona ───────────────────────────────────────── -->
+            <div class="card border-0 shadow-sm border-dashed">
+                <div class="card-body">
+                    <h6 class="fw-semibold mb-3">
+                        <i class="bi bi-plus-circle text-primary me-1"></i>Nueva zona
+                    </h6>
+                    <div class="row g-2 align-items-end">
+                        <div class="col-sm-6 col-md-3">
+                            <label class="form-label form-label-sm fw-semibold">Nombre</label>
+                            <input class="form-control form-control-sm"
+                                   placeholder="Ej: Nostromo" @bind="_dcNewZoneName" />
+                        </div>
+                        <div class="col-sm-6 col-md-4">
+                            <label class="form-label form-label-sm fw-semibold">Descripción</label>
+                            <input class="form-control form-control-sm"
+                                   placeholder="Opcional" @bind="_dcNewZoneDescription" />
+                        </div>
+                        <div class="col-auto">
+                            <label class="form-label form-label-sm fw-semibold d-block">Orientación</label>
+                            <div class="d-flex gap-1">
+                                <input type="radio" class="btn-check" id="new-ori-h"
+                                       checked="@(_dcNewZoneOrientation == ZoneOrientation.Horizontal)"
+                                       @onchange='() => _dcNewZoneOrientation = ZoneOrientation.Horizontal' />
+                                <label class="btn btn-outline-secondary btn-sm" for="new-ori-h">
+                                    <i class="bi bi-arrow-right me-1"></i>Horizontal
+                                </label>
+                                <input type="radio" class="btn-check" id="new-ori-v"
+                                       checked="@(_dcNewZoneOrientation == ZoneOrientation.Vertical)"
+                                       @onchange='() => _dcNewZoneOrientation = ZoneOrientation.Vertical' />
+                                <label class="btn btn-outline-secondary btn-sm" for="new-ori-v">
+                                    <i class="bi bi-arrow-down me-1"></i>Vertical
+                                </label>
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <button class="btn btn-primary btn-sm" disabled="@_dcSaving"
+                                    @onclick="CreateZoneAsync">
+                                @if (_dcSaving) { <span class="spinner-border spinner-border-sm me-1"></span> }
+                                <i class="bi bi-plus me-1"></i>Crear zona
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    }
 }
 
 </div>
+
+<!-- ═══════════════════════════════════════════════════
+     MODALES DE CONFIRMACIÓN — ZONAS / MESAS / PUESTOS
+═══════════════════════════════════════════════════ -->
+@if (_dcDeleteZoneId is not null)
+{
+    <div class="modal d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-dialog-centered modal-sm">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header eb-modal-header">
+                    <h5 class="modal-title text-white fw-bold mb-0">
+                        <i class="bi bi-exclamation-triangle-fill me-2"></i>Eliminar zona
+                    </h5>
+                </div>
+                <div class="modal-body">
+                    <p class="mb-0">¿Eliminar la zona <strong>@_dcDeleteZoneName</strong>?
+                    Esta acción no se puede deshacer.</p>
+                </div>
+                <div class="modal-footer border-0 pt-0">
+                    <button class="btn btn-outline-secondary btn-sm" @onclick="CancelDeleteZone">Cancelar</button>
+                    <button class="btn btn-danger btn-sm" disabled="@_dcSaving"
+                            @onclick="ConfirmDeleteZoneAsync">
+                        @if (_dcSaving) { <span class="spinner-border spinner-border-sm me-1"></span> }
+                        Eliminar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@if (_dcDeleteTableId is not null)
+{
+    <div class="modal d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-dialog-centered modal-sm">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header eb-modal-header">
+                    <h5 class="modal-title text-white fw-bold mb-0">
+                        <i class="bi bi-exclamation-triangle-fill me-2"></i>Eliminar mesa
+                    </h5>
+                </div>
+                <div class="modal-body">
+                    <p class="mb-0">¿Eliminar la mesa <strong>@_dcDeleteTableKey</strong>?
+                    Esta acción no se puede deshacer.</p>
+                </div>
+                <div class="modal-footer border-0 pt-0">
+                    <button class="btn btn-outline-secondary btn-sm" @onclick="CancelDeleteTable">Cancelar</button>
+                    <button class="btn btn-danger btn-sm" disabled="@_dcSaving"
+                            @onclick="ConfirmDeleteTableAsync">
+                        @if (_dcSaving) { <span class="spinner-border spinner-border-sm me-1"></span> }
+                        Eliminar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@if (_dcDeleteDockId is not null)
+{
+    <div class="modal d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header eb-modal-header">
+                    <h5 class="modal-title text-white fw-bold mb-0">
+                        <i class="bi bi-exclamation-triangle-fill me-2"></i>Eliminar puesto
+                    </h5>
+                </div>
+                <div class="modal-body">
+                    <p>¿Eliminar el puesto <strong>@_dcDeleteDockCode</strong>?</p>
+                    <p class="text-danger small mb-0">
+                        <i class="bi bi-calendar-x me-1"></i>
+                        Se cancelarán todas las reservas futuras de este puesto
+                        y se notificará a los usuarios afectados.
+                    </p>
+                </div>
+                <div class="modal-footer border-0 pt-0">
+                    <button class="btn btn-outline-secondary btn-sm" @onclick="CancelDeleteDock">Cancelar</button>
+                    <button class="btn btn-danger btn-sm" disabled="@_dcSaving"
+                            @onclick="ConfirmDeleteDockAsync">
+                        @if (_dcSaving) { <span class="spinner-border spinner-border-sm me-1"></span> }
+                        Eliminar y cancelar reservas
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
 
 <!-- ═══════════════════════════════════════════════════
      MODAL RESERVA DE EMERGENCIA
@@ -773,7 +1227,7 @@ else
 
 @code {
     // ── Enum de pestañas ────────────────────────────────────────────
-    private enum Tab { Maintenance, BulkCancel, Emergency, Users, AuditLog }
+    private enum Tab { Maintenance, BulkCancel, Emergency, Users, AuditLog, DockConfig }
 
     // ── Constantes de roles (evitan literales en lambdas Razor) ─────
     private const string RoleManager = "Manager";
@@ -850,6 +1304,54 @@ else
         get => int.TryParse(_auditActionFilterStr, out var i) ? (AuditAction)i : null;
         set => _auditActionFilterStr = value.HasValue ? ((int)value.Value).ToString() : null;
     }
+
+    // ── Configuración de zonas, mesas y puestos ────────────────────
+    private IReadOnlyList<DockZoneAdminDto> _dockZones = [];
+    private bool _dockConfigLoaded;
+    private bool _dcLoadingZones;
+    private bool _dcSaving;
+    private string? _dcError;
+    private string? _dcSuccess;
+
+    // Edición de zona
+    private Guid? _dcEditingZoneId;
+    private string _dcZoneName = string.Empty;
+    private string _dcZoneDescription = string.Empty;
+    private ZoneOrientation _dcZoneOrientation = ZoneOrientation.Horizontal;
+
+    // Nueva zona
+    private string _dcNewZoneName = string.Empty;
+    private string _dcNewZoneDescription = string.Empty;
+    private ZoneOrientation _dcNewZoneOrientation = ZoneOrientation.Horizontal;
+
+    // Edición de mesa
+    private Guid? _dcEditingTableId;
+    private string _dcTableLocator = string.Empty;
+
+    // Nueva mesa
+    private Guid? _dcNewTableZoneId;
+    private string _dcNewTableKey = string.Empty;
+    private string _dcNewTableLocator = string.Empty;
+
+    // Edición de puesto
+    private Guid? _dcEditingDockId;
+    private string _dcDockCode = string.Empty;
+    private string _dcDockLocation = string.Empty;
+    private string _dcDockEquipment = string.Empty;
+
+    // Nuevo puesto
+    private Guid? _dcNewDockZoneId;
+    private string _dcNewDockCode = string.Empty;
+    private string _dcNewDockLocation = string.Empty;
+    private string _dcNewDockEquipment = string.Empty;
+
+    // Confirmaciones de borrado
+    private Guid? _dcDeleteZoneId;
+    private string? _dcDeleteZoneName;
+    private Guid? _dcDeleteTableId;
+    private string? _dcDeleteTableKey;
+    private Guid? _dcDeleteDockId;
+    private string? _dcDeleteDockCode;
 
     // ══════════════════════════════════════════════════════════════
     // Ciclo de vida
@@ -1156,6 +1658,357 @@ else
     }
 
     // ══════════════════════════════════════════════════════════════
+    // Configuración de zonas, mesas y puestos
+    // ══════════════════════════════════════════════════════════════
+
+    private async Task SwitchToDockConfigTab()
+    {
+        _activeTab = Tab.DockConfig;
+        if (!_dockConfigLoaded)
+            await LoadDockConfigAsync();
+    }
+
+    private async Task LoadDockConfigAsync()
+    {
+        _dcLoadingZones = true;
+        _dockZones = await Mediator.Send(new GetDockAdminDataQuery());
+        _dockConfigLoaded = true;
+        _dcLoadingZones = false;
+    }
+
+    // ── Zona ──────────────────────────────────────────────────────
+
+    private void StartEditZone(DockZoneAdminDto zone)
+    {
+        _dcEditingZoneId = zone.Id;
+        _dcZoneName = zone.Name;
+        _dcZoneDescription = zone.Description ?? string.Empty;
+        _dcZoneOrientation = zone.Orientation;
+        _dcEditingTableId = null;
+        _dcEditingDockId = null;
+    }
+
+    private void CancelEditZone()
+    {
+        _dcEditingZoneId = null;
+    }
+
+    private async Task SaveEditZoneAsync(Guid zoneId)
+    {
+        _dcError = null;
+        _dcSuccess = null;
+        _dcSaving = true;
+
+        var result = await Mediator.Send(new UpdateDockZoneCommand(
+            CurrentUser.UserId, zoneId,
+            _dcZoneName.Trim(),
+            string.IsNullOrWhiteSpace(_dcZoneDescription) ? null : _dcZoneDescription.Trim(),
+            _dcZoneOrientation));
+
+        if (result.IsSuccess)
+        {
+            _dcSuccess = "Zona actualizada correctamente.";
+            _dcEditingZoneId = null;
+            await LoadDockConfigAsync();
+        }
+        else
+        {
+            _dcError = MapDockAdminError(result.Error!);
+        }
+
+        _dcSaving = false;
+    }
+
+    private async Task CreateZoneAsync()
+    {
+        _dcError = null;
+        _dcSuccess = null;
+        _dcSaving = true;
+
+        var result = await Mediator.Send(new CreateDockZoneCommand(
+            CurrentUser.UserId,
+            _dcNewZoneName.Trim(),
+            string.IsNullOrWhiteSpace(_dcNewZoneDescription) ? null : _dcNewZoneDescription.Trim(),
+            _dcNewZoneOrientation));
+
+        if (result.IsSuccess)
+        {
+            _dcSuccess = "Zona creada correctamente.";
+            _dcNewZoneName = string.Empty;
+            _dcNewZoneDescription = string.Empty;
+            _dcNewZoneOrientation = ZoneOrientation.Horizontal;
+            await LoadDockConfigAsync();
+        }
+        else
+        {
+            _dcError = MapDockAdminError(result.Error!);
+        }
+
+        _dcSaving = false;
+    }
+
+    private void RequestDeleteZone(Guid zoneId, string zoneName)
+    {
+        _dcDeleteZoneId = zoneId;
+        _dcDeleteZoneName = zoneName;
+    }
+
+    private async Task ConfirmDeleteZoneAsync()
+    {
+        if (_dcDeleteZoneId is null) return;
+        _dcError = null;
+        _dcSuccess = null;
+        _dcSaving = true;
+
+        var result = await Mediator.Send(new DeleteDockZoneCommand(
+            CurrentUser.UserId, _dcDeleteZoneId.Value));
+
+        if (result.IsSuccess)
+        {
+            _dcSuccess = $"Zona «{_dcDeleteZoneName}» eliminada.";
+            await LoadDockConfigAsync();
+        }
+        else
+        {
+            _dcError = MapDockAdminError(result.Error!);
+        }
+
+        _dcDeleteZoneId = null;
+        _dcDeleteZoneName = null;
+        _dcSaving = false;
+    }
+
+    private void CancelDeleteZone()
+    {
+        _dcDeleteZoneId = null;
+        _dcDeleteZoneName = null;
+    }
+
+    // ── Mesa ──────────────────────────────────────────────────────
+
+    private void StartEditTable(DockTableAdminDto tbl)
+    {
+        _dcEditingTableId = tbl.Id;
+        _dcTableLocator = tbl.Locator ?? string.Empty;
+        _dcEditingZoneId = null;
+        _dcEditingDockId = null;
+    }
+
+    private void CancelEditTable() => _dcEditingTableId = null;
+
+    private async Task SaveEditTableAsync(Guid tableId)
+    {
+        _dcError = null;
+        _dcSuccess = null;
+        _dcSaving = true;
+
+        var result = await Mediator.Send(new UpdateDockTableCommand(
+            CurrentUser.UserId, tableId,
+            string.IsNullOrWhiteSpace(_dcTableLocator) ? null : _dcTableLocator.Trim()));
+
+        if (result.IsSuccess)
+        {
+            _dcSuccess = "Mesa actualizada correctamente.";
+            _dcEditingTableId = null;
+            await LoadDockConfigAsync();
+        }
+        else
+        {
+            _dcError = MapDockAdminError(result.Error!);
+        }
+
+        _dcSaving = false;
+    }
+
+    private void StartNewTable(Guid zoneId)
+    {
+        _dcNewTableZoneId = zoneId;
+        _dcNewTableKey = string.Empty;
+        _dcNewTableLocator = string.Empty;
+    }
+
+    private void CancelNewTable() => _dcNewTableZoneId = null;
+
+    private async Task CreateTableAsync(Guid zoneId)
+    {
+        _dcError = null;
+        _dcSuccess = null;
+        _dcSaving = true;
+
+        var result = await Mediator.Send(new CreateDockTableCommand(
+            CurrentUser.UserId, zoneId,
+            _dcNewTableKey.Trim(),
+            string.IsNullOrWhiteSpace(_dcNewTableLocator) ? null : _dcNewTableLocator.Trim()));
+
+        if (result.IsSuccess)
+        {
+            _dcSuccess = "Mesa añadida correctamente.";
+            _dcNewTableZoneId = null;
+            await LoadDockConfigAsync();
+        }
+        else
+        {
+            _dcError = MapDockAdminError(result.Error!);
+        }
+
+        _dcSaving = false;
+    }
+
+    private void RequestDeleteTable(Guid tableId, string tableKey)
+    {
+        _dcDeleteTableId = tableId;
+        _dcDeleteTableKey = tableKey;
+    }
+
+    private async Task ConfirmDeleteTableAsync()
+    {
+        if (_dcDeleteTableId is null) return;
+        _dcError = null;
+        _dcSuccess = null;
+        _dcSaving = true;
+
+        var result = await Mediator.Send(new DeleteDockTableCommand(
+            CurrentUser.UserId, _dcDeleteTableId.Value));
+
+        if (result.IsSuccess)
+        {
+            _dcSuccess = $"Mesa «{_dcDeleteTableKey}» eliminada.";
+            await LoadDockConfigAsync();
+        }
+        else
+        {
+            _dcError = MapDockAdminError(result.Error!);
+        }
+
+        _dcDeleteTableId = null;
+        _dcDeleteTableKey = null;
+        _dcSaving = false;
+    }
+
+    private void CancelDeleteTable()
+    {
+        _dcDeleteTableId = null;
+        _dcDeleteTableKey = null;
+    }
+
+    // ── Puesto ────────────────────────────────────────────────────
+
+    private void StartEditDock(DockAdminDto dock)
+    {
+        _dcEditingDockId = dock.Id;
+        _dcDockCode = dock.Code;
+        _dcDockLocation = dock.Location;
+        _dcDockEquipment = dock.Equipment;
+        _dcEditingZoneId = null;
+        _dcEditingTableId = null;
+    }
+
+    private void CancelEditDock() => _dcEditingDockId = null;
+
+    private async Task SaveEditDockAsync(Guid dockId)
+    {
+        _dcError = null;
+        _dcSuccess = null;
+        _dcSaving = true;
+
+        var result = await Mediator.Send(new UpdateDockCommand(
+            CurrentUser.UserId, dockId,
+            _dcDockCode.Trim(),
+            _dcDockLocation.Trim(),
+            _dcDockEquipment.Trim()));
+
+        if (result.IsSuccess)
+        {
+            _dcSuccess = "Puesto actualizado correctamente.";
+            _dcEditingDockId = null;
+            await LoadDockConfigAsync();
+        }
+        else
+        {
+            _dcError = MapDockAdminError(result.Error!);
+        }
+
+        _dcSaving = false;
+    }
+
+    private void StartNewDock(Guid zoneId)
+    {
+        _dcNewDockZoneId = zoneId;
+        _dcNewDockCode = string.Empty;
+        _dcNewDockLocation = string.Empty;
+        _dcNewDockEquipment = string.Empty;
+    }
+
+    private void CancelNewDock() => _dcNewDockZoneId = null;
+
+    private async Task CreateDockAsync(Guid zoneId)
+    {
+        _dcError = null;
+        _dcSuccess = null;
+        _dcSaving = true;
+
+        var result = await Mediator.Send(new CreateDockCommand(
+            CurrentUser.UserId, zoneId,
+            _dcNewDockCode.Trim(),
+            _dcNewDockLocation.Trim(),
+            _dcNewDockEquipment.Trim()));
+
+        if (result.IsSuccess)
+        {
+            _dcSuccess = "Puesto añadido correctamente.";
+            _dcNewDockZoneId = null;
+            await LoadDockConfigAsync();
+        }
+        else
+        {
+            _dcError = MapDockAdminError(result.Error!);
+        }
+
+        _dcSaving = false;
+    }
+
+    private void RequestDeleteDock(Guid dockId, string dockCode)
+    {
+        _dcDeleteDockId = dockId;
+        _dcDeleteDockCode = dockCode;
+    }
+
+    private async Task ConfirmDeleteDockAsync()
+    {
+        if (_dcDeleteDockId is null) return;
+        _dcError = null;
+        _dcSuccess = null;
+        _dcSaving = true;
+
+        var result = await Mediator.Send(new DeleteDockCommand(
+            CurrentUser.UserId, _dcDeleteDockId.Value,
+            $"Eliminado por SystemAdmin"));
+
+        if (result.IsSuccess)
+        {
+            var cancelled = result.Value;
+            _dcSuccess = cancelled > 0
+                ? $"Puesto «{_dcDeleteDockCode}» eliminado. Se cancelaron {cancelled} reserva(s) futuras."
+                : $"Puesto «{_dcDeleteDockCode}» eliminado.";
+            await LoadDockConfigAsync();
+        }
+        else
+        {
+            _dcError = MapDockAdminError(result.Error!);
+        }
+
+        _dcDeleteDockId = null;
+        _dcDeleteDockCode = null;
+        _dcSaving = false;
+    }
+
+    private void CancelDeleteDock()
+    {
+        _dcDeleteDockId = null;
+        _dcDeleteDockCode = null;
+    }
+
+    // ══════════════════════════════════════════════════════════════
     // Helpers visuales
     // ══════════════════════════════════════════════════════════════
 
@@ -1238,6 +2091,15 @@ else
         AuditAction.EmergencyReservationCreated => "bg-info text-dark",
         AuditAction.UserRoleAssigned            => "bg-primary",
         AuditAction.UserRoleRemoved             => "bg-secondary",
+        AuditAction.DockZoneCreated             => "bg-success",
+        AuditAction.DockZoneUpdated             => "bg-primary",
+        AuditAction.DockZoneDeleted             => "bg-danger",
+        AuditAction.DockCreated                 => "bg-success",
+        AuditAction.DockUpdated                 => "bg-primary",
+        AuditAction.DockDeleted                 => "bg-danger",
+        AuditAction.DockTableCreated            => "bg-success",
+        AuditAction.DockTableUpdated            => "bg-primary",
+        AuditAction.DockTableDeleted            => "bg-danger",
         _                                       => "bg-light text-dark"
     };
 
@@ -1252,6 +2114,15 @@ else
         AuditAction.EmergencyReservationCreated => "Reserva emergencia",
         AuditAction.UserRoleAssigned            => "Rol asignado",
         AuditAction.UserRoleRemoved             => "Rol retirado",
+        AuditAction.DockZoneCreated             => "Zona creada",
+        AuditAction.DockZoneUpdated             => "Zona actualizada",
+        AuditAction.DockZoneDeleted             => "Zona eliminada",
+        AuditAction.DockCreated                 => "Puesto creado",
+        AuditAction.DockUpdated                 => "Puesto actualizado",
+        AuditAction.DockDeleted                 => "Puesto eliminado",
+        AuditAction.DockTableCreated            => "Mesa creada",
+        AuditAction.DockTableUpdated            => "Mesa actualizada",
+        AuditAction.DockTableDeleted            => "Mesa eliminada",
         _                                       => action.ToString()
     };
 
@@ -1292,6 +2163,21 @@ else
         "USER_MAX_SLOTS_EXCEEDED" => "El usuario ha alcanzado el máximo de franjas diarias.",
         "USER_SLOT_CONFLICT"      => "El usuario ya tiene una reserva que se solaparía.",
         _                         => $"Error: {error}"
+    };
+
+    private static string MapDockAdminError(string error) => error switch
+    {
+        "NOT_SYSTEM_ADMIN"          => "No tienes permisos de SystemAdmin para realizar esta acción.",
+        "ZONE_NOT_FOUND"            => "La zona especificada no existe.",
+        "ZONE_NAME_ALREADY_EXISTS"  => "Ya existe una zona con ese nombre.",
+        "ZONE_HAS_DOCKS"            => "No se puede eliminar la zona porque tiene puestos asignados.",
+        "DOCK_NOT_FOUND"            => "El puesto especificado no existe.",
+        "DOCK_CODE_ALREADY_EXISTS"  => "Ya existe un puesto con ese código.",
+        "DOCK_CODE_REQUIRED"        => "El código del puesto es obligatorio.",
+        "TABLE_NOT_FOUND"           => "La mesa especificada no existe.",
+        "TABLE_KEY_ALREADY_EXISTS"  => "Ya existe una mesa con esa clave en la zona.",
+        "TABLE_KEY_REQUIRED"        => "La clave de mesa es obligatoria.",
+        _                           => $"Error inesperado: {error}"
     };
 }
 
