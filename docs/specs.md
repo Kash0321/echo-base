@@ -27,7 +27,7 @@
 ---
 
 ## 🎯 Objetivo
-App interna para que 70 empleados reserven 24 puestos físicos, permitiendo cada puesto dos franjas horarias, mañana o tarde.
+App interna para que múltiples empleados reserven sobre un conjunto limitado de puestos físicos, permitiendo cada puesto dos franjas horarias, mañana o tarde.
 
 ## 🛠️ Stack técnico
 - Framework: .NET 10
@@ -216,7 +216,7 @@ Representa a un empleado autenticado mediante Azure AD.
 ---
 
 #### `Dock` — Puesto de trabajo
-Puesto de trabajo físico reservable. Capacidad total del sistema: 24 puestos.
+Puesto de trabajo físico reservable.
 
 | Propiedad | Tipo | Descripción |
 |---|---|---|
@@ -400,8 +400,8 @@ Integración con Azure AD (tennant de nuestra compañía) para autenticación y 
 ## 📋 Reglas de negocio generales
 - Un usuario solo puede reservar 1 puesto por día, y puede indicar la franja o franjas horarias en la que va a usar el puesto (mañanas hasta las 14 y tardes de 14 fin de jornada), de modo que otro empleado pueda reservar el puesto en una franja horaria diferente el mismo día si está disponible, pero un empleado puede reservar como máximo dos franjas horarias en el mismo puesto de trabajo o en dos puestos de trabajo distintos.
 - Las reservas se abren con 7 días de antelación.
-- Capacidad máxima: 24 puestos de trabajo
-- Interfaz visual: Mapa de puestos de trabajo, agrupados en dos zonas: Nostromo tiene 12 puestos de trabajo en una mesa corrida con 6 puestos a cada lado, Derelict tiene 12 puestos de trabajo, en dos mesas corridas con 3 puestos a cada lado en cada una de las mesas
+- Capacidad máxima: no hay una capacidad máxima global, pero cada puesto de trabajo tiene una capacidad de 2 reservas por día (mañana y tarde). El sistema debe validar que no se exceda esta capacidad al crear reservas.
+- Interfaz visual: Mapa de puestos de trabajo, agrupados en zonas, cada zona con su propio bloque visual, que dispone mesas con una orientación específica (vertical u horizontal). Cada puesto muestra su estado (libre, reservado mañana, reservado tarde, reservado ambas franjas, bloqueado) y quién tiene la reserva o el bloqueo.
 - Existirá un cuadro de mando para usuarios con privilegios de administración, que permitirá bloquear varios puestos de trabajo en un día o un período de días más largo, lo que bloqueará (impedirá reservar) esos puestos de trabajo para su reserva al resto de usuarios con privilegios normales.
 
 ## 👥 Funcionalidad 0: Gestión cuentas de usuario [Parcialmente implementada, pendiente de configuración de acceso al tennant de Azure AD]
@@ -420,7 +420,7 @@ Integración con Azure AD (tennant de nuestra compañía) para autenticación y 
 
 ## 📌 Funcionalidad 2: Reserva de puesto de trabajo [Implementada]
 - El usuario inicia sesión en la aplicación utilizando su cuenta de Azure AD.
-- El usuario ve un mapa visual de los 24 puestos de trabajo, agrupados en dos zonas: Nostromo (12 puestos) y Derelict (12 puestos).
+- El usuario ve un mapa visual de los puestos de trabajo, agrupados en las zonas configuradas.
 - El usuario selecciona un puesto de trabajo disponible para la fecha deseada.
 - El usuario indica la franja horaria (mañana, tarde o ambas) para su reserva.
 - El sistema valida que el usuario no tenga otra reserva para ese día y que el puesto esté disponible en la franja horaria seleccionada.

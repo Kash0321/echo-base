@@ -23,8 +23,9 @@
             <div>
                 <p class="eb-page-eyebrow text-uppercase fw-semibold mb-0">Echo Base</p>
                 <h1 class="h4 fw-bold mb-0">
-                    <i class="bi bi-map-fill me-2"></i>Mapa de bahías
+                    <i class="bi bi-map-fill me-2"></i>Mapa de bahías de atraque
                 </h1>
+                <p class="small text-white-50 mb-0 mt-1">Elige dónde quieres trabajar</p>
             </div>
             <!-- Selector de fecha + leyenda -->
             <div class="d-flex align-items-end gap-3 flex-wrap">
@@ -54,6 +55,20 @@
 </div>
 
 <div class="container-fluid px-3">
+
+<!-- Texto de ayuda -->
+<div class="alert alert-info d-flex align-items-start gap-2 py-2 mb-3" role="alert" style="font-size:.85rem;">
+    <i class="bi bi-info-circle-fill flex-shrink-0 mt-1"></i>
+    <div>
+        <strong>¿Cómo reservar?</strong>
+        Selecciona la fecha con el selector de la cabecera, después haz clic sobre un puesto
+        <span class="badge bg-success">libre</span> o
+        <span class="badge bg-warning text-dark">parcial</span>
+        para abrirlo, elige tu franja horaria (mañana, tarde o ambas) y confirma.
+        Los puestos <span class="badge bg-danger">completos</span> y
+        <span class="badge bg-secondary">bloqueados</span> no están disponibles.
+    </div>
+</div>
 
 @if (_loading)
 {

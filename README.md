@@ -6,7 +6,7 @@
 
 **Status:** Orbital (Satellite App)
 
-**Mission:** Coordinate 70 Rebel Units across 24 Docking Bays.
+**Misión:** Coordinar múltiples unidades rebeldes a través de un conjunto limitado de bahías de atraque.
 
 **Tech ground**
 - **Command Center:** .NET 10 / Blazor Web App
@@ -21,8 +21,8 @@
 El nombre no es solo una referencia a Star Wars; es una metáfora de nuestra realidad operativa:
 
 1.  **El Concepto de Base:** Al igual que la base rebelde en el planeta Hoth, nuestra oficina ya no es un asentamiento permanente para todos, sino un punto de encuentro táctico. Los empleados operan de forma remota ("en la galaxia") y acuden a la base para misiones específicas de colaboración.
-2.  **Las Docking Bays:** Cada uno de los **24 puestos disponibles** se trata como una "bahía de atraque" (*docking station*). La aplicación garantiza que ninguna "nave" (empleado) intente aterrizar sin una bahía asignada.
-3.  **El Desafío Logístico:** Aplicamos el **Principio del Palomar**: gestionar 70 unidades para 24 espacios requiere una coordinación de precisión quirúrgica para evitar colisiones.
+2.  **Las Docking Bays:** Cada uno de los **puestos disponibles** se trata como una "bahía de atraque" (*docking station*). La aplicación garantiza que ninguna "nave" (empleado) intente aterrizar sin una bahía asignada.
+3.  **El Desafío Logístico:** Aplicamos el **Principio del Palomar**: gestionar múltiples unidades para un conjunto limitado de espacios requiere una coordinación de precisión quirúrgica para evitar colisiones.
 
 ## 🛠️ Stack Tecnológico
 
@@ -151,8 +151,9 @@ El modo de autenticación se controla mediante `appsettings.Development.json`:
 
 ```json
 "Authentication": {
-  "UseDevelopmentStub": true,   // true → DevAuth sin Azure AD; false → Azure AD real
-  "DevUserIsManager": true      // true → el usuario dev tiene rol Manager
+  "UseDevelopmentStub": true,    // true → DevAuth sin Azure AD; false → Azure AD real
+  "DevUserIsManager": true,      // true → el usuario dev tiene rol Manager,
+  "DevUserIsSystemAdmin": true   // true → el usuario dev también tiene rol SystemAdmin
 }
 ```
 
@@ -161,7 +162,7 @@ El modo de autenticación se controla mediante `appsettings.Development.json`:
 | `true` | Autenticación simulada (`DevAuth`). No requiere Azure AD. Válido para desarrollo local sin acceso al tenant. |
 | `false` | Autenticación real con Azure AD (OpenID Connect). Requiere `AzureAd:*` configurados vía User Secrets. |
 
-> **Nota:** Mientras no esté disponible la configuración del tenant de Azure AD, mantén `UseDevelopmentStub: true`. El usuario simulado tiene un ID determinístico (`00000000-0000-0000-0000-000000000001`) y se crea automáticamente en la base de datos con rol Manager al arrancar.
+> **Nota:** Mientras no esté disponible la configuración del tenant de Azure AD, mantén `UseDevelopmentStub: true`. El usuario simulado tiene un ID determinístico (`00000000-0000-0000-0000-000000000001`) y se crea automáticamente en la base de datos con los roles configurados (`DevUserIsManager`, `DevUserIsSystemAdmin`).
 
 ---
 
@@ -233,6 +234,31 @@ El hook ejecuta el calculo tras cada commit y enmienda el mismo commit para incl
 ### Historico
 
 <!-- LOC_REPORT_HISTORY_START -->
+
+### 2026-04-02 | commit 507a798
+
+Resumen
+
+| Categoria | Ficheros | LoC | % sobre total |
+|---|---:|---:|---:|
+| Codigo de aplicacion | 111 | 8.231 | 69,4% |
+| Codigo de pruebas | 31 | 3.636 | 30,6% |
+| Total | 142 | 11.867 | 100% |
+
+Desglose de codigo de aplicacion
+
+| Proyecto | Ficheros | LoC |
+|---|---:|---:|
+| EchoBase.Core | 50 | 2.256 |
+| EchoBase.Infrastructure | 30 | 1.691 |
+| EchoBase.Web | 31 | 4.284 |
+
+Desglose de pruebas
+
+| Proyecto | Ficheros | LoC |
+|---|---:|---:|
+| EchoBase.Tests.Integration | 11 | 785 |
+| EchoBase.Tests.Unit | 20 | 2.851 |
 
 ### 2026-04-02 | commit 248ec9d
 
@@ -635,6 +661,7 @@ Desglose de pruebas
 | EchoBase.Tests.Unit | 12 | 1.795 |
 
 <!-- LOC_REPORT_HISTORY_END -->
+
 
 
 
