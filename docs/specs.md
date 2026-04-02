@@ -110,24 +110,178 @@ A continuación se muestran capturas de las pantallas principales del sistema, q
 ![Administración - Log de Auditoría](006.SystemAdmin05_LOG.png)
 
 ## 🗃️ Modelo de datos
-1. **User** (Empleado que reserva espacio): Id, Nombre, Email, Línea de negocio (Core, Energía, Scrap/Waste, Transversal), Teléfono de contacto (opcional), NotificaciónEmail (bool), NotificaciónTeams (bool).
-2. **Dock** (Puesto de trabajo): Id, Código (ej: A-01), Ubicación, Equipamiento (Monitor doble, etc.).
-3. **Reservation** (Reserva de espacio de trabajo): Id, UserId, DockId, Fecha (Solo fecha, sin hora), Estado (Activa, Cancelada).
-4. **BlockedDock** (Puestos bloqueados por administración): Id, DockId, FechaInicio, FechaFin, Motivo.
-5. **UserPreferences** (Preferencias de notificación): Conceptualmente forman parte del perfil del usuario. En la implementación actual se persisten como columnas de la entidad `User` en lugar de una tabla separada.
-6. **IncidenceReport** (Reporte de incidencias en los puestos de trabajo): Id, UserId, DockId, Fecha, Descripción, Estado (Abierta, En Proceso, Resuelta).
-7. **AuditLog** (Registro de auditoría para acciones críticas): Id, UserId, Acción (Reserva, Cancelación, Bloqueo), Detalles, Timestamp.
-8. **Report** (Reportes de uso y estadísticas): Id, Tipo (Ocupación, Cancelaciones, Incidencias), Periodo (Diario, Semanal, Mensual), Datos (JSON).
-9. **Notification** (Notificaciones para usuarios): Id, UserId, Tipo (ReservaConfirmada, ReservaCancelada, Recordatorio), Contenido, Leída (bool), Timestamp.
-10. **Role** (Roles de usuario para autorización): Id, Nombre (BasicUser, Manager).
-11. **UserRole** (Relación entre usuarios y roles): Id, UserId, RoleId.
-12. **DockEquipment** (Equipamiento específico de cada puesto): Id, DockId, Tipo (MonitorDoble, SillaErgonómica, etc.), Descripción.
-13. **DockZone** (Zona de los puestos de trabajo): Id, Nombre (Nostromo, Derelict), Descripción.
-14. **DockZoneAssignment** (Asignación de puestos a zonas): Id, DockId, DockZoneId.
-15. **ReservationHistory** (Historial de reservas para auditoría y análisis): Id, ReservationId, UserId, DockId, Fecha, Acción (Creada, Modificada, Cancelada), Timestamp.
-16. **IncidenceHistory** (Historial de incidencias para seguimiento): Id, IncidenceReportId, UserId, DockId, Fecha, Acción (Reportada, En Proceso, Resuelta), Timestamp.
-17. **ReportData** (Datos específicos para reportes personalizados): Id, ReportId, Clave, Valor.
-18. **BlockedDockHistory** (Historial de bloqueos de puestos de trabajo): Id, BlockedDockId, UserId, Acción (Bloqueado, Desbloqueado), Timestamp.
+
+### Entidades de negocio
+
+#### `User` — Empleado
+Representa a un empleado autenticado mediante Azure AD.
+
+| Propiedad | Tipo | Descripción |
+|---|---|---|
+| `Id` | `Guid` (UUID v7) | Identificador único |
+| `Name` | `string` | Nombre completo (sincronizado con Azure AD, solo lectura) |
+| `Email` | `string` | Correo corporativo (sincronizado con Azure AD, solo lectura) |
+| `BusinessLine` | `BusinessLine` (enum) | Línea de negocio: `Core`, `Energia`, `ScrapWaste`, `Transversal` |
+| `PhoneNumber` | `string?` | Teléfono de contacto opcional |
+| `EmailNotifications` | `bool` | Preferencia de notificación por correo (por defecto `true`) |
+| `TeamsNotifications` | `bool` | Preferencia de notificación por Teams (por defecto `false`) |
+| `Reservations` | nav. → `Reservation` | Reservas del usuario |
+| `Roles` | nav. → `Role` | Roles de autorización asignados (relación muchos-a-muchos) |
+
+> **Nota:** Las preferencias de notificación se persisten como columnas de `User` (no existe una tabla `UserPreferences` separada).
+
+---
+
+#### `Dock` — Puesto de trabajo
+Puesto de trabajo físico reservable. Capacidad total del sistema: 24 puestos.
+
+| Propiedad | Tipo | Descripción |
+|---|---|---|
+| `Id` | `Guid` (UUID v7) | Identificador único |
+| `Code` | `string` | Código alfanumérico (ej.: `A-01`) |
+| `Location` | `string` | Descripción de la ubicación física |
+| `Equipment` | `string` | Equipamiento disponible (texto libre) |
+| `DockZoneId` | `Guid?` | FK de la zona a la que pertenece el puesto |
+| `DockZone` | nav. → `DockZone` | Zona a la que pertenece el puesto |
+| `Reservations` | nav. → `Reservation` | Reservas realizadas sobre este puesto |
+
+> **Nota:** El equipamiento se almacena como texto libre en `Dock.Equipment`; no existe una entidad `DockEquipment` separada.
+
+---
+
+#### `DockZone` — Zona de trabajo
+Agrupa un conjunto de puestos bajo una misma zona física de la oficina.
+
+| Propiedad | Tipo | Descripción |
+|---|---|---|
+| `Id` | `Guid` | Identificador único |
+| `Name` | `string` | Nombre de la zona (`Nostromo`, `Derelict`) |
+| `Description` | `string?` | Descripción opcional de la zona |
+| `Docks` | nav. → `Dock` | Puestos de trabajo incluidos en la zona |
+
+> **Nota:** La asignación puesto-zona se gestiona mediante la FK `Dock.DockZoneId`; no existe una entidad `DockZoneAssignment` separada.
+
+---
+
+#### `Reservation` — Reserva de puesto
+Reserva de un puesto por un usuario en una fecha y franja horaria concretas.
+
+| Propiedad | Tipo | Descripción |
+|---|---|---|
+| `Id` | `Guid` (UUID v7) | Identificador único |
+| `UserId` | `Guid` | FK del usuario que realizó la reserva |
+| `DockId` | `Guid` | FK del puesto de trabajo reservado |
+| `Date` | `DateOnly` | Fecha de la reserva (sin componente horario) |
+| `TimeSlot` | `TimeSlot` (enum) | Franja horaria: `Morning`, `Afternoon`, `Both` |
+| `Status` | `ReservationStatus` (enum) | Estado: `Active`, `Cancelled` |
+| `User` | nav. → `User` | Propietario de la reserva |
+| `Dock` | nav. → `Dock` | Puesto reservado |
+
+---
+
+#### `BlockedDock` — Bloqueo de puesto
+Bloqueo administrativo de un puesto para un período de fechas.
+
+| Propiedad | Tipo | Descripción |
+|---|---|---|
+| `Id` | `Guid` (UUID v7) | Identificador único |
+| `DockId` | `Guid` | FK del puesto bloqueado |
+| `BlockedByUserId` | `Guid` | FK del Manager que creó el bloqueo |
+| `StartDate` | `DateOnly` | Fecha de inicio del bloqueo (inclusiva) |
+| `EndDate` | `DateOnly` | Fecha de fin del bloqueo (inclusiva) |
+| `Reason` | `string` | Motivo del bloqueo |
+| `IsActive` | `bool` | `true` mientras el bloqueo esté vigente; `false` si fue desactivado |
+| `Dock` | nav. → `Dock` | Puesto bloqueado |
+| `BlockedByUser` | nav. → `User` | Manager que realizó el bloqueo |
+
+---
+
+#### `Role` — Rol de autorización
+
+| Propiedad | Tipo | Descripción |
+|---|---|---|
+| `Id` | `Guid` | Identificador único |
+| `Name` | `string` | Nombre del rol: `BasicUser`, `Manager`, `SystemAdmin` |
+| `Users` | nav. → `User` | Usuarios con este rol (relación muchos-a-muchos) |
+
+> **Nota:** La relación `User` ↔ `Role` es muchos-a-muchos gestionada por EF Core; no existe una entidad `UserRole` separada.
+
+Semillas de BD (`DbSeeder`):
+
+| Nombre | Id semilla |
+|---|---|
+| `BasicUser` | `d0000000-0000-0000-0000-000000000001` |
+| `Manager` | `d0000000-0000-0000-0000-000000000002` |
+| `SystemAdmin` | `d0000000-0000-0000-0000-000000000003` |
+
+---
+
+#### `AuditLog` — Registro de auditoría
+Entrada inmutable creada automáticamente por `AuditLoggingBehavior` para cada comando exitoso que implemente `IAuditableRequest`.
+
+| Propiedad | Tipo | Descripción |
+|---|---|---|
+| `Id` | `Guid` (UUID v7) | Identificador único |
+| `PerformedByUserId` | `Guid?` | FK del usuario que realizó la acción (`null` para acciones de sistema) |
+| `Action` | `AuditAction` (enum) | Tipo de acción auditada |
+| `Details` | `string` | Descripción legible (puesto, fecha, franja, etc.) |
+| `Timestamp` | `DateTimeOffset` | Momento UTC de la acción |
+
+Valores del enum `AuditAction`:
+
+| Valor | Descripción |
+|---|---|
+| `ReservationCreated` | Reserva creada |
+| `ReservationCancelled` | Reserva cancelada |
+| `DockBlocked` | Puesto(s) bloqueado(s) |
+| `DockUnblocked` | Puesto(s) desbloqueado(s) |
+| `BulkReservationsCancelled` | Cancelación masiva ejecutada |
+| `MaintenanceModeChanged` | Modo mantenimiento activado/desactivado |
+| `EmergencyReservationCreated` | Reserva de emergencia creada |
+| `UserRoleAssigned` | Rol asignado a un usuario |
+| `UserRoleRemoved` | Rol retirado a un usuario |
+
+---
+
+#### `SystemSetting` — Configuración del sistema
+Par clave-valor persistido para configuración en caliente sin redespliegue. La clave actúa como clave primaria (`string`); **excluida** del mecanismo UUID v7.
+
+| Propiedad | Tipo | Descripción |
+|---|---|---|
+| `Key` | `string` (PK) | Clave única del ajuste |
+| `Value` | `string` | Valor serializado como cadena |
+| `UpdatedAt` | `DateTimeOffset` | Fecha y hora UTC de la última modificación |
+| `UpdatedByUserId` | `Guid?` | FK del usuario que realizó la última modificación |
+
+Claves predefinidas:
+
+| Clave | Descripción |
+|---|---|
+| `"MaintenanceMode"` | `"true"` / `"false"` |
+| `"MaintenanceModeReason"` | Texto libre (vacío si está desactivado) |
+
+---
+
+### Enums del dominio
+
+| Enum | Valores |
+|---|---|
+| `BusinessLine` | `Core = 1`, `Energia = 2`, `ScrapWaste = 3`, `Transversal = 4` |
+| `TimeSlot` | `Morning = 1` (hasta 14:00 h), `Afternoon = 2` (14:00 h – fin jornada), `Both = 3` (jornada completa) |
+| `ReservationStatus` | `Active = 1`, `Cancelled = 2` |
+| `AuditAction` | (ver tabla de `AuditLog` arriba) |
+
+---
+
+### Entidades planificadas (no implementadas)
+
+Las siguientes entidades fueron contempladas en el diseño inicial pero aún no han sido implementadas:
+
+| Entidad | Funcionalidad asociada |
+|---|---|
+| `IncidenceReport` | Funcionalidad 6: Reporte de incidencias en puestos de trabajo |
+| `Report` / `ReportData` | Funcionalidad 5: Reportes y estadísticas |
+| `Notification` | Notificaciones internas persistidas en la aplicación |
 
 
 ## 🔐 Modelo de autenticación y autorización
@@ -274,13 +428,13 @@ Valores del enum `AuditAction`:
 |---|---|
 | `ReservationCreated` | Reserva creada |
 | `ReservationCancelled` | Reserva cancelada |
-| `DockBlocked` | Puesto bloqueado |
-| `DockUnblocked` | Puesto desbloqueado |
-| `RoleAssigned` | Rol asignado a usuario |
-| `RoleRemoved` | Rol eliminado de usuario |
-| `MaintenanceModeChanged` | Modo mantenimiento cambiado |
-| `BulkCancellation` | Cancelación masiva ejecutada |
+| `DockBlocked` | Puesto(s) bloqueado(s) |
+| `DockUnblocked` | Puesto(s) desbloqueado(s) |
+| `BulkReservationsCancelled` | Cancelación masiva ejecutada |
+| `MaintenanceModeChanged` | Modo mantenimiento activado/desactivado |
 | `EmergencyReservationCreated` | Reserva de emergencia creada |
+| `UserRoleAssigned` | Rol asignado a un usuario |
+| `UserRoleRemoved` | Rol retirado a un usuario |
 
 #### Comandos y queries implementados
 
