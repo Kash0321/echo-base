@@ -15,11 +15,12 @@
 - [📌 Funcionalidad 2: Reserva de puesto de trabajo](#-funcionalidad-2-reserva-de-puesto-de-trabajo-implementada)
 - [🛡️ Funcionalidad 3: Cuadro de mando para administración](#️-funcionalidad-3-cuadro-de-mando-para-administración-implementada)
 - [🗓️ Funcionalidad 4: Gestión de reservas](#️-funcionalidad-4-gestión-de-reservas-implementada)
-- [📊 Funcionalidad 5: Reportes y estadísticas](#-funcionalidad-5-reportes-y-estadísticas-pendiente-de-implementación)
-- [🔧 Funcionalidad 6: Reporte de incidencias](#-funcionalidad-6-reporte-de-incidencias-en-los-puestos-de-trabajo-pendiente-de-implementación)
-- [🚩 Funcionalidad 7: Feature Flags de sistema](#-funcionalidad-7-feature-flags-de-sistema-implementada)
+- [🏗️ Funcionalidad 5: Configuración de Zonas, Mesas y Puestos de trabajo](#️-funcionalidad-5-configuración-del-zonas-mesas-y-puestos-de-trabajo-pendiente-de-implementación)
+- [📊 Funcionalidad 6: Reportes y estadísticas](#-funcionalidad-6-reportes-y-estadísticas-pendiente-de-implementación)
+- [🔧 Funcionalidad 7: Reporte de incidencias](#-funcionalidad-7-reporte-de-incidencias-en-los-puestos-de-trabajo-pendiente-de-implementación)
+- [🚩 Funcionalidad 8: Feature Flags de sistema](#-funcionalidad-8-feature-flags-de-sistema-implementada)
   - [🔔 Flag: TeamsNotificationsEnabled](#-flag-featuresteamsnotificationsenabled)
-- [🛠️ Funcionalidad 8: Funciones de administración del sistema](#️-funcionalidad-8-funciones-de-administración-del-sistema-implementada)
+- [🛠️ Funcionalidad 9: Funciones de administración del sistema](#️-funcionalidad-9-funciones-de-administración-del-sistema-implementada)
 - [🧪 Estrategia de pruebas](#-estrategia-de-pruebas)
   - [🔬 Pruebas unitarias](#-pruebas-unitarias-echobasetestsunit)
   - [🔗 Pruebas de integración](#-pruebas-de-integración-echobasetestsintegration)
@@ -447,18 +448,24 @@ Integración con Azure AD (tennant de nuestra compañía) para autenticación y 
 - El sistema envía recordatorios automáticos a los usuarios sobre sus reservas próximas, con opciones para modificar o cancelar la reserva directamente desde la notificación.
 - Las notificaciones por Microsoft Teams solo se envían si el feature flag `Features:TeamsNotificationsEnabled` está activo a nivel global (ver Funcionalidad 7).
 
-## 📊 Funcionalidad 5: Reportes y estadísticas [Pendiente de implementación]
+## 🏗️ Funcionalidad 5: Configuración del Zonas, Mesas y Puestos de trabajo [Pendiente de implementación]
+- El SystemAdmin puede configurar (crear, editar y eliminar) las zonas de trabajo, asignar puestos a cada zona y definir la orientación de las mesas (horizontal o vertical) para cada zona desde el cuadro de mando de administración.
+- El SystemAdmin puede definir metadatos de localización para cada mesa (por ejemplo, "Mesa 1", "Mesa 2") que se muestran en el mapa de puestos de trabajo como parte del bloque visual de cada zona. Si no se define un localizador para una mesa, se muestra un nombre inferido basado en la clave lógica (ejemplo: "Mesa N" para la mesa con clave "N").
+- El SystemAdmin puede editar la información de cada puesto de trabajo, incluyendo su código, ubicación y equipamiento disponible, para mantener la información actualizada y precisa para los usuarios al hacer sus reservas.
+- El SystemAdmin puede eliminar puestos de trabajo obsoletos o que ya no estén disponibles, lo que los retirará del mapa de reservas y cancelará automáticamente cualquier reserva futura asociada a esos puestos, notificando a los usuarios afectados sobre la cancelación y el motivo.
+
+## 📊 Funcionalidad 6: Reportes y estadísticas [Pendiente de implementación]
 - El Manager puede acceder a un panel de reportes que muestra estadísticas de uso de los puestos de trabajo, como el porcentaje de ocupación por día, semana o mes.
 - El Manager puede exportar los datos de reservas en formato CSV para análisis adicionales.
 - El sistema genera alertas automáticas para el Manager si se detecta un patrón de reservas inusuales, como un aumento repentino en la demanda de ciertos puestos de trabajo o una alta tasa de cancelaciones.
 
-## 🔧 Funcionalidad 6: Reporte de incidencias en los puestos de trabajo [Pendiente de implementación]
+## 🔧 Funcionalidad 7: Reporte de incidencias en los puestos de trabajo [Pendiente de implementación]
 - El usuario puede reportar incidencias relacionadas con los puestos de trabajo (por ejemplo, problemas de equipamiento o limpieza) a través de la aplicación.
 - El usuario selecciona el puesto de trabajo afectado y describe la incidencia en un formulario.
 - El sistema registra la incidencia y notifica a los usuarios con rol de Manager para que puedan tomar medidas correctivas. El usuario recibe una confirmación de que su reporte ha sido registrado y se le informa sobre el proceso de seguimiento de la incidencia.
 - El usuario puede hacer seguimiento del estado de su reporte de incidencia desde su perfil de usuario, recibiendo notificaciones sobre el progreso y la resolución de la incidencia.
 
-## 🚩 Funcionalidad 7: Feature Flags de sistema [Implementada]
+## 🚩 Funcionalidad 8: Feature Flags de sistema [Implementada]
 
 El sistema incluye un mecanismo de feature flags basado en configuración para activar o desactivar funcionalidades sin necesidad de redespliegue. Los flags se declaran en la sección `Features` de `appsettings.json` y pueden sobreescribirse en `appsettings.Development.json` o en las variables de entorno del host.
 
@@ -500,7 +507,7 @@ El sistema incluye un mecanismo de feature flags basado en configuración para a
 - Con flag `true` y stubs desactivados, se registra `GraphTeamsNotificationService`.
 - Sin flag declarado, el valor por defecto (`true`) preserva el comportamiento original.
 
-## 🛠️ Funcionalidad 8: Funciones de administración del sistema [Implementada]
+## 🛠️ Funcionalidad 9: Funciones de administración del sistema [Implementada]
 - El Administrador o administradores pueden gestionar los usuarios del sistema, asignar roles y revisar logs de auditoría para acciones críticas como reservas, cancelaciones y bloqueos de puestos de trabajo.
 - El sistema registra en un log de auditoría todas las acciones relevantes, incluyendo quién realizó la acción, qué acción se realizó, detalles adicionales y la marca de tiempo. Este log es accesible para los administradores a través de una interfaz dedicada, con opciones de filtrado y exportación para análisis.
 - El sistema incluye una función de "modo mantenimiento" que los administradores pueden activar para realizar tareas de mantenimiento sin afectar a los usuarios finales. Cuando el modo mantenimiento está activo, los usuarios reciben una notificación de que el sistema está temporalmente fuera de servicio y no pueden realizar reservas ni acceder a sus perfiles hasta que se desactive el modo mantenimiento.
@@ -566,8 +573,6 @@ Valores del enum `AuditAction`:
 | **Reserva de emergencia** | Selector de usuario + selector de fecha con flechas de navegación por días (recarga el mapa al cambiar). Mapa visual interactivo idéntico al de `DockMap.razor` (colores libres/parcial/completo/bloqueado, tooltips). Al hacer clic en un puesto disponible se abre un **modal** (mismo estilo que DockMap) con información del puesto, usuario seleccionado, selector de franja horaria (`btn-check`) y botón "Crear reserva". |
 | **Usuarios** | Tabla de usuarios con sus roles actuales (badges de color). Botones de asignar/retirar rol **Manager** (`bi-person-plus` / `bi-person-dash`) y **SystemAdmin** (`bi-shield-plus` / `bi-shield-dash`). El texto del botón muestra el nombre completo del rol (`SystemAdmin`, no `Admin`). |
 | **Log de auditoría** | Tabla paginada con filtros de fecha (desde/hasta), tipo de acción y nombre de usuario. Paginación con flechas. |
-
-
 
 ---
 
