@@ -1,4 +1,5 @@
 using EchoBase.Core.Entities;
+using EchoBase.Core.Entities.Enums;
 using EchoBase.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -32,9 +33,18 @@ internal sealed class DockZoneConfiguration : IEntityTypeConfiguration<DockZone>
         builder.Property(dz => dz.Description)
             .HasMaxLength(500);
 
+        builder.Property(dz => dz.Orientation)
+            .HasConversion<int>()
+            .HasDefaultValue(ZoneOrientation.Horizontal);
+
         builder.HasMany(dz => dz.Docks)
             .WithOne(d => d.DockZone)
             .HasForeignKey(d => d.DockZoneId)
             .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasMany(dz => dz.Tables)
+            .WithOne(t => t.DockZone)
+            .HasForeignKey(t => t.DockZoneId)
+            .OnDelete(DeleteBehavior.Cascade);
     }
 }

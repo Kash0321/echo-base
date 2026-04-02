@@ -418,4 +418,72 @@ public class GetDockMapHandlerTests
         dock.AssignToZone(zone);
         zone.Docks.Add(dock);
     }
+
+    private static void AddTable(DockZone zone, Guid id, string tableKey, string? locator = null)
+    {
+        var table = new DockTable(id) { TableKey = tableKey, Locator = locator };
+        table.AssignToZone(zone);
+        zone.Tables.Add(table);
+    }
+
+    // ──────────────────────────────────────────────────────────
+    // Orientation tests
+    // ──────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task Handle_ZoneOrientation_IsPropagedToDtoAsHorizontalByDefault()
+    {
+        var result = await _handler.Handle(Query(), CancellationToken.None);
+
+        Assert.All(result.Zones, z =>
+            Assert.Equal(ZoneOrientation.Horizontal, z.Orientation));
+    }
+
+    [Fact]
+    public async Task Handle_ZoneWithVerticalOrientation_DtoPropagatesVertical()
+    {
+        var verticalZone = new DockZone(Guid.NewGuid())
+        {
+            Name = "VerticalZone",
+            Orientation = ZoneOrientation.Vertical
+        };
+        AddDock(verticalZone, Guid.NewGuid(), "N-A01");
+
+        _repository.GetAllZonesWithDocksAsync(Arg.Any<CancellationToken>())
+            .Returns([verticalZone]);
+
+        var result = await _handler.Handle(Query(), CancellationToken.None);
+
+        Assert.Equal(ZoneOrientation.Vertical, result.Zones[0].Orientation);
+    }
+
+    // ──────────────────────────────────────────────────────────
+    // Locator tests
+    // ──────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task Handle_TableWithLocator_DtoContainsLocator()
+    {
+        var zone = new DockZone(Guid.NewGuid()) { Name = "Nostromo" };
+        AddDock(zone, Guid.NewGuid(), "N-A01");
+        AddDock(zone, Guid.NewGuid(), "N-B01");
+        AddTable(zone, Guid.NewGuid(), tableKey: "N", locator: "Mesa Ventana");
+
+        _repository.GetAllZonesWithDocksAsync(Arg.Any<CancellationToken>())
+            .Returns([zone]);
+
+        var result = await _handler.Handle(Query(), CancellationToken.None);
+
+        Assert.Equal("Mesa Ventana", result.Zones[0].Tables[0].Locator);
+    }
+
+    [Fact]
+    public async Task Handle_TableWithoutLocator_DtoLocatorIsNull()
+    {
+        var result = await _handler.Handle(Query(), CancellationToken.None);
+
+        Assert.All(
+            result.Zones.SelectMany(z => z.Tables),
+            t => Assert.Null(t.Locator));
+    }
 }

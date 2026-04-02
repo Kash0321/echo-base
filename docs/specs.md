@@ -68,6 +68,8 @@ Para mantener coherencia en el rediseño y ampliaciones futuras de Echo Base, se
 4. **Componentización Visual**
    - **Tarjetas sin borde y elevación sutil**: Uso de `.card.border-0.shadow-sm`.
    - **Hover effects táctiles**: Aplicados en tarjetas informativas (reservas futuras) y los puestos del mapa (`.eb-reservation-card:hover`, `.eb-dock-seat:not(:disabled):hover`) usando `transform: translateY(-2px); box-shadow: ...`.
+   - **Distribución de mesas por zona (`DockZone.Orientation`)**: Cada zona puede renderizar sus mesas en sentido horizontal (`d-flex flex-row flex-wrap gap-3`, valor por defecto) o vertical (`d-flex flex-column gap-3`), controlado por la propiedad `ZoneOrientation` almacenada en BD. Esta lógica se aplica en `DockMap.razor` y `AdminDashboard.razor` sin CSS adicional, usando únicamente clases Flexbox de Bootstrap 5.
+   - **Localizador de mesa (`DockTable.Locator`)**: El encabezado que aparece sobre cada bloque de mesa en el mapa muestra `Locator` si está definido, o el nombre inferido (ej. «Mesa 1») como fallback. `DockTable` es una entidad independiente que asocia un `TableKey` (clave lógica derivada del prefijo del código de puesto) con su texto informativo. Los botones de puesto individual siempre muestran `Code`.
    - **Interacciones enriquecidas (Formularios/Modales)**: Uso moderno de entradas, por ejemplo, convirtiendo opciones en botones (`.btn-check` + `.btn-outline-primary`) en lugar de radio buttons clásicos para mejorar las áreas táctiles en móviles y darle un look moderno.
    - **Datos históricos**: Manejo diferenciado visualmente. Los elementos cancelados o pasados bajan su opacidad y tienen efecto tachado sobre los listados.
    - **Formularios de perfil**: Separación clara entre datos corporativos de solo lectura (gestionados por Azure AD) y datos editables del usuario (línea de negocio, teléfono y preferencias), usando tarjetas diferenciadas, campos compactos y switches visuales para preferencias booleanas.
@@ -238,9 +240,32 @@ Agrupa un conjunto de puestos bajo una misma zona física de la oficina.
 | `Id` | `Guid` | Identificador único |
 | `Name` | `string` | Nombre de la zona (`Nostromo`, `Derelict`) |
 | `Description` | `string?` | Descripción opcional de la zona |
+| `Orientation` | `ZoneOrientation` (enum) | Distribución visual de las mesas: `Horizontal` (en fila, por defecto) o `Vertical` (apiladas en columna) |
 | `Docks` | nav. → `Dock` | Puestos de trabajo incluidos en la zona |
+| `Tables` | nav. → `DockTable` | Metadatos de mesas lógicas de la zona |
 
 > **Nota:** La asignación puesto-zona se gestiona mediante la FK `Dock.DockZoneId`; no existe una entidad `DockZoneAssignment` separada.
+
+---
+
+#### `DockTable` — Mesa lógica de zona
+Entidad que asocia la clave lógica de una mesa (derivada del prefijo del código de puesto) con un texto de localización opcional visible en el mapa.
+
+| Propiedad | Tipo | Descripción |
+|---|---|---|
+| `Id` | `Guid` (UUID v7) | Identificador único |
+| `TableKey` | `string` | Clave lógica de la mesa (ej.: `"N"`, `"D-1"`, `"D-2"`), máx. 20 caracteres. Única por zona. |
+| `Locator` | `string?` | Texto de localización opcional que aparece sobre el bloque de mesa en el mapa. Si es `null`, se muestra el nombre inferido (ej.: «Mesa 1»). Máx. 100 caracteres. |
+| `DockZoneId` | `Guid` | FK de la zona a la que pertenece la mesa |
+| `DockZone` | nav. → `DockZone` | Zona propietaria |
+
+Semillas de BD (`DbSeeder`):
+
+| Mesa | `TableKey` | Id semilla |
+|---|---|---|
+| Nostromo | `"N"` | `e0000000-0000-0000-0000-000000000001` |
+| Derelict 1 | `"D-1"` | `e0000000-0000-0000-0000-000000000002` |
+| Derelict 2 | `"D-2"` | `e0000000-0000-0000-0000-000000000003` |
 
 ---
 
@@ -350,6 +375,7 @@ Claves predefinidas:
 | `BusinessLine` | `Core = 1`, `Energia = 2`, `ScrapWaste = 3`, `Transversal = 4` |
 | `TimeSlot` | `Morning = 1` (hasta 14:00 h), `Afternoon = 2` (14:00 h – fin jornada), `Both = 3` (jornada completa) |
 | `ReservationStatus` | `Active = 1`, `Cancelled = 2` |
+| `ZoneOrientation` | `Horizontal = 0` (mesas en fila, por defecto), `Vertical = 1` (mesas apiladas en columna) |
 | `AuditAction` | (ver tabla de `AuditLog` arriba) |
 
 ---
@@ -551,7 +577,7 @@ Valores del enum `AuditAction`:
 
 - **Framework:** xUnit + NSubstitute
 - **Alcance:** Handlers MediatR de forma aislada; cada dependencia externa (repositorios, servicios de notificación) se sustituye por un doble de prueba con NSubstitute.
-- **Cobertura actual:** Handlers de comandos/queries de Reservaciones, Usuarios y BlockedDocks; feature flags de Teams.
+- **Cobertura actual:** Handlers de comandos/queries de Reservaciones, Usuarios y BlockedDocks; feature flags de Teams; orientación de zona y localizador de mesa en `GetDockMapHandler`.
 
 ### 🔗 Pruebas de integración (`EchoBase.Tests.Integration`)
 
@@ -690,6 +716,15 @@ Cada instancia de clase de tests obtiene su propia base de datos en memoria, por
 | UT-AD-11 | `RemoveUserRoleCommand` con `ResolvedTargetUserName` → `Details` contiene nombre del usuario; GUID ausente |
 | UT-AD-12 | `RemoveUserRoleCommand` sin resolución → fallback al GUID del usuario |
 
+**`GetDockMapHandlerTests`** (4 casos sobre orientación de zona y localizador de mesa — `EchoBase.Tests.Unit/Reservations/`):
+
+| ID | Caso |
+|---|---|
+| UT-DM-01 | Zona con `Orientation` por defecto → `DockZoneMapDto.Orientation` es `Horizontal` |
+| UT-DM-02 | Zona con `Orientation = Vertical` → `DockZoneMapDto.Orientation` es `Vertical` |
+| UT-DM-03 | `DockTable` con `Locator` no nulo → `DockTableDto.Locator` contiene el valor configurado |
+| UT-DM-04 | Zona sin `DockTable` entries → `DockTableDto.Locator` es `null` en todos los DTOs de tabla |
+
 **Pruebas de integración**
 
 **`SetMaintenanceModeIntegrationTests`** (5 casos):
@@ -733,3 +768,13 @@ Cada instancia de clase de tests obtiene su propia base de datos en memoria, por
 | IT-SA-20 | Filtro por `Action` devuelve solo los registros coincidentes |
 | IT-SA-21 | Paginación: solicitar página 2 devuelve los registros correctos |
 | IT-SA-22 | Filtro por nombre de usuario devuelve solo entradas de ese usuario |
+
+#### ✅ Cobertura actual — Consulta de mapa de bahías
+
+**`GetDockMapIntegrationTests`** (3 casos):
+
+| ID | Caso |
+|---|---|
+| IT-DM-01 | `GetDockMapQuery` → zonas retornadas con `Orientation` correcta desde BD (`Nostromo = Horizontal`, `Derelict = Vertical`) |
+| IT-DM-02 | `GetDockMapQuery` → tablas retornadas con `Locator` correcto procedente de los registros `DockTable` sembrados |
+| IT-DM-03 | `GetDockMapQuery` → `DockMapDto.Date` es la fecha de la query |

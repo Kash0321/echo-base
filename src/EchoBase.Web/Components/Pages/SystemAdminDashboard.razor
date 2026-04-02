@@ -222,11 +222,11 @@ else
                                         <span class="fw-semibold small">@zone.Name</span>
                                     </div>
                                     <div class="card-body py-2 px-3">
-                                        <div class="d-flex flex-wrap gap-3">
+                                        <div class="d-flex @GetZoneFlexClass(zone) gap-3">
                                             @foreach (var table in zone.Tables)
                                             {
                                                 <div class="eb-table-block">
-                                                    <p class="text-muted small fw-semibold mb-1 text-center">@table.Name</p>
+                                                    <p class="text-muted small fw-semibold mb-1">@(table.Locator ?? table.Name)</p>
                                                     <div class="eb-dock-table">
                                                         <div class="d-flex gap-2 mb-1">
                                                             @foreach (var seat in table.SideA)
@@ -378,11 +378,11 @@ else
                                     <span class="fw-semibold small">@zone.Name</span>
                                 </div>
                                 <div class="card-body py-2 px-3">
-                                    <div class="d-flex flex-wrap gap-3">
+                                    <div class="d-flex @GetZoneFlexClass(zone) gap-3">
                                         @foreach (var table in zone.Tables)
                                         {
                                             <div class="eb-table-block">
-                                                <p class="text-muted small fw-semibold mb-1 text-center">@table.Name</p>
+                                                <p class="text-muted small fw-semibold mb-1">@(table.Locator ?? table.Name)</p>
                                                 <div class="eb-dock-table">
                                                     <div class="d-flex gap-2 mb-1">
                                                         @foreach (var seat in table.SideA)
@@ -1158,6 +1158,9 @@ else
     // ══════════════════════════════════════════════════════════════
     // Helpers visuales
     // ══════════════════════════════════════════════════════════════
+
+    private static string GetZoneFlexClass(DockZoneMapDto zone) =>
+        zone.Orientation == ZoneOrientation.Vertical ? "flex-column align-items-start" : "flex-row flex-wrap";
 
     private static string GetBtnClass(DockSeatDto seat) => seat.Status switch
     {

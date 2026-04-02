@@ -15,6 +15,7 @@ internal sealed class DockMapRepository(EchoBaseDbContext context) : IDockMapRep
     public Task<List<DockZone>> GetAllZonesWithDocksAsync(CancellationToken ct = default) =>
         context.DockZones
             .Include(z => z.Docks)
+            .Include(z => z.Tables)
             .AsNoTracking()
             .ToListAsync(ct);
 

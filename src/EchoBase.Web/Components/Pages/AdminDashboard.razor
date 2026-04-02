@@ -155,11 +155,11 @@ else
                                     <p class="text-muted small fw-semibold mb-2">
                                         <i class="bi bi-grid-3x3 text-primary me-1"></i>@zone.Name
                                     </p>
-                                    <div class="d-flex flex-wrap gap-3">
+                                    <div class="d-flex @GetZoneFlexClass(zone) gap-3">
                                         @foreach (var table in zone.Tables)
                                         {
                                             <div class="eb-table-block">
-                                                <p class="text-muted small fw-semibold mb-1 text-center">@table.Name</p>
+                                                <p class="text-muted small fw-semibold mb-1">@(table.Locator ?? table.Name)</p>
                                                 <div class="eb-dock-table">
                                                     <div class="d-flex gap-2 mb-1">
                                                         @foreach (var seat in table.SideA)
@@ -458,6 +458,9 @@ else
             _                         => "btn-outline-secondary"
         };
     }
+
+    private static string GetZoneFlexClass(DockZoneMapDto zone) =>
+        zone.Orientation == ZoneOrientation.Vertical ? "flex-column align-items-start" : "flex-row flex-wrap";
 
     private bool IsSeatDisabled(DockSeatDto seat)
         => seat.Status == DockStatus.Blocked && !_selectedDockIds.Contains(seat.Id);

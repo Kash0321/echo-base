@@ -1,3 +1,5 @@
+using EchoBase.Core.Entities.Enums;
+
 namespace EchoBase.Core.Entities;
 
 /// <summary>
@@ -20,7 +22,17 @@ public sealed class DockZone(Guid id) : EntityBase
     /// <summary>Descripción opcional de la zona (distribución física, equipamiento común, etc.).</summary>
     public string? Description { get; init; }
 
+    /// <summary>
+    /// Orientación visual de las mesas dentro de la zona en el mapa de puestos.
+    /// <see cref="ZoneOrientation.Horizontal"/> (por defecto) muestra las mesas en fila;
+    /// <see cref="ZoneOrientation.Vertical"/> las apila en columna.
+    /// </summary>
+    public ZoneOrientation Orientation { get; init; } = ZoneOrientation.Horizontal;
+
     /// <summary>Puestos de trabajo que pertenecen a esta zona.</summary>
     public ICollection<Dock> Docks { get; } = new List<Dock>();
+
+    /// <summary>Mesas físicas configuradas en esta zona, con sus localizadores opcionales.</summary>
+    public ICollection<DockTable> Tables { get; } = new List<DockTable>();
 
 }

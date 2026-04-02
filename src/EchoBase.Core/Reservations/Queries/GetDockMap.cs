@@ -48,11 +48,13 @@ public sealed record DockSeatDto(
 /// <summary>
 /// Representación de una mesa física con dos lados (A y B).
 /// </summary>
-/// <param name="Name">Nombre descriptivo de la mesa.</param>
+/// <param name="Name">Nombre descriptivo generado automáticamente (ej.: «Mesa 1», «Nostromo»).</param>
+/// <param name="Locator">Texto indicativo personalizado que sustituye a <see cref="Name"/> en el mapa visual. Si es <see langword="null"/>, el UI muestra <see cref="Name"/> como fallback.</param>
 /// <param name="SideA">Puestos del lado A.</param>
 /// <param name="SideB">Puestos del lado B.</param>
 public sealed record DockTableDto(
     string Name,
+    string? Locator,
     IReadOnlyList<DockSeatDto> SideA,
     IReadOnlyList<DockSeatDto> SideB);
 
@@ -62,11 +64,13 @@ public sealed record DockTableDto(
 /// <param name="Id">Identificador de la zona.</param>
 /// <param name="Name">Nombre de la zona (Nostromo, Derelict).</param>
 /// <param name="Description">Descripción opcional.</param>
+/// <param name="Orientation">Orientación visual de las mesas dentro de la zona: horizontal (en fila) o vertical (en columna).</param>
 /// <param name="Tables">Mesas que componen la zona.</param>
 public sealed record DockZoneMapDto(
     Guid Id,
     string Name,
     string? Description,
+    ZoneOrientation Orientation,
     IReadOnlyList<DockTableDto> Tables);
 
 /// <summary>
@@ -134,6 +138,10 @@ internal sealed class GetDockMapHandler(IDockMapRepository repository)
 
         var tables = new List<DockTableDto>();
 
+        // Construir lookup de localizadores por clave de mesa
+        var locatorByKey = zone.Tables
+            .ToDictionary(t => t.TableKey, t => t.Locator);
+
         foreach (var tableGroup in docksByTable)
         {
             var bySide = tableGroup
@@ -149,10 +157,11 @@ internal sealed class GetDockMapHandler(IDockMapRepository repository)
                 .ToList();
 
             var tableName = BuildTableName(zone.Name, tableGroup.Key);
-            tables.Add(new DockTableDto(tableName, sideA, sideB));
+            var locator   = locatorByKey.GetValueOrDefault(tableGroup.Key);
+            tables.Add(new DockTableDto(tableName, locator, sideA, sideB));
         }
 
-        return new DockZoneMapDto(zone.Id, zone.Name, zone.Description, tables);
+        return new DockZoneMapDto(zone.Id, zone.Name, zone.Description, zone.Orientation, tables);
     }
 
     internal static DockSeatDto BuildSeatDto(

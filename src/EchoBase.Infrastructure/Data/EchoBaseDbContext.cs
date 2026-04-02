@@ -24,6 +24,9 @@ public sealed class EchoBaseDbContext(DbContextOptions<EchoBaseDbContext> option
     /// <summary>Zonas físicas que agrupan puestos (Nostromo, Derelict).</summary>
     public DbSet<DockZone> DockZones => Set<DockZone>();
 
+    /// <summary>Mesas físicas dentro de cada zona, con sus localizadores opcionales.</summary>
+    public DbSet<DockTable> DockTables => Set<DockTable>();
+
     /// <summary>Reservas de puestos realizadas por los usuarios.</summary>
     public DbSet<Reservation> Reservations => Set<Reservation>();
 

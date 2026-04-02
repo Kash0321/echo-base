@@ -1,11 +1,12 @@
 using EchoBase.Core.Entities;
+using EchoBase.Core.Entities.Enums;
 using Microsoft.EntityFrameworkCore;
 
 namespace EchoBase.Infrastructure.Data;
 
 /// <summary>
 /// Inicializa la base de datos con los datos maestros obligatorios:
-/// las dos zonas físicas y los 24 puestos de trabajo según el mapa de specs.
+/// las dos zonas físicas y los 30 puestos de trabajo según el mapa de specs.
 /// </summary>
 /// <remarks>
 /// Los GUIDs de zonas y puestos son determinísticos y no deben modificarse
@@ -20,6 +21,12 @@ public static class DbSeeder
 
     private static readonly Guid NostromoZoneId = new("a0000000-0000-0000-0000-000000000001");
     private static readonly Guid DerelictZoneId  = new("a0000000-0000-0000-0000-000000000002");
+
+    // ── GUIDs de mesas (DockTable) ────────────────────────────
+    private static readonly Guid NostromoTableId   = new("e0000000-0000-0000-0000-000000000001");
+    private static readonly Guid DerelictTable1Id  = new("e0000000-0000-0000-0000-000000000002");
+    private static readonly Guid DerelictTable2Id  = new("e0000000-0000-0000-0000-000000000003");
+    private static readonly Guid DerelictTable3Id  = new("e0000000-0000-0000-0000-000000000004");
 
     // Nostromo · Lado A (N-A01 … N-A06)
     private static readonly Guid[] NostromoSideA =
@@ -75,6 +82,22 @@ public static class DbSeeder
         new("c0000000-0000-0000-0004-000000000003"),
     ];
 
+    // Derelict · Mesa 3 · Lado A (D-3A01 … D-3A03)
+    private static readonly Guid[] DerelictTable3SideA =
+    [
+        new("c0000000-0000-0000-0005-000000000001"),
+        new("c0000000-0000-0000-0005-000000000002"),
+        new("c0000000-0000-0000-0005-000000000003"),
+    ];
+
+    // Derelict · Mesa 3 · Lado B (D-3B01 … D-3B03)
+    private static readonly Guid[] DerelictTable3SideB =
+    [
+        new("c0000000-0000-0000-0006-000000000001"),
+        new("c0000000-0000-0000-0006-000000000002"),
+        new("c0000000-0000-0000-0006-000000000003"),
+    ];
+
     private const string DefaultEquipment = "Monitor doble, teclado, ratón, silla ergonómica";
 
     // ──────────────────────────────────────────────────────────────
@@ -103,16 +126,24 @@ public static class DbSeeder
         var nostromo = new DockZone(NostromoZoneId)
         {
             Name = "Nostromo",
-            Description = "Mesa corrida con 6 puestos a cada lado (6+6)"
+            Description = "Mesa corrida con 6 puestos a cada lado (6+6)",
+            Orientation = ZoneOrientation.Horizontal
         };
 
         var derelict = new DockZone(DerelictZoneId)
         {
             Name = "Derelict",
-            Description = "Dos mesas corridas con 3 puestos a cada lado en cada mesa (3+3 y 3+3)"
+            Description = "Tres mesas corridas con 3 puestos a cada lado en cada mesa (3+3, 3+3 y 3+3)",
+            Orientation = ZoneOrientation.Vertical
         };
 
         context.DockZones.AddRange(nostromo, derelict);
+
+        // ── Mesas (DockTable) ─────────────────────────────────────
+        AddTable(context, NostromoTableId,  tableKey: "N",   locator: "Mesa única 12 puestos", nostromo);
+        AddTable(context, DerelictTable1Id, tableKey: "D-1", locator: "Mesa AiQube",           derelict);
+        AddTable(context, DerelictTable2Id, tableKey: "D-2", locator: "Mesa central",          derelict);
+        AddTable(context, DerelictTable3Id, tableKey: "D-3", locator: "Mesa ventanal",         derelict);
 
         // ── Nostromo ──────────────────────────────────────────────
         AddDocks(context, NostromoSideA, "N-A", "Nostromo · Lado A · Posición {0}", nostromo);
@@ -123,8 +154,26 @@ public static class DbSeeder
         AddDocks(context, DerelictTable1SideB, "D-1B", "Derelict · Mesa 1 · Lado B · Posición {0}", derelict);
         AddDocks(context, DerelictTable2SideA, "D-2A", "Derelict · Mesa 2 · Lado A · Posición {0}", derelict);
         AddDocks(context, DerelictTable2SideB, "D-2B", "Derelict · Mesa 2 · Lado B · Posición {0}", derelict);
+        AddDocks(context, DerelictTable3SideA, "D-3A", "Derelict · Mesa 3 · Lado A · Posición {0}", derelict);
+        AddDocks(context, DerelictTable3SideB, "D-3B", "Derelict · Mesa 3 · Lado B · Posición {0}", derelict);
 
         await context.SaveChangesAsync();
+    }
+
+    private static void AddTable(
+        EchoBaseDbContext context,
+        Guid id,
+        string tableKey,
+        string? locator,
+        DockZone zone)
+    {
+        var table = new DockTable(id)
+        {
+            TableKey = tableKey,
+            Locator  = locator
+        };
+        table.AssignToZone(zone);
+        context.DockTables.Add(table);
     }
 
     private static void AddDocks(
