@@ -1,6 +1,6 @@
 /* ── Hero ──────────────────────────────────────────────── */
 .eb-about-hero {
-    background: linear-gradient(135deg, #0d1b2a 0%, #1a3a5c 50%, #0a2540 100%);
+    background: linear-gradient(135deg, var(--eb-dark-blue, #17233C) 0%, var(--eb-dark-petroleum, #0A404B) 50%, var(--eb-dark-blue, #17233C) 100%);
     border-bottom: 1px solid rgba(255,255,255,.08);
     position: relative;
     overflow: hidden;
@@ -10,7 +10,7 @@
     content: "";
     position: absolute;
     inset: 0;
-    background: radial-gradient(ellipse at 50% 120%, rgba(30,90,160,.35) 0%, transparent 70%);
+    background: radial-gradient(ellipse at 50% 120%, rgba(8,108,217,.25) 0%, transparent 70%);
     pointer-events: none;
 }
 
@@ -22,13 +22,13 @@
 
 /* ── Lore card ─────────────────────────────────────────── */
 .eb-lore-card {
-    background: rgba(13, 27, 42, .03);
+    background: rgba(23, 35, 60, .03);
     border-left: 4px solid var(--bs-primary) !important;
 }
 
 .eb-lore-pillar {
     padding: .75rem;
-    background: rgba(13, 27, 42, .04);
+    background: rgba(23, 35, 60, .04);
     border-radius: .5rem;
 }
 
@@ -80,7 +80,7 @@
     width: 3rem;
     height: 3rem;
     border-radius: 50%;
-    background: linear-gradient(135deg, #1b6ec2, #1a3a5c);
+    background: linear-gradient(135deg, var(--eb-blue-400, #086cd9), var(--eb-dark-blue, #17233C));
     display: flex;
     align-items: center;
     justify-content: center;

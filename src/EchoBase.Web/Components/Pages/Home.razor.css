@@ -1,6 +1,6 @@
 /* ── Hero ──────────────────────────────────────────────── */
 .eb-hero {
-    background: linear-gradient(135deg, #0d1b2a 0%, #1a3a5c 60%, #0d1b2a 100%);
+    background: var(--eb-header-gradient, linear-gradient(135deg, #17233C 0%, #0A404B 60%, #17233C 100%));
     border-bottom: 1px solid rgba(255,255,255,.08);
 }
 
@@ -12,7 +12,7 @@
 
 /* ── Lore card ─────────────────────────────────────────── */
 .eb-lore-card {
-    background: rgba(13, 27, 42, .03);
+    background: rgba(23, 35, 60, .03);
     border-left: 4px solid var(--bs-primary) !important;
 }
 
