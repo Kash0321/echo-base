@@ -47,7 +47,29 @@
 }
 else
 {
-    <!-- ═══════════════════════ BLOQUEO + MAPA ═══════════════════════ -->
+    <!-- ═══ PESTAÑAS DE NAVEGACIÓN ═══════════════════════════════════════════════════ -->
+    <ul class="nav nav-tabs mb-3" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link @(_adminTab == AdminTab.Blocks ? "active" : "")"
+                    @onclick='() => _adminTab = AdminTab.Blocks'>
+                <i class="bi bi-slash-circle text-danger me-1"></i>Bloqueos
+                <span class="badge bg-secondary ms-1" style="font-size:.65rem;">@_activeBlocks.Count</span>
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link @(_adminTab == AdminTab.Incidences ? "active" : "")"
+                    @onclick='() => _adminTab = AdminTab.Incidences'>
+                <i class="bi bi-exclamation-triangle text-warning me-1"></i>Incidencias en puestos
+                @if (_allIncidences is not null && _allIncidences.TotalCount > 0)
+                {
+                    <span class="badge bg-secondary ms-1" style="font-size:.65rem;">@_allIncidences.TotalCount</span>
+                }
+            </button>
+        </li>
+    </ul>
+
+    @if (_adminTab == AdminTab.Blocks)
+    {
     <div class="row g-3">
 
         <!-- Panel de bloqueo -->
@@ -298,8 +320,10 @@ else
             </div>
         </div>
     </div>
+    }
 
-    <!-- ═══════════════════════ INCIDENCIAS ═══════════════════════ -->
+    @if (_adminTab == AdminTab.Incidences)
+    {
     <div class="row mt-3">
         <div class="col-12">
             <div class="card border-0 shadow-sm">
@@ -397,6 +421,7 @@ else
             </div>
         </div>
     </div>
+    }
 }
 
 <!-- ═══════════════════════════════════════════════════
@@ -531,6 +556,10 @@ else
     // ──────────────────────────────────────────────────────────────
     private readonly HashSet<Guid> _selectedDockIds = new();
     private Guid? _unblockingId;
+
+    // Pestañas
+    private enum AdminTab { Blocks, Incidences }
+    private AdminTab _adminTab = AdminTab.Blocks;
 
     // ──────────────────────────────────────────────────────────────
     // Estado: paginación de bloqueos activos

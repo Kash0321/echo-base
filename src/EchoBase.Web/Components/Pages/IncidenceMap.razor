@@ -41,17 +41,36 @@
 
 <div class="container-fluid px-3">
 
-<!-- Texto de ayuda -->
-<p class="text-info small mb-3">
-    <i class="bi bi-info-circle me-1"></i>
-    <strong>¿Cómo reportar?</strong>
-    Haz clic sobre cualquier puesto del mapa para abrir el formulario de reporte.
-    Describe la incidencia con el mayor detalle posible para que los responsables puedan atenderla.
-</p>
-
 <!-- ═══════════════════════════════════════════════════
-     MAPA DE PUESTOS (modo incidencias: todos clicables)
+     PESTAÑAS DE NAVEGACIÓN
 ═══════════════════════════════════════════════════ -->
+<ul class="nav nav-tabs mb-3" role="tablist">
+    <li class="nav-item" role="presentation">
+        <button class="nav-link @(_incidenceTab == IncidenceTab.Map ? "active" : "")"
+                @onclick='() => _incidenceTab = IncidenceTab.Map'>
+            <i class="bi bi-map me-1"></i>Mapa de puestos
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link @(_incidenceTab == IncidenceTab.MyIncidences ? "active" : "")"
+                @onclick='() => _incidenceTab = IncidenceTab.MyIncidences'>
+            <i class="bi bi-clock-history me-1"></i>Mis incidencias
+            @if (_myIncidences is not null && _myIncidences.Count > 0)
+            {
+                <span class="badge bg-secondary ms-1" style="font-size:.65rem;">@_myIncidences.Count</span>
+            }
+        </button>
+    </li>
+</ul>
+
+@if (_incidenceTab == IncidenceTab.Map)
+{
+    <div class="alert alert-info d-flex align-items-center gap-2 py-2 mb-3 small">
+        <i class="bi bi-info-circle flex-shrink-0"></i>
+        <span><strong>&#191;C&#243;mo reportar?</strong> Haz clic sobre cualquier puesto del mapa para abrir el formulario de reporte. Describe la incidencia con el mayor detalle posible para que los responsables puedan atenderla.</span>
+    </div>
+
+    @* Mapa de puestos *@
 @if (_loadingMap)
 {
     <div class="d-flex justify-content-center py-5">
@@ -115,13 +134,14 @@ else if (_dockMap is not null)
         }
     </div>
 }
+}
 
-<!-- ═══════════════════════════════════════════════════
-     MIS INCIDENCIAS
-═══════════════════════════════════════════════════ -->
-<h2 class="h5 fw-semibold mb-3 mt-2">
-    <i class="bi bi-clock-history me-2 text-primary"></i>Mis incidencias
-</h2>
+@if (_incidenceTab == IncidenceTab.MyIncidences)
+{
+    @* Mis incidencias *@
+    <h2 class="h5 fw-semibold mb-3 mt-2">
+        <i class="bi bi-clock-history me-2 text-primary"></i>Mis incidencias
+    </h2>
 
 @if (_loadingIncidences)
 {
@@ -183,8 +203,7 @@ else
         </table>
     </div>
 }
-
-</div>
+}</div>
 
 <!-- ═══════════════════════════════════════════════════
      MODAL DE REPORTE DE INCIDENCIA
@@ -260,6 +279,10 @@ else
 }
 
 @code {
+    // Pestañas
+    private enum IncidenceTab { Map, MyIncidences }
+    private IncidenceTab _incidenceTab = IncidenceTab.Map;
+
     // Mapa
     private DockMapDto? _dockMap;
     private bool _loadingMap = true;
