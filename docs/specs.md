@@ -163,43 +163,6 @@ Los **botones de warning** usan texto `#262626` (Graphite Black) en lugar de bla
 - Los **tintes de fondo** para sub-cabeceras y elementos destacados usan `rgba(23, 35, 60, .03/.04/.06)` (derivado de `--eb-dark-blue`).
 - Los **colores de estado** (validación de formularios, bordes activos) usan Green 400 y Red 400 respectivamente.
 
-### 🖼️ Galería de Pantallas (UI/UX)
-
-A continuación se muestran capturas de las pantallas principales del sistema, que reflejan la aplicación de los principios de diseño mencionados:
-
-#### 🏠 1. Home (`Home.razor`)
-![Home](001.Home.png)
-
-#### 🗺️ 2. Mapa de Bahías (`DockMap.razor`)
-![Mapa de bahías](002.DockMap.png)
-
-#### 📅 3. Mis Reservas (`MyReservations.razor`)
-![Mis Reservas](003.MyReservations.png)
-
-#### ℹ️ 4. Acerca de (`About.razor`)
-![Acerca de - Parte 1](004.About_01.png)
-![Acerca de - Parte 2](004.About_02.png)
-
-#### 👤 5. Perfil de Usuario (`UserProfile.razor`)
-![Perfil de Usuario](005.UserProfile.png)
-
-#### 🛡️ 6. Administración del Sistema (`SystemAdminDashboard.razor`)
-
-##### 🔧 Modo Mantenimiento
-![Administración - Modo Mantenimiento](006.SystemAdmin01_MaintenanceMode.png)
-
-##### 🗑️ Cancelación Masiva
-![Administración - Cancelación Masiva](006.SystemAdmin02_BulkCancel.png)
-
-##### ⚡ Reserva de Emergencia
-![Administración - Reserva de Emergencia](006.SystemAdmin03_EmergencyReservation.png)
-
-##### 👥 Gestión de Usuarios
-![Administración - Gestión de Usuarios](006.SystemAdmin04_UsersManagement.png)
-
-##### 📋 Log de Auditoría
-![Administración - Log de Auditoría](006.SystemAdmin05_LOG.png)
-
 ## 🗃️ Modelo de datos
 
 ### Entidades de negocio
