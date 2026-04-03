@@ -98,7 +98,7 @@ public static class DbSeeder
         new("c0000000-0000-0000-0006-000000000003"),
     ];
 
-    private const string DefaultEquipment = "Monitor doble, teclado, ratón, silla ergonómica";
+    private const string DefaultEquipment = "Monitor ultra curvo, teclado, ratón, silla ergonómica";
 
     // ──────────────────────────────────────────────────────────────
     // GUIDs determinísticos para roles — NO modificar
@@ -108,8 +108,11 @@ public static class DbSeeder
     private static readonly Guid ManagerRoleId   = new("d0000000-0000-0000-0000-000000000002");
     private static readonly Guid SystemAdminRoleId = new("d0000000-0000-0000-0000-000000000003");
 
-    // GUID del usuario de desarrollo (coincide con DevAuthHandler)
+    // GUID de los usuarios de desarrollo (coincide con DevAuthHandler)
     private static readonly Guid DevUserId = new("00000000-0000-0000-0000-000000000001");
+
+    // GUID del usuario extra para pruebas de desarrollo (coincide con DevAuthHandler)
+    private static readonly Guid DevUserExtraId = new("00000000-0000-0000-0000-000000000002");
 
     // ──────────────────────────────────────────────────────────────
 
@@ -126,7 +129,7 @@ public static class DbSeeder
         var nostromo = new DockZone(NostromoZoneId)
         {
             Name = "Nostromo",
-            Description = "Mesa corrida con 6 puestos a cada lado (6+6)",
+            Description = "Mesa corrida con 6 puestos a cada lado",
             Orientation = ZoneOrientation.Horizontal,
             Order = 0
         };
@@ -134,7 +137,7 @@ public static class DbSeeder
         var derelict = new DockZone(DerelictZoneId)
         {
             Name = "Derelict",
-            Description = "Tres mesas corridas con 3 puestos a cada lado en cada mesa (3+3, 3+3 y 3+3)",
+            Description = "Tres mesas corridas con 3 puestos a cada lado en cada mesa",
             Orientation = ZoneOrientation.Vertical,
             Order = 1
         };
@@ -142,10 +145,10 @@ public static class DbSeeder
         context.DockZones.AddRange(nostromo, derelict);
 
         // ── Mesas (DockTable) ─────────────────────────────────────
-        var nostromoTable  = AddTable(context, NostromoTableId,  tableKey: "N",   locator: "Mesa única 12 puestos", order: 0, nostromo);
-        var derelictTable1 = AddTable(context, DerelictTable1Id, tableKey: "D-1", locator: "Mesa AiQube",           order: 0, derelict);
-        var derelictTable2 = AddTable(context, DerelictTable2Id, tableKey: "D-2", locator: "Mesa central",          order: 1, derelict);
-        var derelictTable3 = AddTable(context, DerelictTable3Id, tableKey: "D-3", locator: "Mesa ventanal",         order: 2, derelict);
+        var nostromoTable  = AddTable(context, NostromoTableId,  tableKey: "Nostromo",   locator: "Mesa única 12 puestos", order: 0, nostromo);
+        var derelictTable1 = AddTable(context, DerelictTable1Id, tableKey: "Derelict-1", locator: "Mesa AiQube",           order: 0, derelict);
+        var derelictTable2 = AddTable(context, DerelictTable2Id, tableKey: "Derelict-2", locator: "Mesa central",          order: 1, derelict);
+        var derelictTable3 = AddTable(context, DerelictTable3Id, tableKey: "Derelict-3", locator: "Mesa ventanal",         order: 2, derelict);
 
         // ── Nostromo ──────────────────────────────────────────────
         AddDocks(context, NostromoSideA, "N-A", "Nostromo · Lado A · Posición {0}", nostromoTable,  DockSide.A);
@@ -228,7 +231,7 @@ public static class DbSeeder
     }
 
     /// <summary>
-    /// Crea el usuario de desarrollo y le asigna el rol Manager si no existe aún.
+    /// Crea los usuarios de desarrollo y les asigna el rol Manager y el rol SystemAdmin si no existen aún.
     /// Solo debe llamarse en entorno de desarrollo.
     /// </summary>
     /// <param name="context">Contexto de base de datos ya configurado y migrado.</param>
@@ -253,6 +256,33 @@ public static class DbSeeder
         }
 
         bool hasSystemAdminRole = devUser.Roles.Any(r => r.Id == SystemAdminRoleId);
+        if (!hasSystemAdminRole)
+        {
+            var systemAdminRole = await context.Roles.FindAsync(SystemAdminRoleId);
+            if (systemAdminRole is not null)
+                devUser.Roles.Add(systemAdminRole);
+        }
+
+        devUser = await context.Users
+            .Include(u => u.Roles)
+            .FirstOrDefaultAsync(u => u.Id == DevUserExtraId);
+
+
+        if (devUser is null)
+        {
+            devUser = new User(DevUserExtraId) { Name = "Dev User Extra", Email = "dev.extra@localhost" };
+            context.Users.Add(devUser);
+        }
+
+        hasManagerRole = devUser.Roles.Any(r => r.Id == ManagerRoleId);
+        if (!hasManagerRole)
+        {
+            var managerRole = await context.Roles.FindAsync(ManagerRoleId);
+            if (managerRole is not null)
+                devUser.Roles.Add(managerRole);
+        }
+
+        hasSystemAdminRole = devUser.Roles.Any(r => r.Id == SystemAdminRoleId);
         if (!hasSystemAdminRole)
         {
             var systemAdminRole = await context.Roles.FindAsync(SystemAdminRoleId);

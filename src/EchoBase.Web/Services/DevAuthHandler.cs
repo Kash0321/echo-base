@@ -36,7 +36,6 @@ internal sealed class DevAuthHandler(
 
         if (configuration.GetValue<bool>("Authentication:DevUserIsSystemAdmin"))
         {
-            claims.Add(new Claim(ClaimTypes.Role, "Manager"));
             claims.Add(new Claim(ClaimTypes.Role, "SystemAdmin"));
         }
 
