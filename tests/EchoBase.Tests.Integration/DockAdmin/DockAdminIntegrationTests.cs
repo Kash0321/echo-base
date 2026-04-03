@@ -195,7 +195,7 @@ public sealed class DockAdminIntegrationTests : IntegrationTestBase
     [Fact]
     public async Task UpdateDock_ValidRequest_ChangesPersistedToDatabase()
     {
-        var cmd = new UpdateDockCommand(AdminUserId, DockNA01, "N-NUEVO", "Ubicación nueva", "Equipo nuevo");
+        var cmd = new UpdateDockCommand(AdminUserId, DockNA01, "N-NUEVO", DockSide.A, "Ubicación nueva", "Equipo nuevo");
         var result = await Mediator.Send(cmd);
 
         Assert.True(result.IsSuccess);
@@ -209,7 +209,7 @@ public sealed class DockAdminIntegrationTests : IntegrationTestBase
     [Fact]
     public async Task UpdateDock_AuditEntryWritten()
     {
-        await Mediator.Send(new UpdateDockCommand(AdminUserId, DockNA01, "N-A01", "L", "E"));
+        await Mediator.Send(new UpdateDockCommand(AdminUserId, DockNA01, "N-A01", DockSide.A, "L", "E"));
 
         var entry = await DbContext.AuditLogs
             .SingleOrDefaultAsync(a => a.Action == AuditAction.DockUpdated && a.PerformedByUserId == AdminUserId);
@@ -219,7 +219,7 @@ public sealed class DockAdminIntegrationTests : IntegrationTestBase
     [Fact]
     public async Task UpdateDock_NotSystemAdmin_ReturnsError()
     {
-        var result = await Mediator.Send(new UpdateDockCommand(TestUserId, DockNA01, "N-A01", "L", "E"));
+        var result = await Mediator.Send(new UpdateDockCommand(TestUserId, DockNA01, "N-A01", DockSide.A, "L", "E"));
 
         Assert.False(result.IsSuccess);
         Assert.Equal(SystemAdminErrors.NotSystemAdmin, result.Error);
