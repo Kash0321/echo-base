@@ -88,12 +88,13 @@ internal sealed class DockAdminRepository(EchoBaseDbContext context) : IDockAdmi
     }
 
     /// <inheritdoc />
-    public async Task UpdateDockAsync(Guid id, string code, string location, string equipment, CancellationToken ct = default)
+    public async Task UpdateDockAsync(Guid id, string code, DockSide side, string location, string equipment, CancellationToken ct = default)
     {
         await context.Docks
             .Where(d => d.Id == id)
             .ExecuteUpdateAsync(setters => setters
                 .SetProperty(d => d.Code,      code)
+                .SetProperty(d => d.Side,      side)
                 .SetProperty(d => d.Location,  location)
                 .SetProperty(d => d.Equipment, equipment), ct);
     }

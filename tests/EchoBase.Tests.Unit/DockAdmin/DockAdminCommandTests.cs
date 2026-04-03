@@ -309,10 +309,10 @@ public class DockAdminCommandTests
         _dockAdminRepo.DockCodeExistsAsync("B-02", DockId, Arg.Any<CancellationToken>()).Returns(false);
 
         var result = await DockUpdateHandler().Handle(
-            new UpdateDockCommand(AdminId, DockId, "B-02", "Sala B", "Portátil"), CancellationToken.None);
+            new UpdateDockCommand(AdminId, DockId, "B-02", DockSide.B, "Sala B", "Portátil"), CancellationToken.None);
 
         Assert.True(result.IsSuccess);
-        await _dockAdminRepo.Received(1).UpdateDockAsync(DockId, "B-02", "Sala B", "Portátil", Arg.Any<CancellationToken>());
+        await _dockAdminRepo.Received(1).UpdateDockAsync(DockId, "B-02", DockSide.B, "Sala B", "Portátil", Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -321,7 +321,7 @@ public class DockAdminCommandTests
         AsNonSystemAdmin();
 
         var result = await DockUpdateHandler().Handle(
-            new UpdateDockCommand(AdminId, DockId, "A-01", "L", "E"), CancellationToken.None);
+            new UpdateDockCommand(AdminId, DockId, "A-01", DockSide.A, "L", "E"), CancellationToken.None);
 
         Assert.False(result.IsSuccess);
         Assert.Equal(SystemAdminErrors.NotSystemAdmin, result.Error);
@@ -333,7 +333,7 @@ public class DockAdminCommandTests
         AsSystemAdmin();
 
         var result = await DockUpdateHandler().Handle(
-            new UpdateDockCommand(AdminId, DockId, "", "L", "E"), CancellationToken.None);
+            new UpdateDockCommand(AdminId, DockId, "", DockSide.A, "L", "E"), CancellationToken.None);
 
         Assert.False(result.IsSuccess);
         Assert.Equal(DockAdminErrors.DockCodeRequired, result.Error);
@@ -346,7 +346,7 @@ public class DockAdminCommandTests
         _dockAdminRepo.GetDockByIdAsync(DockId, Arg.Any<CancellationToken>()).Returns((Dock?)null);
 
         var result = await DockUpdateHandler().Handle(
-            new UpdateDockCommand(AdminId, DockId, "A-01", "L", "E"), CancellationToken.None);
+            new UpdateDockCommand(AdminId, DockId, "A-01", DockSide.A, "L", "E"), CancellationToken.None);
 
         Assert.False(result.IsSuccess);
         Assert.Equal(DockAdminErrors.DockNotFound, result.Error);
@@ -360,7 +360,7 @@ public class DockAdminCommandTests
         _dockAdminRepo.DockCodeExistsAsync("Z-99", DockId, Arg.Any<CancellationToken>()).Returns(true);
 
         var result = await DockUpdateHandler().Handle(
-            new UpdateDockCommand(AdminId, DockId, "Z-99", "L", "E"), CancellationToken.None);
+            new UpdateDockCommand(AdminId, DockId, "Z-99", DockSide.A, "L", "E"), CancellationToken.None);
 
         Assert.False(result.IsSuccess);
         Assert.Equal(DockAdminErrors.DockCodeAlreadyExists, result.Error);

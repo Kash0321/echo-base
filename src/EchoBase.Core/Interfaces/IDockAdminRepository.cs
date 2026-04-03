@@ -63,7 +63,7 @@ public interface IDockAdminRepository
     /// <summary>
     /// Actualiza via SQL directo el código, ubicación y equipamiento de un puesto.
     /// </summary>
-    Task UpdateDockAsync(Guid id, string code, string location, string equipment, CancellationToken ct = default);
+    Task UpdateDockAsync(Guid id, string code, DockSide side, string location, string equipment, CancellationToken ct = default);
 
     /// <summary>
     /// Obtiene las reservas activas futuras de un puesto (desde <paramref name="fromDate"/> inclusive),

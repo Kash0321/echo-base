@@ -13,12 +13,14 @@ namespace EchoBase.Core.DockAdmin.Commands;
 /// <param name="AdminUserId">Identificador del SystemAdmin que realiza la actualización.</param>
 /// <param name="DockId">Identificador del puesto a actualizar.</param>
 /// <param name="Code">Nuevo código del puesto.</param>
+/// <param name="Side">Nuevo lado del puesto (A o B).</param>
 /// <param name="Location">Nueva ubicación del puesto.</param>
 /// <param name="Equipment">Nuevo equipamiento disponible.</param>
 public sealed record UpdateDockCommand(
     Guid AdminUserId,
     Guid DockId,
     string Code,
+    DockSide Side,
     string Location,
     string Equipment) : IRequest<Result>, IAuditableRequest
 {
@@ -60,7 +62,7 @@ public sealed class UpdateDockHandler(
 
         // 5. Aplicar la actualización
         await dockAdminRepository.UpdateDockAsync(
-            request.DockId, request.Code.Trim(), request.Location, request.Equipment, cancellationToken);
+            request.DockId, request.Code.Trim(), request.Side, request.Location, request.Equipment, cancellationToken);
 
         return Result.Success();
     }

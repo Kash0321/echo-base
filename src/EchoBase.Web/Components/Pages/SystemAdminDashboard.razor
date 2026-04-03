@@ -91,590 +91,65 @@ else
     <!-- ═══ PESTAÑA: MODO MANTENIMIENTO ══════════════════════════════ -->
     @if (_activeTab == Tab.Maintenance)
     {
-        <div class="row g-3">
-            <div class="col-12">
-                <div class="card border-0 shadow-sm">
-                    <div class="card-header eb-zone-header d-flex align-items-center gap-2 py-2">
-                        <i class="bi bi-tools @(_maintenanceActive ? "text-warning" : "text-secondary") fs-5"></i>
-                        <span class="fw-semibold">Modo mantenimiento</span>
-                        @if (_maintenanceActive)
-                        {
-                            <span class="badge bg-warning text-dark ms-auto">ACTIVO</span>
-                        }
-                        else
-                        {
-                            <span class="badge bg-secondary ms-auto">Inactivo</span>
-                        }
-                    </div>
-                    <div class="card-body">
-                        <p class="small text-muted mb-3">
-                            Cuando está activo, los usuarios no pueden realizar reservas ni acceder al sistema.
-                            Los SystemAdmins no se ven afectados.
-                        </p>
-                        <div class="mb-3">
-                            <label for="maintReason" class="form-label form-label-sm fw-semibold">Motivo</label>
-                            <input type="text" id="maintReason" class="form-control form-control-sm"
-                                   placeholder="Ej: Actualización de servidores..."
-                                   @bind="_maintenanceReason" />
-                        </div>
-                        @if (_maintError is not null)
-                        {
-                            <div class="alert alert-danger d-flex align-items-center gap-2 py-2 mb-2">
-                                <i class="bi bi-x-circle-fill flex-shrink-0"></i>
-                                <span class="small">@_maintError</span>
-                            </div>
-                        }
-                        @if (_maintSuccess is not null)
-                        {
-                            <div class="alert alert-success d-flex align-items-center gap-2 py-2 mb-2">
-                                <i class="bi bi-check-circle-fill flex-shrink-0"></i>
-                                <span class="small">@_maintSuccess</span>
-                            </div>
-                        }
-                        <div class="d-flex gap-2">
-                            <button class="btn btn-warning btn-sm flex-fill"
-                                    disabled="@(_settingMaintenance || _maintenanceActive)"
-                                    @onclick="ActivateMaintenance">
-                                @if (_settingMaintenance && !_maintenanceActive)
-                                {
-                                    <span class="spinner-border spinner-border-sm me-1"></span>
-                                }
-                                else
-                                {
-                                    <i class="bi bi-tools me-1"></i>
-                                }
-                                Activar
-                            </button>
-                            <button class="btn btn-outline-secondary btn-sm flex-fill"
-                                    disabled="@(_settingMaintenance || !_maintenanceActive)"
-                                    @onclick="DeactivateMaintenance">
-                                @if (_settingMaintenance && _maintenanceActive)
-                                {
-                                    <span class="spinner-border spinner-border-sm me-1"></span>
-                                }
-                                else
-                                {
-                                    <i class="bi bi-check2-circle me-1"></i>
-                                }
-                                Desactivar
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
+        <p class="text-info small mb-3">
+            <i class="bi bi-info-circle me-1"></i>
+            Cuando está activo, los usuarios no pueden realizar reservas ni acceder al sistema.
+            Los SystemAdmins no se ven afectados.
+        </p>
+        <div class="mb-3">
+            <label for="maintReason" class="form-label form-label-sm fw-semibold">Motivo</label>
+            <input type="text" id="maintReason" class="form-control form-control-sm"
+                    placeholder="Ej: Actualización de servidores..."
+                    @bind="_maintenanceReason" />
         </div>
-    }
-
-    <!-- ═══ PESTAÑA: CANCELACIÓN MASIVA ══════════════════════════════ -->
-    @if (_activeTab == Tab.BulkCancel)
-    {
-        <div class="card border-0 shadow-sm mb-3">
-            <div class="card-header eb-zone-header d-flex align-items-center gap-2 py-2">
-                <i class="bi bi-calendar-x text-danger fs-5"></i>
-                <span class="fw-semibold">Cancelación masiva de reservas</span>
+        @if (_maintError is not null)
+        {
+            <div class="alert alert-danger d-flex align-items-center gap-2 py-2 mb-2">
+                <i class="bi bi-x-circle-fill flex-shrink-0"></i>
+                <span class="small">@_maintError</span>
             </div>
-            <div class="card-body">
-                <p class="small text-muted mb-3">
-                    Cancela todas las reservas activas en el rango de fechas indicado.
-                    Selecciona puestos concretos para afectar solo a ellos, o deja todos sin seleccionar para cancelar todos.
-                </p>
-                <!-- Fechas y motivo -->
-                <div class="row g-2 mb-3">
-                    <div class="col-sm-6 col-md-3">
-                        <label for="bulkStart" class="form-label form-label-sm fw-semibold">Fecha inicio</label>
-                        <input type="date" id="bulkStart" class="form-control form-control-sm"
-                               value="@_bulkStartDate.ToString("yyyy-MM-dd")"
-                               @onchange="e => { if (DateOnly.TryParse(e.Value?.ToString(), out var d)) _bulkStartDate = d; }" />
-                    </div>
-                    <div class="col-sm-6 col-md-3">
-                        <label for="bulkEnd" class="form-label form-label-sm fw-semibold">Fecha fin</label>
-                        <input type="date" id="bulkEnd" class="form-control form-control-sm"
-                               value="@_bulkEndDate.ToString("yyyy-MM-dd")"
-                               min="@_bulkStartDate.ToString("yyyy-MM-dd")"
-                               @onchange="e => { if (DateOnly.TryParse(e.Value?.ToString(), out var d)) _bulkEndDate = d; }" />
-                    </div>
-                    <div class="col-md-6">
-                        <label for="bulkReason" class="form-label form-label-sm fw-semibold">Motivo</label>
-                        <input type="text" id="bulkReason" class="form-control form-control-sm"
-                               placeholder="Ej: Cierre por condiciones climáticas..."
-                               @bind="_bulkReason" />
-                    </div>
-                </div>
-
-                <!-- Mapa de puestos (estilo DockMap) -->
-                @if (_bulkDockMap is not null)
+        }
+        @if (_maintSuccess is not null)
+        {
+            <div class="alert alert-success d-flex align-items-center gap-2 py-2 mb-2">
+                <i class="bi bi-check-circle-fill flex-shrink-0"></i>
+                <span class="small">@_maintSuccess</span>
+            </div>
+        }
+        <div class="d-flex gap-2">
+            <button class="btn btn-warning btn-sm flex-fill"
+                    disabled="@(_settingMaintenance || _maintenanceActive)"
+                    @onclick="ActivateMaintenance">
+                @if (_settingMaintenance && !_maintenanceActive)
                 {
-                    <div class="mb-3">
-                        <div class="d-flex align-items-center gap-3 mb-2">
-                            <span class="form-label form-label-sm fw-semibold mb-0">
-                                Puestos a cancelar
-                                <span class="text-muted fw-normal">(sin selección = todos)</span>
-                            </span>
-                            <div class="d-flex align-items-center gap-2">
-                                <span class="eb-legend-dot bg-danger"></span><span class="small text-muted">Seleccionado</span>
-                                <span class="eb-legend-dot bg-success"></span><span class="small text-muted">No seleccionado</span>
-                            </div>
-                            @if (_bulkSelectedDockIds.Count > 0)
-                            {
-                                <button class="btn btn-link btn-sm p-0 text-muted" @onclick="() => _bulkSelectedDockIds.Clear()">
-                                    <i class="bi bi-x-circle me-1"></i>Limpiar selección (@_bulkSelectedDockIds.Count)
-                                </button>
-                            }
-                        </div>
-                        <div class="d-flex flex-wrap gap-3">
-                            @foreach (var zone in _bulkDockMap.Zones)
-                            {
-                                <div class="card border-0 shadow-sm">
-                                    <div class="card-header eb-zone-header d-flex align-items-center gap-2 py-1 px-2">
-                                        <i class="bi bi-grid-3x3 text-primary"></i>
-                                        <span class="fw-semibold small">@zone.Name</span>
-                                    </div>
-                                    <div class="card-body py-2 px-3">
-                                        <div class="d-flex @GetZoneFlexClass(zone) gap-3">
-                                            @foreach (var table in zone.Tables)
-                                            {
-                                                <div class="eb-table-block">
-                                                    <p class="text-muted small fw-semibold mb-1">@(table.Locator ?? table.Name)</p>
-                                                    <div class="eb-dock-table">
-                                                        <div class="d-flex gap-2 mb-1">
-                                                            @foreach (var seat in table.SideA)
-                                                            {
-                                                                var isSelected = _bulkSelectedDockIds.Contains(seat.Id);
-                                                                <button class="btn @(isSelected ? "btn-danger" : "btn-outline-secondary") eb-dock-seat eb-dock-seat-toggle"
-                                                                        title="@seat.Code — @(isSelected ? "clic para deseleccionar" : "clic para seleccionar")"
-                                                                        @onclick="() => ToggleBulkDock(seat.Id)">
-                                                                    @seat.Code
-                                                                </button>
-                                                            }
-                                                        </div>
-                                                        <hr class="eb-dock-divider my-1" />
-                                                        <div class="d-flex gap-2">
-                                                            @foreach (var seat in table.SideB)
-                                                            {
-                                                                var isSelected = _bulkSelectedDockIds.Contains(seat.Id);
-                                                                <button class="btn @(isSelected ? "btn-danger" : "btn-outline-secondary") eb-dock-seat eb-dock-seat-toggle"
-                                                                        title="@seat.Code — @(isSelected ? "clic para deseleccionar" : "clic para seleccionar")"
-                                                                        @onclick="() => ToggleBulkDock(seat.Id)">
-                                                                    @seat.Code
-                                                                </button>
-                                                            }
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            }
-                                        </div>
-                                    </div>
-                                </div>
-                            }
-                        </div>
-                    </div>
-                }
-
-                @if (_bulkError is not null)
-                {
-                    <div class="alert alert-danger d-flex align-items-center gap-2 py-2 mb-2">
-                        <i class="bi bi-x-circle-fill flex-shrink-0"></i>
-                        <span class="small">@_bulkError</span>
-                    </div>
-                }
-                @if (_bulkSuccess is not null)
-                {
-                    <div class="alert alert-success d-flex align-items-center gap-2 py-2 mb-2">
-                        <i class="bi bi-check-circle-fill flex-shrink-0"></i>
-                        <span class="small">@_bulkSuccess</span>
-                    </div>
-                }
-                @if (_confirmBulkCancel)
-                {
-                    <div class="alert alert-warning d-flex align-items-center gap-2 py-2 mb-2">
-                        <i class="bi bi-exclamation-triangle-fill flex-shrink-0"></i>
-                        <span class="small flex-fill">
-                            ¿Confirmas la cancelación masiva del @_bulkStartDate.ToString("dd/MM/yyyy")
-                            al @_bulkEndDate.ToString("dd/MM/yyyy")
-                            @(_bulkSelectedDockIds.Count > 0 ? $"({_bulkSelectedDockIds.Count} puesto(s) seleccionado(s))" : "(todos los puestos)")?
-                            Esta acción notificará a todos los afectados.
-                        </span>
-                        <div class="d-flex gap-1 ms-2">
-                            <button class="btn btn-danger btn-sm" @onclick="ConfirmBulkCancel">Sí, cancelar</button>
-                            <button class="btn btn-outline-secondary btn-sm" @onclick="() => _confirmBulkCancel = false">No</button>
-                        </div>
-                    </div>
+                    <span class="spinner-border spinner-border-sm me-1"></span>
                 }
                 else
                 {
-                    <button class="btn btn-danger btn-sm"
-                            disabled="@(string.IsNullOrWhiteSpace(_bulkReason) || _bulkCancelling)"
-                            @onclick="RequestBulkCancel">
-                        @if (_bulkCancelling)
-                        {
-                            <span class="spinner-border spinner-border-sm me-1"></span>
-                        }
-                        else
-                        {
-                            <i class="bi bi-calendar-x me-1"></i>
-                        }
-                        Cancelar reservas
-                    </button>
+                    <i class="bi bi-tools me-1"></i>
                 }
-            </div>
-        </div>
-    }
-
-    <!-- ═══ PESTAÑA: RESERVA DE EMERGENCIA ═══════════════════════════ -->
-    @if (_activeTab == Tab.Emergency)
-    {
-        <div class="card border-0 shadow-sm mb-3">
-            <div class="card-header eb-zone-header d-flex align-items-center gap-2 py-2">
-                <i class="bi bi-lightning-charge-fill text-warning fs-5"></i>
-                <span class="fw-semibold">Reserva de emergencia</span>
-            </div>
-            <div class="card-body">
-                <p class="small text-muted mb-3">
-                    Crea una reserva en nombre de un usuario. Se aplican todas las validaciones normales.
-                    Selecciona el usuario, la fecha y haz clic en un puesto del mapa.
-                </p>
-                <!-- Usuario y fecha -->
-                <div class="row g-2 mb-3">
-                    <div class="col-sm-6 col-lg-4">
-                        <label for="erUser" class="form-label form-label-sm fw-semibold">Usuario</label>
-                        <select id="erUser" class="form-select form-select-sm"
-                                @onchange="OnEmergencyUserChanged">
-                            <option value="">— Selecciona usuario —</option>
-                            @foreach (var u in _allUsers)
-                            {
-                                <option value="@u.Id" selected="@(_emergencyTargetUserId == u.Id)">@u.Name (@u.Email)</option>
-                            }
-                        </select>
-                    </div>
-                    <div class="col-sm-6 col-lg-3">
-                        <label for="erDate" class="form-label form-label-sm fw-semibold">Fecha</label>
-                        <div class="d-flex align-items-center gap-1">
-                            <button class="btn btn-sm eb-date-nav-btn" @onclick="EmergencyPrevDay"
-                                    disabled="@(_emergencyDate <= _today)" title="Día anterior">
-                                <i class="bi bi-chevron-left"></i>
-                            </button>
-                            <input type="date" id="erDate" class="form-control form-control-sm"
-                                   value="@_emergencyDate.ToString("yyyy-MM-dd")"
-                                   min="@_today.ToString("yyyy-MM-dd")"
-                                   max="@_today.AddDays(7).ToString("yyyy-MM-dd")"
-                                   @onchange="OnEmergencyDateChanged" />
-                            <button class="btn btn-sm eb-date-nav-btn" @onclick="EmergencyNextDay"
-                                    disabled="@(_emergencyDate >= _today.AddDays(7))" title="Día siguiente">
-                                <i class="bi bi-chevron-right"></i>
-                            </button>
-                        </div>
-                    </div>
-                    <div class="col-lg-5 d-flex align-items-end">
-                        <div class="d-flex align-items-center gap-2 pb-1 flex-wrap">
-                            <span class="eb-legend-dot bg-success"></span><span class="small text-muted">Libre</span>
-                            <span class="eb-legend-dot bg-warning"></span><span class="small text-muted">Parcial</span>
-                            <span class="eb-legend-dot bg-danger"></span><span class="small text-muted">Completo</span>
-                            <span class="eb-legend-dot bg-secondary"></span><span class="small text-muted">Bloqueado</span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Mapa de puestos (igual que DockMap) -->
-                @if (_emergencyDockMap is not null)
+                Activar
+            </button>
+            <button class="btn btn-outline-secondary btn-sm flex-fill"
+                    disabled="@(_settingMaintenance || !_maintenanceActive)"
+                    @onclick="DeactivateMaintenance">
+                @if (_settingMaintenance && _maintenanceActive)
                 {
-                    <div class="d-flex flex-wrap gap-3 mb-3">
-                        @foreach (var zone in _emergencyDockMap.Zones)
-                        {
-                            <div class="card border-0 shadow-sm">
-                                <div class="card-header eb-zone-header d-flex align-items-center gap-2 py-1 px-2">
-                                    <i class="bi bi-grid-3x3 text-primary"></i>
-                                    <span class="fw-semibold small">@zone.Name</span>
-                                </div>
-                                <div class="card-body py-2 px-3">
-                                    <div class="d-flex @GetZoneFlexClass(zone) gap-3">
-                                        @foreach (var table in zone.Tables)
-                                        {
-                                            <div class="eb-table-block">
-                                                <p class="text-muted small fw-semibold mb-1">@(table.Locator ?? table.Name)</p>
-                                                <div class="eb-dock-table">
-                                                    <div class="d-flex gap-2 mb-1">
-                                                        @foreach (var seat in table.SideA)
-                                                        {
-                                                            <span title="@GetTooltip(seat)" style="display:inline-block">
-                                                                <button class="btn @GetBtnClass(seat) eb-dock-seat"
-                                                                        disabled="@(seat.Status is DockStatus.FullyBooked or DockStatus.Blocked)"
-                                                                        @onclick="() => OnEmergencySeatClicked(seat)">
-                                                                    @seat.Code
-                                                                </button>
-                                                            </span>
-                                                        }
-                                                    </div>
-                                                    <hr class="eb-dock-divider my-1" />
-                                                    <div class="d-flex gap-2">
-                                                        @foreach (var seat in table.SideB)
-                                                        {
-                                                            <span title="@GetTooltip(seat)" style="display:inline-block">
-                                                                <button class="btn @GetBtnClass(seat) eb-dock-seat"
-                                                                        disabled="@(seat.Status is DockStatus.FullyBooked or DockStatus.Blocked)"
-                                                                        @onclick="() => OnEmergencySeatClicked(seat)">
-                                                                    @seat.Code
-                                                                </button>
-                                                            </span>
-                                                        }
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        }
-                                    </div>
-                                </div>
-                            </div>
-                        }
-                    </div>
-                }
-                @if (_emergencyError is not null)
-                {
-                    <div class="alert alert-danger d-flex align-items-center gap-2 py-2 mb-2">
-                        <i class="bi bi-x-circle-fill flex-shrink-0"></i>
-                        <span class="small">@_emergencyError</span>
-                    </div>
-                }
-                @if (_emergencySuccess is not null)
-                {
-                    <div class="alert alert-success d-flex align-items-center gap-2 py-2 mb-2">
-                        <i class="bi bi-check-circle-fill flex-shrink-0"></i>
-                        <span class="small">@_emergencySuccess</span>
-                    </div>
-                }
-            </div>
-        </div>
-    }
-
-    <!-- ═══ PESTAÑA: GESTIÓN DE USUARIOS ══════════════════════════════ -->
-    @if (_activeTab == Tab.Users)
-    {
-        <div class="card border-0 shadow-sm">
-            <div class="card-header eb-zone-header d-flex align-items-center gap-2 py-2">
-                <i class="bi bi-people-fill text-primary fs-5"></i>
-                <span class="fw-semibold">Gestión de usuarios</span>
-                <span class="badge bg-secondary ms-auto">@_allUsers.Count</span>
-            </div>
-            <div class="card-body p-0">
-                @if (_allUsers.Count == 0)
-                {
-                    <p class="text-muted small p-3 mb-0">
-                        <i class="bi bi-info-circle me-1"></i>No hay usuarios registrados.
-                    </p>
+                    <span class="spinner-border spinner-border-sm me-1"></span>
                 }
                 else
                 {
-                    <div class="table-responsive">
-                        <table class="table table-sm table-hover align-middle mb-0">
-                            <thead class="table-light">
-                                <tr>
-                                    <th class="ps-3">Nombre</th>
-                                    <th>Email</th>
-                                    <th>Roles</th>
-                                    <th class="pe-3 text-end">Acciones</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @foreach (var user in UsersPagedItems)
-                                {
-                                    var uid = user.Id;
-                                    var hasManager = user.Roles.Contains("Manager");
-                                    var hasAdmin = user.Roles.Contains("SystemAdmin");
-                                    <tr>
-                                        <td class="ps-3 fw-semibold small">@user.Name</td>
-                                        <td class="small text-muted">@user.Email</td>
-                                        <td>
-                                            @foreach (var role in user.Roles)
-                                            {
-                                                <span class="badge @GetRoleBadgeClass(role) me-1">@role</span>
-                                            }
-                                            @if (!user.Roles.Any())
-                                            {
-                                                <span class="text-muted small">—</span>
-                                            }
-                                        </td>
-                                        <td class="pe-3 text-end">
-                                            <div class="d-flex gap-1 justify-content-end">
-                                                @if (hasManager)
-                                                {
-                                                    <button class="btn btn-outline-secondary btn-sm"
-                                                            title="Quitar rol Manager"
-                                                            @onclick="() => RemoveRole(uid, RoleManager)">
-                                                        <i class="bi bi-person-dash me-1"></i>Manager
-                                                    </button>
-                                                }
-                                                else
-                                                {
-                                                    <button class="btn btn-outline-primary btn-sm"
-                                                            title="Asignar rol Manager"
-                                                            @onclick="() => AssignRole(uid, RoleManager)">
-                                                        <i class="bi bi-person-plus me-1"></i>Manager
-                                                    </button>
-                                                }
-                                                @if (hasAdmin)
-                                                {
-                                                    <button class="btn btn-outline-secondary btn-sm"
-                                                            title="Quitar rol SystemAdmin"
-                                                            @onclick="() => RemoveRole(uid, RoleSystemAdmin)">
-                                                        <i class="bi bi-shield-minus me-1"></i>SystemAdmin
-                                                    </button>
-                                                }
-                                                else
-                                                {
-                                                    <button class="btn btn-outline-danger btn-sm"
-                                                            title="Asignar rol SystemAdmin"
-                                                            @onclick="() => AssignRole(uid, RoleSystemAdmin)">
-                                                        <i class="bi bi-shield-plus me-1"></i>SystemAdmin
-                                                    </button>
-                                                }
-                                            </div>
-                                        </td>
-                                    </tr>
-                                }
-                            </tbody>
-                        </table>
-                    </div>
-                    @if (UsersTotalPages > 1)
-                    {
-                        <div class="d-flex justify-content-between align-items-center px-3 py-2 border-top small text-muted">
-                            <span>Página @_usersPage de @UsersTotalPages</span>
-                            <div class="d-flex gap-1">
-                                <button class="btn btn-outline-secondary btn-sm"
-                                        disabled="@(_usersPage == 1)"
-                                        @onclick="() => _usersPage--">
-                                    <i class="bi bi-chevron-left"></i>
-                                </button>
-                                <button class="btn btn-outline-secondary btn-sm"
-                                        disabled="@(_usersPage == UsersTotalPages)"
-                                        @onclick="() => _usersPage++">
-                                    <i class="bi bi-chevron-right"></i>
-                                </button>
-                            </div>
-                        </div>
-                    }
+                    <i class="bi bi-check2-circle me-1"></i>
                 }
-                @if (_roleError is not null)
-                {
-                    <div class="alert alert-danger d-flex align-items-center gap-2 py-2 m-3">
-                        <i class="bi bi-x-circle-fill flex-shrink-0"></i>
-                        <span class="small">@_roleError</span>
-                    </div>
-                }
-            </div>
+                Desactivar
+            </button>
         </div>
     }
 
-    <!-- ═══ PESTAÑA: LOG DE AUDITORÍA ════════════════════════════════ -->
-    @if (_activeTab == Tab.AuditLog)
-    {
-        <div class="card border-0 shadow-sm">
-            <div class="card-header eb-zone-header d-flex align-items-center gap-2 py-2">
-                <i class="bi bi-journal-text text-primary fs-5"></i>
-                <span class="fw-semibold">Log de auditoría</span>
-                <span class="badge bg-secondary ms-auto">@_auditLog.TotalCount total</span>
-            </div>
-            <!-- Filtros -->
-            <div class="card-body border-bottom pb-3">
-                <div class="row g-2 align-items-end">
-                    <div class="col-sm-6 col-md-3">
-                        <label for="logFrom" class="form-label form-label-sm fw-semibold">Desde</label>
-                        <input type="date" id="logFrom" class="form-control form-control-sm"
-                               @bind="_auditFromDate" />
-                    </div>
-                    <div class="col-sm-6 col-md-3">
-                        <label for="logTo" class="form-label form-label-sm fw-semibold">Hasta</label>
-                        <input type="date" id="logTo" class="form-control form-control-sm"
-                               @bind="_auditToDate" />
-                    </div>
-                    <div class="col-sm-6 col-md-3">
-                        <label for="logAction" class="form-label form-label-sm fw-semibold">Acción</label>
-                        <select id="logAction" class="form-select form-select-sm" @bind="_auditActionFilterStr">
-                            <option value="">— Todas —</option>
-                            @foreach (var action in Enum.GetValues<AuditAction>())
-                            {
-                                <option value="@((int)action)">@FormatAuditAction(action)</option>
-                            }
-                        </select>
-                    </div>
-                    <div class="col-sm-6 col-md-3">
-                        <label for="logUser" class="form-label form-label-sm fw-semibold">Usuario</label>
-                        <input type="text" id="logUser" class="form-control form-control-sm"
-                               placeholder="Buscar..." @bind="_auditUserSearch" />
-                    </div>
-                </div>
-                <div class="row mt-2">
-                    <div class="col-12 d-flex justify-content-end">
-                        <button class="btn btn-primary btn-sm" @onclick="ApplyAuditFilter">
-                            <i class="bi bi-search me-1"></i>Filtrar
-                        </button>
-                    </div>
-                </div>
-            </div>
-            <!-- Tabla -->
-            <div class="card-body p-0">
-                @if (_auditLog.Items.Count == 0)
-                {
-                    <p class="text-muted small p-3 mb-0">
-                        <i class="bi bi-info-circle me-1"></i>No hay registros para los filtros aplicados.
-                    </p>
-                }
-                else
-                {
-                    <div class="table-responsive">
-                        <table class="table table-sm table-hover align-middle mb-0">
-                            <thead class="table-light">
-                                <tr>
-                                    <th class="ps-3">Fecha / Hora</th>
-                                    <th>Usuario</th>
-                                    <th>Acción</th>
-                                    <th>Detalles</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @foreach (var entry in _auditLog.Items)
-                                {
-                                    <tr>
-                                        <td class="ps-3 small text-muted text-nowrap">
-                                            @entry.Timestamp.ToLocalTime().ToString("dd/MM/yy HH:mm")
-                                        </td>
-                                        <td class="small">@(entry.PerformedByName ?? "Sistema")</td>
-                                        <td>
-                                            <span class="badge @GetActionBadgeClass(entry.Action)">
-                                                @FormatAuditAction(entry.Action)
-                                            </span>
-                                        </td>
-                                        <td class="small text-muted">@entry.Details</td>
-                                    </tr>
-                                }
-                            </tbody>
-                        </table>
-                    </div>
-                    <!-- Paginación -->
-                    <div class="d-flex align-items-center justify-content-between px-3 py-2 border-top">
-                        <small class="text-muted">
-                            Página @_auditPage de @_auditLog.TotalPages
-                            (@_auditLog.TotalCount registros totales)
-                        </small>
-                        <div class="d-flex gap-1">
-                            <button class="btn btn-outline-secondary btn-sm"
-                                    disabled="@(_auditPage <= 1)"
-                                    @onclick="AuditPrevPage">
-                                <i class="bi bi-chevron-left"></i>
-                            </button>
-                            <button class="btn btn-outline-secondary btn-sm"
-                                    disabled="@(_auditPage >= _auditLog.TotalPages)"
-                                    @onclick="AuditNextPage">
-                                <i class="bi bi-chevron-right"></i>
-                            </button>
-                        </div>
-                    </div>
-                }
-            </div>
-        </div>
-    }
-
+    <!-- ═══ PESTAÑA ZONAS Y PUESTOS ═════════════════════════════════════ -->
     @if (_activeTab == Tab.DockConfig)
     {
-        <!-- ═══ PESTAÑA ZONAS Y PUESTOS ═════════════════════════════════════ -->
-        <p class="text-muted small mb-3">
+        <p class="text-info small mb-3">
             <i class="bi bi-info-circle me-1"></i>
             Gestiona las zonas físicas, las mesas y los puestos de trabajo.
             Al eliminar un puesto se cancelarán automáticamente sus reservas futuras.
@@ -826,14 +301,48 @@ else
                                         </tr>
                                     </thead>
                                     <tbody>
-                        @foreach (var tbl in zone.Tables)
+                                    @foreach (var tbl in zone.Tables)
                                         {
                                             <tr @key="tbl.Id"
                                                 @ondragover:preventDefault
                                                 @ondrop="() => OnTableDrop(tbl.Id, zone)">
-                                                <td class="font-monospace small">
-                                                    @if (_dcEditingTableId != tbl.Id)
-                                                    {
+                                                @if (_dcEditingTableId == tbl.Id)
+                                                {
+                                                    <td class="py-1">
+                                                        <div class="input-group input-group-sm">
+                                                            <input class="form-control font-monospace" placeholder="Clave"
+                                                                   @bind="_dcTableKey" />
+                                                            <button class="btn btn-outline-secondary" type="button" title="Limpiar"
+                                                                    @onclick='() => _dcTableKey = string.Empty'>
+                                                                <i class="bi bi-x-lg" style="font-size:.7rem;"></i>
+                                                            </button>
+                                                        </div>
+                                                    </td>
+                                                    <td class="py-1">
+                                                        <div class="input-group input-group-sm">
+                                                            <input class="form-control" placeholder="Localizador (opcional)"
+                                                                   @bind="_dcTableLocator" />
+                                                            <button class="btn btn-outline-secondary" type="button" title="Limpiar"
+                                                                    @onclick='() => _dcTableLocator = string.Empty'>
+                                                                <i class="bi bi-x-lg" style="font-size:.7rem;"></i>
+                                                            </button>
+                                                        </div>
+                                                    </td>
+                                                    <td class="py-1 text-end" style="width:1%">
+                                                        <div class="d-flex gap-1 justify-content-end">
+                                                            <button class="btn btn-success btn-sm" disabled="@_dcSaving"
+                                                                    @onclick="() => SaveEditTableAsync(tbl.Id)">
+                                                                @if (_dcSaving) { <span class="spinner-border spinner-border-sm me-1"></span> }
+                                                                Guardar
+                                                            </button>
+                                                            <button class="btn btn-outline-secondary btn-sm"
+                                                                    @onclick="CancelEditTable">Cancelar</button>
+                                                        </div>
+                                                    </td>
+                                                }
+                                                else
+                                                {
+                                                    <td class="font-monospace small">
                                                         <span draggable="true"
                                                               @ondragstart="() => { _dragSourceTableId = tbl.Id; _dragTableSourceZoneId = zone.Id; }"
                                                               class="text-secondary me-1"
@@ -842,42 +351,7 @@ else
                                                             <i class="bi bi-grip-vertical"></i>
                                                         </span>
                                                         @tbl.TableKey
-                                                    }
-                                                </td>
-                                                @if (_dcEditingTableId == tbl.Id)
-                                                {
-                                                    <td colspan="2" class="py-1">
-                                                        <div class="d-flex flex-wrap gap-2 align-items-center">
-                                                            <div class="input-group input-group-sm" style="flex:0 1 150px; min-width:100px;">
-                                                                <input class="form-control font-monospace" placeholder="Clave"
-                                                                       @bind="_dcTableKey" />
-                                                                <button class="btn btn-outline-secondary" type="button" title="Limpiar"
-                                                                        @onclick='() => _dcTableKey = string.Empty'>
-                                                                    <i class="bi bi-x-lg" style="font-size:.7rem;"></i>
-                                                                </button>
-                                                            </div>
-                                                            <div class="input-group input-group-sm" style="flex:1 1 180px; min-width:160px;">
-                                                                <input class="form-control" placeholder="Localizador (opcional)"
-                                                                       @bind="_dcTableLocator" />
-                                                                <button class="btn btn-outline-secondary" type="button" title="Limpiar"
-                                                                        @onclick='() => _dcTableLocator = string.Empty'>
-                                                                    <i class="bi bi-x-lg" style="font-size:.7rem;"></i>
-                                                                </button>
-                                                            </div>
-                                                            <div class="d-flex gap-1 flex-shrink-0">
-                                                                <button class="btn btn-success btn-sm" disabled="@_dcSaving"
-                                                                        @onclick="() => SaveEditTableAsync(tbl.Id)">
-                                                                    @if (_dcSaving) { <span class="spinner-border spinner-border-sm me-1"></span> }
-                                                                    Guardar
-                                                                </button>
-                                                                <button class="btn btn-outline-secondary btn-sm"
-                                                                        @onclick="CancelEditTable">Cancelar</button>
-                                                            </div>
-                                                        </div>
                                                     </td>
-                                                }
-                                                else
-                                                {
                                                     <td class="small text-muted">@(tbl.Locator ?? "—")</td>
                                                     <td class="text-end">
                                                         <button class="btn btn-outline-primary btn-sm py-0"
@@ -977,42 +451,58 @@ else
                                                     <tr>
                                                         @if (_dcEditingDockId == dock.Id)
                                                         {
-                                                            <td colspan="5" class="py-1">
-                                                                <div class="d-flex flex-wrap gap-2 align-items-center">
-                                                                    <div class="input-group input-group-sm" style="flex:0 1 110px; min-width:90px;">
-                                                                        <input class="form-control" placeholder="Código"
-                                                                               @bind="_dcDockCode" />
-                                                                        <button class="btn btn-outline-secondary" type="button" title="Limpiar"
-                                                                                @onclick='() => _dcDockCode = string.Empty'>
-                                                                            <i class="bi bi-x-lg" style="font-size:.7rem;"></i>
-                                                                        </button>
-                                                                    </div>
-                                                                    <div class="input-group input-group-sm" style="flex:1 1 160px; min-width:140px;">
-                                                                        <input class="form-control" placeholder="Ubicación"
-                                                                               @bind="_dcDockLocation" />
-                                                                        <button class="btn btn-outline-secondary" type="button" title="Limpiar"
-                                                                                @onclick='() => _dcDockLocation = string.Empty'>
-                                                                            <i class="bi bi-x-lg" style="font-size:.7rem;"></i>
-                                                                        </button>
-                                                                    </div>
-                                                                    <div class="input-group input-group-sm" style="flex:2 1 180px; min-width:160px;">
-                                                                        <input class="form-control" placeholder="Equipamiento"
-                                                                               @bind="_dcDockEquipment" />
-                                                                        <button class="btn btn-outline-secondary" type="button" title="Limpiar"
-                                                                                @onclick='() => _dcDockEquipment = string.Empty'>
-                                                                            <i class="bi bi-x-lg" style="font-size:.7rem;"></i>
-                                                                        </button>
-                                                                    </div>
-                                                                    <div class="d-flex gap-1 flex-shrink-0">
-                                                                        <button class="btn btn-success btn-sm"
-                                                                                disabled="@_dcSaving"
-                                                                                @onclick="() => SaveEditDockAsync(dock.Id)">
-                                                                            @if (_dcSaving) { <span class="spinner-border spinner-border-sm me-1"></span> }
-                                                                            Guardar
-                                                                        </button>
-                                                                        <button class="btn btn-outline-secondary btn-sm"
-                                                                                @onclick="CancelEditDock">Cancelar</button>
-                                                                    </div>
+                                                            <td class="py-1">
+                                                                <div class="input-group input-group-sm">
+                                                                    <input class="form-control" placeholder="Código"
+                                                                           @bind="_dcDockCode" />
+                                                                    <button class="btn btn-outline-secondary" type="button" title="Limpiar"
+                                                                            @onclick='() => _dcDockCode = string.Empty'>
+                                                                        <i class="bi bi-x-lg" style="font-size:.7rem;"></i>
+                                                                    </button>
+                                                                </div>
+                                                            </td>
+                                                            <td class="py-1" style="width:1%">
+                                                                <div class="d-flex gap-1" role="group">
+                                                                    <input type="radio" class="btn-check" id="edit-dock-side-a-@dock.Id"
+                                                                           checked="@(_dcDockSide == DockSide.A)"
+                                                                           @onchange='() => _dcDockSide = DockSide.A' />
+                                                                    <label class="btn btn-outline-secondary btn-sm" for="edit-dock-side-a-@dock.Id">A</label>
+                                                                    <input type="radio" class="btn-check" id="edit-dock-side-b-@dock.Id"
+                                                                           checked="@(_dcDockSide == DockSide.B)"
+                                                                           @onchange='() => _dcDockSide = DockSide.B' />
+                                                                    <label class="btn btn-outline-secondary btn-sm" for="edit-dock-side-b-@dock.Id">B</label>
+                                                                </div>
+                                                            </td>
+                                                            <td class="py-1">
+                                                                <div class="input-group input-group-sm">
+                                                                    <input class="form-control" placeholder="Ubicación"
+                                                                           @bind="_dcDockLocation" />
+                                                                    <button class="btn btn-outline-secondary" type="button" title="Limpiar"
+                                                                            @onclick='() => _dcDockLocation = string.Empty'>
+                                                                        <i class="bi bi-x-lg" style="font-size:.7rem;"></i>
+                                                                    </button>
+                                                                </div>
+                                                            </td>
+                                                            <td class="py-1">
+                                                                <div class="input-group input-group-sm">
+                                                                    <input class="form-control" placeholder="Equipamiento"
+                                                                           @bind="_dcDockEquipment" />
+                                                                    <button class="btn btn-outline-secondary" type="button" title="Limpiar"
+                                                                            @onclick='() => _dcDockEquipment = string.Empty'>
+                                                                        <i class="bi bi-x-lg" style="font-size:.7rem;"></i>
+                                                                    </button>
+                                                                </div>
+                                                            </td>
+                                                            <td class="py-1 text-end" style="width:1%">
+                                                                <div class="d-flex gap-1 justify-content-end">
+                                                                    <button class="btn btn-success btn-sm"
+                                                                            disabled="@_dcSaving"
+                                                                            @onclick="() => SaveEditDockAsync(dock.Id)">
+                                                                        @if (_dcSaving) { <span class="spinner-border spinner-border-sm me-1"></span> }
+                                                                        Guardar
+                                                                    </button>
+                                                                    <button class="btn btn-outline-secondary btn-sm"
+                                                                            @onclick="CancelEditDock">Cancelar</button>
                                                                 </div>
                                                             </td>
                                                         }
@@ -1111,7 +601,7 @@ else
                     <div class="d-flex flex-wrap gap-2 align-items-center">
                         <div class="input-group input-group-sm" style="flex:1 1 160px; min-width:130px;">
                             <span class="input-group-text">Nombre</span>
-                            <input class="form-control" placeholder="Ej: Nostromo" @bind="_dcNewZoneName" />
+                            <input class="form-control" placeholder="Ej: Zona 1" @bind="_dcNewZoneName" />
                             <button class="btn btn-outline-secondary" type="button" title="Limpiar"
                                     @onclick='() => _dcNewZoneName = string.Empty'>
                                 <i class="bi bi-x-lg" style="font-size:.7rem;"></i>
@@ -1147,6 +637,487 @@ else
                             </button>
                         </div>
                     </div>
+                </div>
+            </div>
+        }
+    }
+
+    <!-- ═══ PESTAÑA: CANCELACIÓN MASIVA ══════════════════════════════ -->
+    @if (_activeTab == Tab.BulkCancel)
+    {
+        <p class="text-info small mb-3">
+            <i class="bi bi-info-circle me-1"></i>
+            Cancela todas las reservas activas en el rango de fechas indicado.
+            Selecciona puestos concretos para afectar solo a ellos, o deja todos sin seleccionar para cancelar todos.
+        </p>
+        <!-- Fechas y motivo -->
+        <div class="row g-2 mb-3">
+            <div class="col-sm-6 col-md-3">
+                <label for="bulkStart" class="form-label form-label-sm fw-semibold">Fecha inicio</label>
+                <input type="date" id="bulkStart" class="form-control form-control-sm"
+                        value="@_bulkStartDate.ToString("yyyy-MM-dd")"
+                        @onchange="e => { if (DateOnly.TryParse(e.Value?.ToString(), out var d)) _bulkStartDate = d; }" />
+            </div>
+            <div class="col-sm-6 col-md-3">
+                <label for="bulkEnd" class="form-label form-label-sm fw-semibold">Fecha fin</label>
+                <input type="date" id="bulkEnd" class="form-control form-control-sm"
+                        value="@_bulkEndDate.ToString("yyyy-MM-dd")"
+                        min="@_bulkStartDate.ToString("yyyy-MM-dd")"
+                        @onchange="e => { if (DateOnly.TryParse(e.Value?.ToString(), out var d)) _bulkEndDate = d; }" />
+            </div>
+            <div class="col-md-6">
+                <label for="bulkReason" class="form-label form-label-sm fw-semibold">Motivo</label>
+                <input type="text" id="bulkReason" class="form-control form-control-sm"
+                        placeholder="Ej: Cierre por condiciones climáticas..."
+                        @bind="_bulkReason" />
+            </div>
+        </div>
+
+        <!-- Mapa de puestos (estilo DockMap) -->
+        @if (_bulkDockMap is not null)
+        {
+            <div class="mb-3">
+                <div class="d-flex align-items-center gap-3 mb-2">
+                    <span class="form-label form-label-sm fw-semibold mb-0">
+                        Puestos a cancelar
+                        <span class="text-muted fw-normal">(sin selección = todos)</span>
+                    </span>
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="eb-legend-dot bg-danger"></span><span class="small text-muted">Seleccionado</span>
+                        <span class="eb-legend-dot bg-success"></span><span class="small text-muted">No seleccionado</span>
+                    </div>
+                    @if (_bulkSelectedDockIds.Count > 0)
+                    {
+                        <button class="btn btn-link btn-sm p-0 text-muted" @onclick="() => _bulkSelectedDockIds.Clear()">
+                            <i class="bi bi-x-circle me-1"></i>Limpiar selección (@_bulkSelectedDockIds.Count)
+                        </button>
+                    }
+                </div>
+                <div class="d-flex flex-wrap gap-3">
+                    @foreach (var zone in _bulkDockMap.Zones)
+                    {
+                        <div class="card border-0 shadow-sm">
+                            <div class="card-header eb-zone-header d-flex align-items-center gap-2 py-1 px-2">
+                                <i class="bi bi-grid-3x3 text-primary"></i>
+                                <span class="fw-semibold small">@zone.Name</span>
+                            </div>
+                            <div class="card-body py-2 px-3">
+                                <div class="d-flex @GetZoneFlexClass(zone) gap-3">
+                                    @foreach (var table in zone.Tables)
+                                    {
+                                        <div class="eb-table-block">
+                                            <p class="text-muted small fw-semibold mb-1">@(table.Locator ?? table.Name)</p>
+                                            <div class="eb-dock-table">
+                                                <div class="d-flex gap-2 mb-1">
+                                                    @foreach (var seat in table.SideA)
+                                                    {
+                                                        var isSelected = _bulkSelectedDockIds.Contains(seat.Id);
+                                                        <button class="btn @(isSelected ? "btn-danger" : "btn-outline-secondary") eb-dock-seat eb-dock-seat-toggle"
+                                                                title="@seat.Code — @(isSelected ? "clic para deseleccionar" : "clic para seleccionar")"
+                                                                @onclick="() => ToggleBulkDock(seat.Id)">
+                                                            @seat.Code
+                                                        </button>
+                                                    }
+                                                </div>
+                                                <hr class="eb-dock-divider my-1" />
+                                                <div class="d-flex gap-2">
+                                                    @foreach (var seat in table.SideB)
+                                                    {
+                                                        var isSelected = _bulkSelectedDockIds.Contains(seat.Id);
+                                                        <button class="btn @(isSelected ? "btn-danger" : "btn-outline-secondary") eb-dock-seat eb-dock-seat-toggle"
+                                                                title="@seat.Code — @(isSelected ? "clic para deseleccionar" : "clic para seleccionar")"
+                                                                @onclick="() => ToggleBulkDock(seat.Id)">
+                                                            @seat.Code
+                                                        </button>
+                                                    }
+                                                </div>
+                                            </div>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+
+        @if (_bulkError is not null)
+        {
+            <div class="alert alert-danger d-flex align-items-center gap-2 py-2 mb-2">
+                <i class="bi bi-x-circle-fill flex-shrink-0"></i>
+                <span class="small">@_bulkError</span>
+            </div>
+        }
+        @if (_bulkSuccess is not null)
+        {
+            <div class="alert alert-success d-flex align-items-center gap-2 py-2 mb-2">
+                <i class="bi bi-check-circle-fill flex-shrink-0"></i>
+                <span class="small">@_bulkSuccess</span>
+            </div>
+        }
+        @if (_confirmBulkCancel)
+        {
+            <div class="alert alert-warning d-flex align-items-center gap-2 py-2 mb-2">
+                <i class="bi bi-exclamation-triangle-fill flex-shrink-0"></i>
+                <span class="small flex-fill">
+                    ¿Confirmas la cancelación masiva del @_bulkStartDate.ToString("dd/MM/yyyy")
+                    al @_bulkEndDate.ToString("dd/MM/yyyy")
+                    @(_bulkSelectedDockIds.Count > 0 ? $"({_bulkSelectedDockIds.Count} puesto(s) seleccionado(s))" : "(todos los puestos)")?
+                    Esta acción notificará a todos los afectados.
+                </span>
+                <div class="d-flex gap-1 ms-2">
+                    <button class="btn btn-danger btn-sm" @onclick="ConfirmBulkCancel">Sí, cancelar</button>
+                    <button class="btn btn-outline-secondary btn-sm" @onclick="() => _confirmBulkCancel = false">No</button>
+                </div>
+            </div>
+        }
+        else
+        {
+            <button class="btn btn-danger btn-sm"
+                    disabled="@(string.IsNullOrWhiteSpace(_bulkReason) || _bulkCancelling)"
+                    @onclick="RequestBulkCancel">
+                @if (_bulkCancelling)
+                {
+                    <span class="spinner-border spinner-border-sm me-1"></span>
+                }
+                else
+                {
+                    <i class="bi bi-calendar-x me-1"></i>
+                }
+                Cancelar reservas
+            </button>
+        }
+    }
+
+    <!-- ═══ PESTAÑA: RESERVA DE EMERGENCIA ═══════════════════════════ -->
+    @if (_activeTab == Tab.Emergency)
+    {
+        <p class="text-info small mb-3">
+            <i class="bi bi-info-circle me-1"></i>
+            Crea una reserva en nombre de un usuario. Se aplican todas las validaciones normales.
+            Selecciona el usuario, la fecha y haz clic en un puesto del mapa.
+        </p>
+        <!-- Usuario y fecha -->
+        <div class="row g-2 mb-3">
+            <div class="col-sm-6 col-lg-4">
+                <label for="erUser" class="form-label form-label-sm fw-semibold">Usuario</label>
+                <select id="erUser" class="form-select form-select-sm"
+                        @onchange="OnEmergencyUserChanged">
+                    <option value="">— Selecciona usuario —</option>
+                    @foreach (var u in _allUsers)
+                    {
+                        <option value="@u.Id" selected="@(_emergencyTargetUserId == u.Id)">@u.Name (@u.Email)</option>
+                    }
+                </select>
+            </div>
+            <div class="col-sm-6 col-lg-3">
+                <label for="erDate" class="form-label form-label-sm fw-semibold">Fecha</label>
+                <div class="d-flex align-items-center gap-1">
+                    <button class="btn btn-sm eb-date-nav-btn" @onclick="EmergencyPrevDay"
+                            disabled="@(_emergencyDate <= _today)" title="Día anterior">
+                        <i class="bi bi-chevron-left"></i>
+                    </button>
+                    <input type="date" id="erDate" class="form-control form-control-sm"
+                            value="@_emergencyDate.ToString("yyyy-MM-dd")"
+                            min="@_today.ToString("yyyy-MM-dd")"
+                            max="@_today.AddDays(7).ToString("yyyy-MM-dd")"
+                            @onchange="OnEmergencyDateChanged" />
+                    <button class="btn btn-sm eb-date-nav-btn" @onclick="EmergencyNextDay"
+                            disabled="@(_emergencyDate >= _today.AddDays(7))" title="Día siguiente">
+                        <i class="bi bi-chevron-right"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="col-lg-5 d-flex align-items-end">
+                <div class="d-flex align-items-center gap-2 pb-1 flex-wrap">
+                    <span class="eb-legend-dot bg-success"></span><span class="small text-muted">Libre</span>
+                    <span class="eb-legend-dot bg-warning"></span><span class="small text-muted">Parcial</span>
+                    <span class="eb-legend-dot bg-danger"></span><span class="small text-muted">Completo</span>
+                    <span class="eb-legend-dot bg-secondary"></span><span class="small text-muted">Bloqueado</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Mapa de puestos (igual que DockMap) -->
+        @if (_emergencyDockMap is not null)
+        {
+            <div class="d-flex flex-wrap gap-3 mb-3">
+                @foreach (var zone in _emergencyDockMap.Zones)
+                {
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-header eb-zone-header d-flex align-items-center gap-2 py-1 px-2">
+                            <i class="bi bi-grid-3x3 text-primary"></i>
+                            <span class="fw-semibold small">@zone.Name</span>
+                        </div>
+                        <div class="card-body py-2 px-3">
+                            <div class="d-flex @GetZoneFlexClass(zone) gap-3">
+                                @foreach (var table in zone.Tables)
+                                {
+                                    <div class="eb-table-block">
+                                        <p class="text-muted small fw-semibold mb-1">@(table.Locator ?? table.Name)</p>
+                                        <div class="eb-dock-table">
+                                            <div class="d-flex gap-2 mb-1">
+                                                @foreach (var seat in table.SideA)
+                                                {
+                                                    <span title="@GetTooltip(seat)" style="display:inline-block">
+                                                        <button class="btn @GetBtnClass(seat) eb-dock-seat"
+                                                                disabled="@(seat.Status is DockStatus.FullyBooked or DockStatus.Blocked)"
+                                                                @onclick="() => OnEmergencySeatClicked(seat)">
+                                                            @seat.Code
+                                                        </button>
+                                                    </span>
+                                                }
+                                            </div>
+                                            <hr class="eb-dock-divider my-1" />
+                                            <div class="d-flex gap-2">
+                                                @foreach (var seat in table.SideB)
+                                                {
+                                                    <span title="@GetTooltip(seat)" style="display:inline-block">
+                                                        <button class="btn @GetBtnClass(seat) eb-dock-seat"
+                                                                disabled="@(seat.Status is DockStatus.FullyBooked or DockStatus.Blocked)"
+                                                                @onclick="() => OnEmergencySeatClicked(seat)">
+                                                            @seat.Code
+                                                        </button>
+                                                    </span>
+                                                }
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+        @if (_emergencyError is not null)
+        {
+            <div class="alert alert-danger d-flex align-items-center gap-2 py-2 mb-2">
+                <i class="bi bi-x-circle-fill flex-shrink-0"></i>
+                <span class="small">@_emergencyError</span>
+            </div>
+        }
+        @if (_emergencySuccess is not null)
+        {
+            <div class="alert alert-success d-flex align-items-center gap-2 py-2 mb-2">
+                <i class="bi bi-check-circle-fill flex-shrink-0"></i>
+                <span class="small">@_emergencySuccess</span>
+            </div>
+        }
+    }
+
+    <!-- ═══ PESTAÑA: GESTIÓN DE USUARIOS ══════════════════════════════ -->        
+    @if (_activeTab == Tab.Users)
+    {
+        <p class="text-info small mb-3">
+            <i class="bi bi-info-circle me-1"></i>
+            Modifica los roles de los usuarios para gestionar sus permisos. El rol <strong>Manager</strong> permite gestionar bloqueos de puestos, mientras que el rol <strong>SystemAdmin</strong> otorga acceso completo a este panel.
+        </p>
+        @if (_allUsers.Count == 0)
+        {
+            <p class="text-muted small p-3 mb-0">
+                <i class="bi bi-info-circle me-1"></i>No hay usuarios registrados.
+            </p>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table table-sm table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="ps-3">Nombre</th>
+                            <th>Email</th>
+                            <th>Roles</th>
+                            <th class="pe-3 text-end">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var user in UsersPagedItems)
+                        {
+                            var uid = user.Id;
+                            var hasManager = user.Roles.Contains("Manager");
+                            var hasAdmin = user.Roles.Contains("SystemAdmin");
+                            <tr>
+                                <td class="ps-3 fw-semibold small">@user.Name</td>
+                                <td class="small text-muted">@user.Email</td>
+                                <td>
+                                    @foreach (var role in user.Roles)
+                                    {
+                                        <span class="badge @GetRoleBadgeClass(role) me-1">@role</span>
+                                    }
+                                    @if (!user.Roles.Any())
+                                    {
+                                        <span class="text-muted small">—</span>
+                                    }
+                                </td>
+                                <td class="pe-3 text-end">
+                                    <div class="d-flex gap-1 justify-content-end">
+                                        @if (hasManager)
+                                        {
+                                            <button class="btn btn-outline-secondary btn-sm"
+                                                    title="Quitar rol Manager"
+                                                    @onclick="() => RemoveRole(uid, RoleManager)">
+                                                <i class="bi bi-person-dash me-1"></i>Manager
+                                            </button>
+                                        }
+                                        else
+                                        {
+                                            <button class="btn btn-outline-primary btn-sm"
+                                                    title="Asignar rol Manager"
+                                                    @onclick="() => AssignRole(uid, RoleManager)">
+                                                <i class="bi bi-person-plus me-1"></i>Manager
+                                            </button>
+                                        }
+                                        @if (hasAdmin)
+                                        {
+                                            <button class="btn btn-outline-secondary btn-sm"
+                                                    title="Quitar rol SystemAdmin"
+                                                    @onclick="() => RemoveRole(uid, RoleSystemAdmin)">
+                                                <i class="bi bi-shield-minus me-1"></i>SystemAdmin
+                                            </button>
+                                        }
+                                        else
+                                        {
+                                            <button class="btn btn-outline-danger btn-sm"
+                                                    title="Asignar rol SystemAdmin"
+                                                    @onclick="() => AssignRole(uid, RoleSystemAdmin)">
+                                                <i class="bi bi-shield-plus me-1"></i>SystemAdmin
+                                            </button>
+                                        }
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+            @if (UsersTotalPages > 1)
+            {
+                <div class="d-flex justify-content-between align-items-center px-3 py-2 border-top small text-muted">
+                    <span>Página @_usersPage de @UsersTotalPages</span>
+                    <div class="d-flex gap-1">
+                        <button class="btn btn-outline-secondary btn-sm"
+                                disabled="@(_usersPage == 1)"
+                                @onclick="() => _usersPage--">
+                            <i class="bi bi-chevron-left"></i>
+                        </button>
+                        <button class="btn btn-outline-secondary btn-sm"
+                                disabled="@(_usersPage == UsersTotalPages)"
+                                @onclick="() => _usersPage++">
+                            <i class="bi bi-chevron-right"></i>
+                        </button>
+                    </div>
+                </div>
+            }
+        }
+        @if (_roleError is not null)
+        {
+            <div class="alert alert-danger d-flex align-items-center gap-2 py-2 m-3">
+                <i class="bi bi-x-circle-fill flex-shrink-0"></i>
+                <span class="small">@_roleError</span>
+            </div>
+        }
+    }
+
+    <!-- ═══ PESTAÑA: LOG DE AUDITORÍA ════════════════════════════════ -->
+    @if (_activeTab == Tab.AuditLog)
+    {        
+        <p class="text-info small mb-3">
+            <i class="bi bi-info-circle me-1"></i>
+            Revisa las acciones realizadas por los usuarios en el sistema. Utiliza los filtros para acotar la búsqueda por fecha, tipo de acción o usuario. La información mostrada incluye quién realizó la acción, cuándo y detalles adicionales.
+        </p>
+        <!-- Filtros -->
+        <div class="card-body border-bottom pb-3">
+            <div class="row g-2 align-items-end">
+                <div class="col-sm-6 col-md-3">
+                    <label for="logFrom" class="form-label form-label-sm fw-semibold">Desde</label>
+                    <input type="date" id="logFrom" class="form-control form-control-sm"
+                            @bind="_auditFromDate" />
+                </div>
+                <div class="col-sm-6 col-md-3">
+                    <label for="logTo" class="form-label form-label-sm fw-semibold">Hasta</label>
+                    <input type="date" id="logTo" class="form-control form-control-sm"
+                            @bind="_auditToDate" />
+                </div>
+                <div class="col-sm-6 col-md-3">
+                    <label for="logAction" class="form-label form-label-sm fw-semibold">Acción</label>
+                    <select id="logAction" class="form-select form-select-sm" @bind="_auditActionFilterStr">
+                        <option value="">— Todas —</option>
+                        @foreach (var action in Enum.GetValues<AuditAction>())
+                        {
+                            <option value="@((int)action)">@FormatAuditAction(action)</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-sm-6 col-md-3">
+                    <label for="logUser" class="form-label form-label-sm fw-semibold">Usuario</label>
+                    <input type="text" id="logUser" class="form-control form-control-sm"
+                            placeholder="Buscar..." @bind="_auditUserSearch" />
+                </div>
+            </div>
+            <div class="row mt-2">
+                <div class="col-12 d-flex justify-content-end">
+                    <button class="btn btn-primary btn-sm" @onclick="ApplyAuditFilter">
+                        <i class="bi bi-search me-1"></i>Filtrar
+                    </button>
+                </div>
+            </div>
+        </div>
+        @if (_auditLog.Items.Count == 0)
+        {
+            <p class="text-muted small p-3 mb-0">
+                <i class="bi bi-info-circle me-1"></i>No hay registros para los filtros aplicados.
+            </p>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table table-sm table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="ps-3">Fecha / Hora</th>
+                            <th>Usuario</th>
+                            <th>Acción</th>
+                            <th>Detalles</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var entry in _auditLog.Items)
+                        {
+                            <tr>
+                                <td class="ps-3 small text-muted text-nowrap">
+                                    @entry.Timestamp.ToLocalTime().ToString("dd/MM/yy HH:mm")
+                                </td>
+                                <td class="small">@(entry.PerformedByName ?? "Sistema")</td>
+                                <td>
+                                    <span class="badge @GetActionBadgeClass(entry.Action)">
+                                        @FormatAuditAction(entry.Action)
+                                    </span>
+                                </td>
+                                <td class="small text-muted">@entry.Details</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+            <!-- Paginación -->
+            <div class="d-flex align-items-center justify-content-between px-3 py-2 border-top">
+                <small class="text-muted">
+                    Página @_auditPage de @_auditLog.TotalPages
+                    (@_auditLog.TotalCount registros totales)
+                </small>
+                <div class="d-flex gap-1">
+                    <button class="btn btn-outline-secondary btn-sm"
+                            disabled="@(_auditPage <= 1)"
+                            @onclick="AuditPrevPage">
+                        <i class="bi bi-chevron-left"></i>
+                    </button>
+                    <button class="btn btn-outline-secondary btn-sm"
+                            disabled="@(_auditPage >= _auditLog.TotalPages)"
+                            @onclick="AuditNextPage">
+                        <i class="bi bi-chevron-right"></i>
+                    </button>
                 </div>
             </div>
         }
@@ -1466,6 +1437,7 @@ else
     // Edición de puesto
     private Guid? _dcEditingDockId;
     private string _dcDockCode = string.Empty;
+    private DockSide _dcDockSide = DockSide.A;
     private string _dcDockLocation = string.Empty;
     private string _dcDockEquipment = string.Empty;
 
@@ -2030,6 +2002,7 @@ else
     {
         _dcEditingDockId = dock.Id;
         _dcDockCode = dock.Code;
+        _dcDockSide = dock.Side;
         _dcDockLocation = dock.Location;
         _dcDockEquipment = dock.Equipment;
         _dcEditingZoneId = null;
@@ -2047,6 +2020,7 @@ else
         var result = await Mediator.Send(new UpdateDockCommand(
             CurrentUser.UserId, dockId,
             _dcDockCode.Trim(),
+            _dcDockSide,
             _dcDockLocation.Trim(),
             _dcDockEquipment.Trim()));
 
