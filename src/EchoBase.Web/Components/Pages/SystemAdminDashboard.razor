@@ -721,12 +721,22 @@ else
                         <i class="bi bi-buildings-fill text-primary fs-5"></i>
                         @if (_dcEditingZoneId == zone.Id)
                         {
-                            <!-- Formulario edición de zona inline -->
+                            <!-- Formulario edición de zona — controles a anchura completa -->
                             <div class="d-flex flex-wrap gap-2 align-items-center flex-grow-1">
-                                <input class="form-control form-control-sm" style="max-width:200px;"
-                                       placeholder="Nombre" @bind="_dcZoneName" />
-                                <input class="form-control form-control-sm" style="max-width:280px;"
-                                       placeholder="Descripción (opcional)" @bind="_dcZoneDescription" />
+                                <div class="input-group input-group-sm" style="flex:1 1 140px; min-width:140px;">
+                                    <input class="form-control" placeholder="Nombre" @bind="_dcZoneName" />
+                                    <button class="btn btn-outline-secondary" type="button" title="Limpiar"
+                                            @onclick='() => _dcZoneName = string.Empty'>
+                                        <i class="bi bi-x-lg" style="font-size:.7rem;"></i>
+                                    </button>
+                                </div>
+                                <div class="input-group input-group-sm" style="flex:2 1 200px; min-width:200px;">
+                                    <input class="form-control" placeholder="Descripción (opcional)" @bind="_dcZoneDescription" />
+                                    <button class="btn btn-outline-secondary" type="button" title="Limpiar"
+                                            @onclick='() => _dcZoneDescription = string.Empty'>
+                                        <i class="bi bi-x-lg" style="font-size:.7rem;"></i>
+                                    </button>
+                                </div>
                                 <div class="d-flex gap-1" role="group">
                                     <input type="radio" class="btn-check" id="ori-h-@zone.Id"
                                            name="ori-@zone.Id" value="@ZoneOrientation.Horizontal"
@@ -743,6 +753,9 @@ else
                                         <i class="bi bi-arrow-down"></i> V
                                     </label>
                                 </div>
+                            </div>
+                            <!-- Botones de acción al final, en la zona de acciones -->
+                            <div class="d-flex gap-1 flex-shrink-0">
                                 <button class="btn btn-success btn-sm" disabled="@_dcSaving"
                                         @onclick="() => SaveEditZoneAsync(zone.Id)">
                                     @if (_dcSaving) { <span class="spinner-border spinner-border-sm me-1"></span> }
