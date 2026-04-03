@@ -1,7 +1,211 @@
 ﻿@page "/"
+@attribute [Authorize]
 
-<PageTitle>Home</PageTitle>
+<PageTitle>Echo Base — Strategic Docking Coordinator</PageTitle>
 
-<h1>Hello, world!</h1>
+<!-- ═══════════════════════════════════════════════════
+     HERO
+═══════════════════════════════════════════════════ -->
+<div class="eb-hero text-center text-white py-2 mb-2">
+    <div class="container">
+        <p class="eb-hero-eyebrow text-uppercase fw-semibold mb-1">Strategic Docking Coordinator</p>
+        <h1 class="display-5 fw-bold mb-1">
+            <i class="bi bi-rocket-takeoff-fill me-3"></i>Echo Base
+        </h1>
+        <p class="small mb-0 opacity-75">
+            Coordina tu acceso a las <strong>bahías de atraque</strong> disponibles en la base.
+            Espacio limitado. Coordinación de precisión.
+        </p>
+    </div>
+</div>
+<br />
+<div class="container pb-2">
 
-Welcome to your new app.
+    <!-- ═══════════════════════════════════════════════════
+         LORE
+    ═══════════════════════════════════════════════════ -->
+    <div class="row justify-content-center mb-2">
+        <div class="col-lg-9">
+            <div class="card border-0 shadow-sm eb-lore-card">
+                <div class="card-body p-3">
+                    <h2 class="h6 text-uppercase fw-bold text-secondary mb-2 d-flex align-items-center gap-2">
+                        <i class="bi bi-stars text-primary"></i> ¿Por qué "Echo Base"?
+                    </h2>
+                    <div class="row g-2">
+                        <div class="col-md-4">
+                            <div class="d-flex gap-3">
+                                <div class="eb-lore-icon flex-shrink-0">
+                                    <i class="bi bi-geo-alt-fill text-primary fs-4"></i>
+                                </div>
+                                <div>
+                                    <h6 class="fw-semibold mb-1">El concepto de Base</h6>
+                                    <p class="text-secondary small mb-0">
+                                        Como la base rebelde en Hoth, la oficina ya no es un
+                                        asentamiento permanente. Es un punto táctico al que
+                                        las unidades acuden para misiones específicas.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="d-flex gap-3">
+                                <div class="eb-lore-icon flex-shrink-0">
+                                    <i class="bi bi-grid-3x3-gap-fill text-primary fs-4"></i>
+                                </div>
+                                <div>
+                                    <h6 class="fw-semibold mb-1">Las Docking Bays</h6>
+                                    <p class="text-secondary small mb-0">
+                                        Cada puesto disponible es una "bahía de atraque".
+                                        Ninguna nave aterriza sin bahía asignada. La app
+                                        garantiza que no haya colisiones.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="d-flex gap-3">
+                                <div class="eb-lore-icon flex-shrink-0">
+                                    <i class="bi bi-diagram-3-fill text-primary fs-4"></i>
+                                </div>
+                                <div>
+                                    <h6 class="fw-semibold mb-1">El Principio del Palomar</h6>
+                                    <p class="text-secondary small mb-0">
+                                        Más empleados que espacios. La coordinación de precisión
+                                        es la única forma de evitar el caos logístico en
+                                        un modelo de trabajo híbrido.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <br/>
+    <!-- ═══════════════════════════════════════════════════
+         INSTRUCCIONES DE USO — STEPPER
+    ═══════════════════════════════════════════════════ -->
+    <h2 class="h6 text-uppercase fw-bold text-secondary text-center mb-2">
+        <i class="bi bi-map me-2"></i>¿Cómo funciona?
+    </h2>
+
+    <div class="row g-2 justify-content-center mb-2">
+
+        <div class="col-sm-6 col-lg-3">
+            <div class="card h-100 border-0 shadow-sm text-center p-2">
+                <div class="eb-step-badge mx-auto mb-1">1</div>
+                <i class="bi bi-calendar-week text-primary fs-3 mb-1"></i>
+                <h6 class="fw-semibold mb-1">Elige fecha y franja</h6>
+                <p class="text-secondary small mb-0">
+                    Las reservas se abren con hasta <strong>7 días</strong> de antelación.
+                    Puedes reservar franja de <strong>mañana</strong>, <strong>tarde</strong>
+                    o <strong>ambas</strong>.
+                </p>
+            </div>
+        </div>
+
+        <div class="col-sm-6 col-lg-3">
+            <div class="card h-100 border-0 shadow-sm text-center p-2">
+                <div class="eb-step-badge mx-auto mb-1">2</div>
+                <i class="bi bi-map-fill text-primary fs-3 mb-1"></i>
+                <h6 class="fw-semibold mb-1">Selecciona tu bahía</h6>
+                <p class="text-secondary small mb-0">
+                    El mapa visual muestra las zonas de trabajo configuradas.
+                    Los puestos libres, ocupados y bloqueados
+                    se distinguen al instante.
+                </p>
+            </div>
+        </div>
+
+        <div class="col-sm-6 col-lg-3">
+            <div class="card h-100 border-0 shadow-sm text-center p-2">
+                <div class="eb-step-badge mx-auto mb-1">3</div>
+                <i class="bi bi-check2-circle text-primary fs-3 mb-1"></i>
+                <h6 class="fw-semibold mb-1">Confirma y listo</h6>
+                <p class="text-secondary small mb-0">
+                    Recibirás una notificación por <strong>correo</strong> o
+                    <strong>Teams</strong> confirmando tu reserva. Puedes cancelarla
+                    en cualquier momento.
+                </p>
+            </div>
+        </div>
+
+        <div class="col-sm-6 col-lg-3">
+            <div class="card h-100 border-0 shadow-sm text-center p-2">
+                <div class="eb-step-badge mx-auto mb-1">4</div>
+                <i class="bi bi-list-check text-primary fs-3 mb-1"></i>
+                <h6 class="fw-semibold mb-1">Gestiona tus reservas</h6>
+                <p class="text-secondary small mb-0">
+                    En <strong>Mis reservas</strong> tienes el historial completo.
+                    Las cancelaciones de última hora liberan la bahía para
+                    otros compañeros.
+                </p>
+            </div>
+        </div>
+
+    </div>
+    <br/>
+    <!-- ═══════════════════════════════════════════════════
+         REGLAS RÁPIDAS
+    ═══════════════════════════════════════════════════ -->
+    <div class="row justify-content-center mb-2">
+        <div class="col-lg-9">
+            <h2 class="h6 text-uppercase fw-bold text-secondary text-center mb-2">
+                <i class="bi bi-shield-check me-2"></i>Reglas de la base
+            </h2>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <div class="d-flex align-items-start gap-2 p-2 bg-light rounded">
+                        <i class="bi bi-1-circle-fill text-primary fs-5 flex-shrink-0 mt-1"></i>
+                        <p class="mb-0 small">
+                            <strong>Máximo 2 franjas por día.</strong> Puedes reservar mañana y tarde
+                            en el mismo puesto o en dos puestos distintos.
+                        </p>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="d-flex align-items-start gap-2 p-2 bg-light rounded">
+                        <i class="bi bi-2-circle-fill text-primary fs-5 flex-shrink-0 mt-1"></i>
+                        <p class="mb-0 small">
+                            <strong>Ventana de 7 días.</strong> Solo puedes reservar dentro
+                            de los próximos 7 días naturales.
+                        </p>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="d-flex align-items-start gap-2 p-2 bg-light rounded">
+                        <i class="bi bi-3-circle-fill text-primary fs-5 flex-shrink-0 mt-1"></i>
+                        <p class="mb-0 small">
+                            <strong>Cancelación libre.</strong> Puedes cancelar una reserva
+                            en cualquier momento, incluso el mismo día.
+                        </p>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="d-flex align-items-start gap-2 p-2 bg-light rounded">
+                        <i class="bi bi-4-circle-fill text-primary fs-5 flex-shrink-0 mt-1"></i>
+                        <p class="mb-0 small">
+                            <strong>Puestos bloqueados.</strong> Los Managers pueden bloquear
+                            bahías para períodos concretos. Estos puestos no estarán disponibles
+                            para reserva.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════
+         CTA
+    ═══════════════════════════════════════════════════ -->
+    <div class="text-center pb-2">
+        <a href="reservas" class="btn btn-primary px-4 me-2">
+            <i class="bi bi-rocket-takeoff me-2"></i>Reservar puesto
+        </a>
+        <a href="mis-reservas" class="btn btn-outline-secondary px-4">
+            <i class="bi bi-list-check me-2"></i>Mis reservas
+        </a>
+    </div>
+
+</div>

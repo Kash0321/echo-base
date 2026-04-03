@@ -59,6 +59,10 @@ node_modules/
 dist/
 build/
 
+# Librerias estaticas necesarias para el frontend de EchoBase.Web
+!src/EchoBase.Web/wwwroot/lib/
+!src/EchoBase.Web/wwwroot/lib/**
+
 ############################################
 # NUGET
 ############################################
@@ -120,3 +124,10 @@ docker-compose.override.yml
 *.publishsettings
 *.pubxml
 *.pubxml.user
+
+############################################
+# BASE DE DATOS LOCAL
+############################################
+src/EchoBase.Web/echobase-dev.db-shm
+src/EchoBase.Web/echobase-dev.db-wal
+src/EchoBase.Web/echobase-dev.db

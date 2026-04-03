@@ -1,19 +1,100 @@
+/* ── Echo Base Design System — Color Palette ────────────── */
+:root {
+    /* Primary Colors */
+    --eb-dark-blue:        #17233C;
+    --eb-dark-petroleum:   #0A404B;
+    --eb-stone-green:      #4F5E5A;
+    --eb-graphite-black:   #262626;
+
+    /* System Blues */
+    --eb-blue-400:  #086cd9;
+    --eb-blue-300:  #1d88fe;
+    --eb-blue-200:  #8fc3ff;
+    --eb-blue-100:  #eaf4ff;
+
+    /* System Greens */
+    --eb-green-400: #11845b;
+    --eb-green-300: #05c168;
+    --eb-green-200: #7fdca4;
+    --eb-green-100: #def2e6;
+
+    /* System Reds */
+    --eb-red-400:   #dc2b2b;
+    --eb-red-300:   #ff5a65;
+    --eb-red-200:   #ffbec2;
+    --eb-red-100:   #ffeff0;
+
+    /* System Yellows */
+    --eb-yellow-400: #FFA800;
+    --eb-yellow-300: #FDBD1A;
+    --eb-yellow-200: #FFE39B;
+    --eb-yellow-100: #FFF6E4;
+
+    /* Alternative Colors */
+    --eb-alt-1:  #BEE2E4;
+    --eb-alt-2:  #D1DA50;
+    --eb-alt-3:  #FED525;
+    --eb-alt-4:  #F18820;
+    --eb-alt-5:  #EB595B;
+    --eb-alt-6:  #9464A7;
+    --eb-alt-7:  #706DB0;
+
+    /* Secondary Colors */
+    --eb-sec-1:  #8ACCC3;
+    --eb-sec-2:  #B4B736;
+    --eb-sec-3:  #D8B00E;
+    --eb-sec-4:  #D36F15;
+    --eb-sec-5:  #C13E43;
+    --eb-sec-6:  #6E4583;
+    --eb-sec-7:  #535497;
+
+    /* Shared hero gradient */
+    --eb-header-gradient: linear-gradient(135deg, var(--eb-dark-blue) 0%, var(--eb-dark-petroleum) 60%, var(--eb-dark-blue) 100%);
+
+    /* Bootstrap 5 CSS variable overrides */
+    --bs-primary:            #086cd9;
+    --bs-primary-rgb:        8, 108, 217;
+    --bs-secondary:          #4F5E5A;
+    --bs-secondary-rgb:      79, 94, 90;
+    --bs-success:            #11845b;
+    --bs-success-rgb:        17, 132, 91;
+    --bs-info:               #0A404B;
+    --bs-info-rgb:           10, 64, 75;
+    --bs-warning:            #FFA800;
+    --bs-warning-rgb:        255, 168, 0;
+    --bs-danger:             #dc2b2b;
+    --bs-danger-rgb:         220, 43, 43;
+    --bs-dark:               #17233C;
+    --bs-dark-rgb:           23, 35, 60;
+    --bs-body-color:         #262626;
+    --bs-body-color-rgb:     38, 38, 38;
+    --bs-border-color:       #d4d8da;
+    --bs-border-color-translucent: rgba(23, 35, 60, 0.13);
+    --bs-link-color:         #086cd9;
+    --bs-link-hover-color:   #0761c3;
+}
+
 html, body {
     font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
 }
 
 a, .btn-link {
-    color: #006bb7;
+    color: var(--eb-blue-400);
 }
 
 .btn-primary {
     color: #fff;
-    background-color: #1b6ec2;
-    border-color: #1861ac;
+    background-color: var(--eb-blue-400);
+    border-color: #0761c3;
+}
+
+.btn-primary:hover {
+    background-color: #0761c3;
+    border-color: #0657ae;
 }
 
 .btn:focus, .btn:active:focus, .btn-link.nav-link:focus, .form-control:focus, .form-check-input:focus {
-  box-shadow: 0 0 0 0.1rem white, 0 0 0 0.25rem #258cfb;
+  box-shadow: 0 0 0 0.1rem white, 0 0 0 0.25rem rgba(8, 108, 217, 0.45);
 }
 
 .content {
@@ -25,15 +106,15 @@ h1:focus {
 }
 
 .valid.modified:not([type=checkbox]) {
-    outline: 1px solid #26b050;
+    outline: 1px solid var(--eb-green-400);
 }
 
 .invalid {
-    outline: 1px solid #e50000;
+    outline: 1px solid var(--eb-red-400);
 }
 
 .validation-message {
-    color: #e50000;
+    color: var(--eb-red-400);
 }
 
 .blazor-error-boundary {

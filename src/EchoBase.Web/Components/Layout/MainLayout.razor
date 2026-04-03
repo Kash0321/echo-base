@@ -1,4 +1,7 @@
 ﻿@inherits LayoutComponentBase
+@using EchoBase.Core.SystemAdmin.Queries
+@using MediatR
+@inject IMediator Mediator
 
 <div class="page">
     <div class="sidebar">
@@ -6,12 +9,49 @@
     </div>
 
     <main>
-        <div class="top-row px-4">
-            <a href="https://learn.microsoft.com/aspnet/core/" target="_blank">About</a>
+        <div class="top-row px-4 d-flex align-items-center gap-3">
+            <NavLink href="acerca-de" class="text-decoration-none">
+                <i class="bi bi-info-circle me-1"></i>Acerca de
+            </NavLink>
+            <AuthorizeView>
+                <Authorized>
+                    <NavLink href="perfil" class="text-decoration-none eb-user-link">
+                        <i class="bi bi-person-circle me-1"></i>@(context.User.FindFirst("name")?.Value ?? context.User.Identity?.Name ?? "Mi perfil")
+                    </NavLink>
+                </Authorized>
+            </AuthorizeView>
         </div>
 
         <article class="content px-4">
-            @Body
+            @if (_maintenanceActive)
+            {
+                <AuthorizeView Roles="SystemAdmin">
+                    <Authorized>
+                        @Body
+                    </Authorized>
+                    <NotAuthorized>
+                        <div class="eb-maintenance-overlay d-flex flex-column align-items-center justify-content-center text-center py-5">
+                            <i class="bi bi-tools display-1 text-warning mb-3"></i>
+                            <h2 class="fw-bold">Sistema en mantenimiento</h2>
+                            <p class="text-muted lead">
+                                El sistema está temporalmente fuera de servicio.<br />
+                                Por favor, inténtalo de nuevo más tarde.
+                            </p>
+                            @if (!string.IsNullOrWhiteSpace(_maintenanceReason))
+                            {
+                                <div class="alert alert-warning d-inline-flex align-items-center gap-2 mt-2">
+                                    <i class="bi bi-info-circle-fill flex-shrink-0"></i>
+                                    <span>@_maintenanceReason</span>
+                                </div>
+                            }
+                        </div>
+                    </NotAuthorized>
+                </AuthorizeView>
+            }
+            else
+            {
+                @Body
+            }
         </article>
     </main>
 </div>
@@ -21,3 +61,23 @@
     <a href="." class="reload">Reload</a>
     <span class="dismiss">🗙</span>
 </div>
+
+@code {
+    private bool _maintenanceActive;
+    private string? _maintenanceReason;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var status = await Mediator.Send(new GetMaintenanceModeQuery());
+            _maintenanceActive = status.IsActive;
+            _maintenanceReason = status.Reason;
+        }
+        catch
+        {
+            // Si no se puede leer el estado de mantenimiento, continuamos con normalidad
+            _maintenanceActive = false;
+        }
+    }
+}
