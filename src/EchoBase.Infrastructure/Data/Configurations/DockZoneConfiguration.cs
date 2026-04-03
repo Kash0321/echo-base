@@ -8,7 +8,8 @@ namespace EchoBase.Infrastructure.Data.Configurations;
 
 /// <summary>
 /// Configuración Fluent API de <see cref="DockZone"/> para EF Core.
-/// Define la tabla, restricciones de columnas, índices y la relación 1:N con <see cref="Dock"/>.
+/// Define la tabla, restricciones de columnas, índices y la relación 1:N con <see cref="DockTable"/>.
+/// Los puestos de trabajo se acceden a través de la jerarquía DockZone → DockTable → Dock.
 /// </summary>
 internal sealed class DockZoneConfiguration : IEntityTypeConfiguration<DockZone>
 {
@@ -37,10 +38,8 @@ internal sealed class DockZoneConfiguration : IEntityTypeConfiguration<DockZone>
             .HasConversion<int>()
             .HasDefaultValue(ZoneOrientation.Horizontal);
 
-        builder.HasMany(dz => dz.Docks)
-            .WithOne(d => d.DockZone)
-            .HasForeignKey(d => d.DockZoneId)
-            .OnDelete(DeleteBehavior.Restrict);
+        builder.Property(dz => dz.Order)
+            .HasDefaultValue(0);
 
         builder.HasMany(dz => dz.Tables)
             .WithOne(t => t.DockZone)

@@ -13,10 +13,10 @@ namespace EchoBase.Tests.Integration.DockAdmin;
 public sealed class DockAdminIntegrationTests : IntegrationTestBase
 {
     // ── GUIDs de datos maestros (DbSeeder) ────────────────────────────────────
-    private static readonly Guid NostromoZoneId = new("a0000000-0000-0000-0000-000000000001");
-    private static readonly Guid DerelictZoneId = new("a0000000-0000-0000-0000-000000000002");
-    // Uno de los puestos de Nostromo (N-A01) — véase DbSeeder
-    private static readonly Guid DockNA01 = new("b0000000-0000-0000-0001-000000000001");
+    private static readonly Guid NostromoZoneId  = new("a0000000-0000-0000-0000-000000000001");
+    private static readonly Guid DerelictZoneId  = new("a0000000-0000-0000-0000-000000000002");
+    private static readonly Guid NostromoTableId  = new("e0000000-0000-0000-0000-000000000001");
+    private static readonly Guid DerelictTable1Id = new("e0000000-0000-0000-0000-000000000002");
 
     // ══════════════════════════════════════════════════════════════════════════
     // IT-DA-01..03 — CreateDockZone
@@ -142,22 +142,23 @@ public sealed class DockAdminIntegrationTests : IntegrationTestBase
     // ══════════════════════════════════════════════════════════════════════════
 
     [Fact]
-    public async Task CreateDock_ValidRequest_PersistedToZone()
+    public async Task CreateDock_ValidRequest_PersistedToTable()
     {
-        var cmd = new CreateDockCommand(AdminUserId, NostromoZoneId, "N-Z99", "Fondo sala", "Monitor extragrande");
+        var cmd = new CreateDockCommand(AdminUserId, NostromoTableId, DockSide.A, "N-Z99", "Fondo sala", "Monitor extragrande");
         var result = await Mediator.Send(cmd);
 
         Assert.True(result.IsSuccess);
         var dock = await DbContext.Docks.SingleOrDefaultAsync(d => d.Id == result.Value);
         Assert.NotNull(dock);
         Assert.Equal("N-Z99", dock.Code);
-        Assert.Equal(NostromoZoneId, dock.DockZoneId);
+        Assert.Equal(NostromoTableId, dock.DockTableId);
+        Assert.Equal(DockSide.A, dock.Side);
     }
 
     [Fact]
     public async Task CreateDock_AuditEntryWritten()
     {
-        var cmd = new CreateDockCommand(AdminUserId, DerelictZoneId, "D-Z99", "Sala D", "Portátil");
+        var cmd = new CreateDockCommand(AdminUserId, DerelictTable1Id, DockSide.A, "D-Z99", "Sala D", "Portátil");
         await Mediator.Send(cmd);
 
         var entry = await DbContext.AuditLogs
@@ -171,7 +172,7 @@ public sealed class DockAdminIntegrationTests : IntegrationTestBase
     {
         // N-A01 ya existe en DbSeeder
         var result = await Mediator.Send(
-            new CreateDockCommand(AdminUserId, NostromoZoneId, "N-A01", "L", "E"));
+            new CreateDockCommand(AdminUserId, NostromoTableId, DockSide.A, "N-A01", "L", "E"));
 
         Assert.False(result.IsSuccess);
         Assert.Equal("DOCK_CODE_ALREADY_EXISTS", result.Error);
@@ -181,7 +182,7 @@ public sealed class DockAdminIntegrationTests : IntegrationTestBase
     public async Task CreateDock_NotSystemAdmin_ReturnsError()
     {
         var result = await Mediator.Send(
-            new CreateDockCommand(TestUserId, NostromoZoneId, "N-Z99", "L", "E"));
+            new CreateDockCommand(TestUserId, NostromoTableId, DockSide.A, "N-Z99", "L", "E"));
 
         Assert.False(result.IsSuccess);
         Assert.Equal(SystemAdminErrors.NotSystemAdmin, result.Error);
@@ -233,7 +234,7 @@ public sealed class DockAdminIntegrationTests : IntegrationTestBase
     {
         // Crear un puesto nuevo (sin reservas) y eliminarlo
         var createResult = await Mediator.Send(
-            new CreateDockCommand(AdminUserId, NostromoZoneId, "TEMP-01", "Temporal", "Ninguno"));
+            new CreateDockCommand(AdminUserId, NostromoTableId, DockSide.A, "TEMP-01", "Temporal", "Ninguno"));
         var tempDockId = createResult.Value;
 
         var result = await Mediator.Send(new DeleteDockCommand(AdminUserId, tempDockId, "Prueba de eliminación"));
@@ -248,7 +249,7 @@ public sealed class DockAdminIntegrationTests : IntegrationTestBase
     {
         // Crear un puesto + reservarlo + eliminarlo
         var createResult = await Mediator.Send(
-            new CreateDockCommand(AdminUserId, NostromoZoneId, "TEMP-02", "Temporal", "Ninguno"));
+            new CreateDockCommand(AdminUserId, NostromoTableId, DockSide.A, "TEMP-02", "Temporal", "Ninguno"));
         var tempDockId = createResult.Value;
 
         // Insertar reserva futura para TestUser
@@ -272,7 +273,7 @@ public sealed class DockAdminIntegrationTests : IntegrationTestBase
     public async Task DeleteDock_AuditEntryWritten()
     {
         var createResult = await Mediator.Send(
-            new CreateDockCommand(AdminUserId, DerelictZoneId, "TEMP-03", "T", "N"));
+            new CreateDockCommand(AdminUserId, DerelictTable1Id, DockSide.A, "TEMP-03", "T", "N"));
         await Mediator.Send(new DeleteDockCommand(AdminUserId, createResult.Value, "Test"));
 
         var entry = await DbContext.AuditLogs
@@ -354,20 +355,34 @@ public sealed class DockAdminIntegrationTests : IntegrationTestBase
     {
         // La tabla de Nostromo tiene Id = e0000000-0000-0000-0000-000000000001
         var tableId = new Guid("e0000000-0000-0000-0000-000000000001");
-        var cmd = new UpdateDockTableCommand(AdminUserId, tableId, "Locator actualizado");
+        var cmd = new UpdateDockTableCommand(AdminUserId, tableId, "N", "Locator actualizado");
         var result = await Mediator.Send(cmd);
 
         Assert.True(result.IsSuccess);
         DbContext.ChangeTracker.Clear();
         var table = await DbContext.DockTables.SingleAsync(t => t.Id == tableId);
+        Assert.Equal("N", table.TableKey);
         Assert.Equal("Locator actualizado", table.Locator);
+    }
+
+    [Fact]
+    public async Task UpdateDockTable_ValidRequest_TableKeyChangedInDatabase()
+    {
+        var tableId = new Guid("e0000000-0000-0000-0000-000000000001");
+        var cmd = new UpdateDockTableCommand(AdminUserId, tableId, "N-NUEVO", null);
+        var result = await Mediator.Send(cmd);
+
+        Assert.True(result.IsSuccess);
+        DbContext.ChangeTracker.Clear();
+        var table = await DbContext.DockTables.SingleAsync(t => t.Id == tableId);
+        Assert.Equal("N-NUEVO", table.TableKey);
     }
 
     [Fact]
     public async Task UpdateDockTable_AuditEntryWritten()
     {
         var tableId = new Guid("e0000000-0000-0000-0000-000000000001");
-        await Mediator.Send(new UpdateDockTableCommand(AdminUserId, tableId, "X"));
+        await Mediator.Send(new UpdateDockTableCommand(AdminUserId, tableId, "N", "X"));
 
         var entry = await DbContext.AuditLogs
             .SingleOrDefaultAsync(a => a.Action == AuditAction.DockTableUpdated);
@@ -378,7 +393,7 @@ public sealed class DockAdminIntegrationTests : IntegrationTestBase
     public async Task UpdateDockTable_NotSystemAdmin_ReturnsError()
     {
         var tableId = new Guid("e0000000-0000-0000-0000-000000000001");
-        var result = await Mediator.Send(new UpdateDockTableCommand(TestUserId, tableId, "X"));
+        var result = await Mediator.Send(new UpdateDockTableCommand(TestUserId, tableId, "N", "X"));
 
         Assert.False(result.IsSuccess);
         Assert.Equal(SystemAdminErrors.NotSystemAdmin, result.Error);
@@ -424,6 +439,17 @@ public sealed class DockAdminIntegrationTests : IntegrationTestBase
         Assert.Equal(SystemAdminErrors.NotSystemAdmin, result.Error);
     }
 
+    [Fact]
+    public async Task DeleteDockTable_TableHasDocks_ReturnsTableHasDocks()
+    {
+        // NostromoTableId tiene puestos asignados
+        var result = await Mediator.Send(new DeleteDockTableCommand(AdminUserId, NostromoTableId));
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal("TABLE_HAS_DOCKS", result.Error);
+        Assert.True(await DbContext.DockTables.AnyAsync(t => t.Id == NostromoTableId));
+    }
+
     // ══════════════════════════════════════════════════════════════════════════
     // IT-DA-32..33 — GetDockAdminData
     // ══════════════════════════════════════════════════════════════════════════
@@ -436,8 +462,8 @@ public sealed class DockAdminIntegrationTests : IntegrationTestBase
         Assert.NotEmpty(result);
         var nostromo = result.SingleOrDefault(z => z.Id == NostromoZoneId);
         Assert.NotNull(nostromo);
-        Assert.NotEmpty(nostromo.Docks);
         Assert.NotEmpty(nostromo.Tables);
+        Assert.Contains(nostromo.Tables, t => t.Docks.Count > 0);
     }
 
     [Fact]
@@ -448,5 +474,62 @@ public sealed class DockAdminIntegrationTests : IntegrationTestBase
         var result = await Mediator.Send(new GetDockAdminDataQuery());
 
         Assert.Contains(result, z => z.Name == "ZonaQuery");
+    }
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // IT-DA-34..37 — ReorderDockZones y ReorderDockTables
+    // ══════════════════════════════════════════════════════════════════════════
+
+    [Fact]
+    public async Task ReorderDockZones_ValidRequest_OrderPersistedToDatabase()
+    {
+        // Derelict (Order=1) pasa a estar antes que Nostromo (Order=0)
+        var orderedIds = new List<Guid> { DerelictZoneId, NostromoZoneId };
+        var result = await Mediator.Send(new ReorderDockZonesCommand(AdminUserId, orderedIds));
+
+        Assert.True(result.IsSuccess);
+        DbContext.ChangeTracker.Clear();
+        var derelict = await DbContext.DockZones.SingleAsync(z => z.Id == DerelictZoneId);
+        var nostromo = await DbContext.DockZones.SingleAsync(z => z.Id == NostromoZoneId);
+        Assert.Equal(0, derelict.Order);
+        Assert.Equal(1, nostromo.Order);
+    }
+
+    [Fact]
+    public async Task ReorderDockZones_NotSystemAdmin_ReturnsError()
+    {
+        var result = await Mediator.Send(new ReorderDockZonesCommand(TestUserId, [NostromoZoneId, DerelictZoneId]));
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(SystemAdminErrors.NotSystemAdmin, result.Error);
+    }
+
+    [Fact]
+    public async Task ReorderDockTables_ValidRequest_OrderPersistedToDatabase()
+    {
+        // Reordenar las mesas de Derelict: D-3 primero, D-2 segundo, D-1 tercero
+        var orderedIds = new List<Guid>
+        {
+            new("e0000000-0000-0000-0000-000000000004"), // D-3
+            new("e0000000-0000-0000-0000-000000000003"), // D-2
+            new("e0000000-0000-0000-0000-000000000002"), // D-1
+        };
+        var result = await Mediator.Send(new ReorderDockTablesCommand(AdminUserId, DerelictZoneId, orderedIds));
+
+        Assert.True(result.IsSuccess);
+        DbContext.ChangeTracker.Clear();
+        var t1 = await DbContext.DockTables.SingleAsync(t => t.Id == new Guid("e0000000-0000-0000-0000-000000000002"));
+        var t3 = await DbContext.DockTables.SingleAsync(t => t.Id == new Guid("e0000000-0000-0000-0000-000000000004"));
+        Assert.Equal(2, t1.Order); // D-1 ahora es la tercera (índice 2)
+        Assert.Equal(0, t3.Order); // D-3 ahora es la primera (índice 0)
+    }
+
+    [Fact]
+    public async Task ReorderDockTables_NotSystemAdmin_ReturnsError()
+    {
+        var result = await Mediator.Send(new ReorderDockTablesCommand(TestUserId, DerelictZoneId, [DerelictTable1Id]));
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(SystemAdminErrors.NotSystemAdmin, result.Error);
     }
 }

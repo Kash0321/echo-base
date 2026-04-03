@@ -24,15 +24,17 @@ public class DockAdminCommandTests
 
     // ── Handlers ─────────────────────────────────────────────────────────────
 
-    private CreateDockZoneHandler  ZoneCreateHandler()  => new(_blockedDockRepo, _dockAdminRepo);
-    private UpdateDockZoneHandler  ZoneUpdateHandler()  => new(_blockedDockRepo, _dockAdminRepo);
-    private DeleteDockZoneHandler  ZoneDeleteHandler()  => new(_blockedDockRepo, _dockAdminRepo);
-    private CreateDockHandler      DockCreateHandler()  => new(_blockedDockRepo, _dockAdminRepo);
-    private UpdateDockHandler      DockUpdateHandler()  => new(_blockedDockRepo, _dockAdminRepo);
-    private DeleteDockHandler      DockDeleteHandler()  => new(_blockedDockRepo, _dockAdminRepo, _time, _publisher);
-    private CreateDockTableHandler TableCreateHandler() => new(_blockedDockRepo, _dockAdminRepo);
-    private UpdateDockTableHandler TableUpdateHandler() => new(_blockedDockRepo, _dockAdminRepo);
-    private DeleteDockTableHandler TableDeleteHandler() => new(_blockedDockRepo, _dockAdminRepo);
+    private CreateDockZoneHandler  ZoneCreateHandler()    => new(_blockedDockRepo, _dockAdminRepo);
+    private UpdateDockZoneHandler  ZoneUpdateHandler()    => new(_blockedDockRepo, _dockAdminRepo);
+    private DeleteDockZoneHandler  ZoneDeleteHandler()    => new(_blockedDockRepo, _dockAdminRepo);
+    private ReorderDockZonesHandler ZoneReorderHandler()  => new(_blockedDockRepo, _dockAdminRepo);
+    private CreateDockHandler      DockCreateHandler()    => new(_blockedDockRepo, _dockAdminRepo);
+    private UpdateDockHandler      DockUpdateHandler()    => new(_blockedDockRepo, _dockAdminRepo);
+    private DeleteDockHandler      DockDeleteHandler()    => new(_blockedDockRepo, _dockAdminRepo, _time, _publisher);
+    private CreateDockTableHandler TableCreateHandler()   => new(_blockedDockRepo, _dockAdminRepo);
+    private UpdateDockTableHandler TableUpdateHandler()   => new(_blockedDockRepo, _dockAdminRepo);
+    private DeleteDockTableHandler TableDeleteHandler()   => new(_blockedDockRepo, _dockAdminRepo);
+    private ReorderDockTablesHandler TableReorderHandler() => new(_blockedDockRepo, _dockAdminRepo);
 
     // ── Helpers ───────────────────────────────────────────────────────────────
 
@@ -42,8 +44,18 @@ public class DockAdminCommandTests
     private static DockZone MakeZone(Guid? id = null, string name = "TestZone", int dockCount = 0)
     {
         var zone = new DockZone(id ?? ZoneId) { Name = name, Orientation = ZoneOrientation.Horizontal };
-        for (var i = 0; i < dockCount; i++)
-            zone.Docks.Add(new Dock(Guid.NewGuid()) { Code = $"X-{i:D2}", Location = "L", Equipment = "E" });
+        if (dockCount > 0)
+        {
+            var table = new DockTable(Guid.NewGuid()) { TableKey = "T" };
+            table.AssignToZone(zone);
+            for (var i = 0; i < dockCount; i++)
+            {
+                var dock = new Dock(Guid.NewGuid()) { Code = $"X-{i:D2}", Location = "L", Equipment = "E" };
+                dock.AssignToTable(table, DockSide.A);
+                ((List<Dock>)table.Docks).Add(dock);
+            }
+            ((List<DockTable>)zone.Tables).Add(table);
+        }
         return zone;
     }
 
@@ -224,10 +236,10 @@ public class DockAdminCommandTests
     {
         AsSystemAdmin();
         _dockAdminRepo.DockCodeExistsAsync("A-01", null, Arg.Any<CancellationToken>()).Returns(false);
-        _dockAdminRepo.GetZoneByIdAsync(ZoneId, Arg.Any<CancellationToken>()).Returns(MakeZone());
+        _dockAdminRepo.GetTableByIdAsync(TableId, Arg.Any<CancellationToken>()).Returns(MakeTable());
 
         var result = await DockCreateHandler().Handle(
-            new CreateDockCommand(AdminId, ZoneId, "A-01", "Sala A", "Monitor"), CancellationToken.None);
+            new CreateDockCommand(AdminId, TableId, DockSide.A, "A-01", "Sala A", "Monitor"), CancellationToken.None);
 
         Assert.True(result.IsSuccess);
         Assert.NotEqual(Guid.Empty, result.Value);
@@ -240,7 +252,7 @@ public class DockAdminCommandTests
         AsNonSystemAdmin();
 
         var result = await DockCreateHandler().Handle(
-            new CreateDockCommand(AdminId, ZoneId, "A-01", "L", "E"), CancellationToken.None);
+            new CreateDockCommand(AdminId, TableId, DockSide.A, "A-01", "L", "E"), CancellationToken.None);
 
         Assert.False(result.IsSuccess);
         Assert.Equal(SystemAdminErrors.NotSystemAdmin, result.Error);
@@ -252,7 +264,7 @@ public class DockAdminCommandTests
         AsSystemAdmin();
 
         var result = await DockCreateHandler().Handle(
-            new CreateDockCommand(AdminId, ZoneId, "   ", "L", "E"), CancellationToken.None);
+            new CreateDockCommand(AdminId, TableId, DockSide.A, "   ", "L", "E"), CancellationToken.None);
 
         Assert.False(result.IsSuccess);
         Assert.Equal(DockAdminErrors.DockCodeRequired, result.Error);
@@ -265,24 +277,24 @@ public class DockAdminCommandTests
         _dockAdminRepo.DockCodeExistsAsync("A-01", null, Arg.Any<CancellationToken>()).Returns(true);
 
         var result = await DockCreateHandler().Handle(
-            new CreateDockCommand(AdminId, ZoneId, "A-01", "L", "E"), CancellationToken.None);
+            new CreateDockCommand(AdminId, TableId, DockSide.A, "A-01", "L", "E"), CancellationToken.None);
 
         Assert.False(result.IsSuccess);
         Assert.Equal(DockAdminErrors.DockCodeAlreadyExists, result.Error);
     }
 
     [Fact]
-    public async Task CreateDock_ZoneNotFound_ReturnsZoneNotFound()
+    public async Task CreateDock_TableNotFound_ReturnsTableNotFound()
     {
         AsSystemAdmin();
         _dockAdminRepo.DockCodeExistsAsync("A-01", null, Arg.Any<CancellationToken>()).Returns(false);
-        _dockAdminRepo.GetZoneByIdAsync(ZoneId, Arg.Any<CancellationToken>()).Returns((DockZone?)null);
+        _dockAdminRepo.GetTableByIdAsync(TableId, Arg.Any<CancellationToken>()).Returns((DockTable?)null);
 
         var result = await DockCreateHandler().Handle(
-            new CreateDockCommand(AdminId, ZoneId, "A-01", "L", "E"), CancellationToken.None);
+            new CreateDockCommand(AdminId, TableId, DockSide.A, "A-01", "L", "E"), CancellationToken.None);
 
         Assert.False(result.IsSuccess);
-        Assert.Equal(DockAdminErrors.ZoneNotFound, result.Error);
+        Assert.Equal(DockAdminErrors.TableNotFound, result.Error);
     }
 
     // ══════════════════════════════════════════════════════════════════════════
@@ -505,12 +517,13 @@ public class DockAdminCommandTests
     {
         AsSystemAdmin();
         _dockAdminRepo.GetTableByIdAsync(TableId, Arg.Any<CancellationToken>()).Returns(MakeTable());
+        _dockAdminRepo.TableKeyExistsInZoneAsync("N", Arg.Any<Guid>(), TableId, Arg.Any<CancellationToken>()).Returns(false);
 
         var result = await TableUpdateHandler().Handle(
-            new UpdateDockTableCommand(AdminId, TableId, "Nuevo localizador"), CancellationToken.None);
+            new UpdateDockTableCommand(AdminId, TableId, "N", "Nuevo localizador"), CancellationToken.None);
 
         Assert.True(result.IsSuccess);
-        await _dockAdminRepo.Received(1).UpdateTableLocatorAsync(TableId, "Nuevo localizador", Arg.Any<CancellationToken>());
+        await _dockAdminRepo.Received(1).UpdateTableAsync(TableId, "N", "Nuevo localizador", Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -519,7 +532,7 @@ public class DockAdminCommandTests
         AsNonSystemAdmin();
 
         var result = await TableUpdateHandler().Handle(
-            new UpdateDockTableCommand(AdminId, TableId, null), CancellationToken.None);
+            new UpdateDockTableCommand(AdminId, TableId, "N", null), CancellationToken.None);
 
         Assert.False(result.IsSuccess);
         Assert.Equal(SystemAdminErrors.NotSystemAdmin, result.Error);
@@ -532,10 +545,37 @@ public class DockAdminCommandTests
         _dockAdminRepo.GetTableByIdAsync(TableId, Arg.Any<CancellationToken>()).Returns((DockTable?)null);
 
         var result = await TableUpdateHandler().Handle(
-            new UpdateDockTableCommand(AdminId, TableId, "X"), CancellationToken.None);
+            new UpdateDockTableCommand(AdminId, TableId, "N", "X"), CancellationToken.None);
 
         Assert.False(result.IsSuccess);
         Assert.Equal(DockAdminErrors.TableNotFound, result.Error);
+    }
+
+    [Fact]
+    public async Task UpdateDockTable_EmptyKey_ReturnsTableKeyRequired()
+    {
+        AsSystemAdmin();
+        _dockAdminRepo.GetTableByIdAsync(TableId, Arg.Any<CancellationToken>()).Returns(MakeTable());
+
+        var result = await TableUpdateHandler().Handle(
+            new UpdateDockTableCommand(AdminId, TableId, "  ", null), CancellationToken.None);
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(DockAdminErrors.TableKeyRequired, result.Error);
+    }
+
+    [Fact]
+    public async Task UpdateDockTable_DuplicateKey_ReturnsTableKeyAlreadyExists()
+    {
+        AsSystemAdmin();
+        _dockAdminRepo.GetTableByIdAsync(TableId, Arg.Any<CancellationToken>()).Returns(MakeTable());
+        _dockAdminRepo.TableKeyExistsInZoneAsync("OTRA", Arg.Any<Guid>(), TableId, Arg.Any<CancellationToken>()).Returns(true);
+
+        var result = await TableUpdateHandler().Handle(
+            new UpdateDockTableCommand(AdminId, TableId, "OTRA", null), CancellationToken.None);
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(DockAdminErrors.TableKeyAlreadyExists, result.Error);
     }
 
     // ══════════════════════════════════════════════════════════════════════════
@@ -578,5 +618,90 @@ public class DockAdminCommandTests
 
         Assert.False(result.IsSuccess);
         Assert.Equal(DockAdminErrors.TableNotFound, result.Error);
+    }
+
+    [Fact]
+    public async Task DeleteDockTable_TableHasDocks_ReturnsTableHasDocks()
+    {
+        AsSystemAdmin();
+        _dockAdminRepo.GetTableByIdAsync(TableId, Arg.Any<CancellationToken>()).Returns(MakeTable());
+        _dockAdminRepo.TableHasDocksAsync(TableId, Arg.Any<CancellationToken>()).Returns(true);
+
+        var result = await TableDeleteHandler().Handle(
+            new DeleteDockTableCommand(AdminId, TableId), CancellationToken.None);
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(DockAdminErrors.TableHasDocks, result.Error);
+        await _dockAdminRepo.DidNotReceive().DeleteTableAsync(Arg.Any<DockTable>(), Arg.Any<CancellationToken>());
+    }
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // UT-DA-38..40 — ReorderDockZones
+    // ══════════════════════════════════════════════════════════════════════════
+
+    [Fact]
+    public async Task ReorderDockZones_ValidRequest_CallsUpdateZoneOrdersWithCorrectItems()
+    {
+        AsSystemAdmin();
+        var orderedIds = new List<Guid> { ZoneId, Guid.NewGuid() };
+
+        var result = await ZoneReorderHandler().Handle(
+            new ReorderDockZonesCommand(AdminId, orderedIds), CancellationToken.None);
+
+        Assert.True(result.IsSuccess);
+        await _dockAdminRepo.Received(1).UpdateZoneOrdersAsync(
+            Arg.Is<IReadOnlyList<(Guid Id, int Order)>>(items =>
+                items.Count == 2 &&
+                items[0].Id == orderedIds[0] && items[0].Order == 0 &&
+                items[1].Id == orderedIds[1] && items[1].Order == 1),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task ReorderDockZones_NotSystemAdmin_ReturnsNotSystemAdmin()
+    {
+        AsNonSystemAdmin();
+
+        var result = await ZoneReorderHandler().Handle(
+            new ReorderDockZonesCommand(AdminId, [ZoneId]), CancellationToken.None);
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(SystemAdminErrors.NotSystemAdmin, result.Error);
+        await _dockAdminRepo.DidNotReceive().UpdateZoneOrdersAsync(Arg.Any<IReadOnlyList<(Guid, int)>>(), Arg.Any<CancellationToken>());
+    }
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // UT-DA-41..43 — ReorderDockTables
+    // ══════════════════════════════════════════════════════════════════════════
+
+    [Fact]
+    public async Task ReorderDockTables_ValidRequest_CallsUpdateTableOrdersWithCorrectItems()
+    {
+        AsSystemAdmin();
+        var orderedIds = new List<Guid> { TableId, Guid.NewGuid(), Guid.NewGuid() };
+
+        var result = await TableReorderHandler().Handle(
+            new ReorderDockTablesCommand(AdminId, ZoneId, orderedIds), CancellationToken.None);
+
+        Assert.True(result.IsSuccess);
+        await _dockAdminRepo.Received(1).UpdateTableOrdersAsync(
+            Arg.Is<IReadOnlyList<(Guid Id, int Order)>>(items =>
+                items.Count == 3 &&
+                items[0].Id == orderedIds[0] && items[0].Order == 0 &&
+                items[2].Id == orderedIds[2] && items[2].Order == 2),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task ReorderDockTables_NotSystemAdmin_ReturnsNotSystemAdmin()
+    {
+        AsNonSystemAdmin();
+
+        var result = await TableReorderHandler().Handle(
+            new ReorderDockTablesCommand(AdminId, ZoneId, [TableId]), CancellationToken.None);
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(SystemAdminErrors.NotSystemAdmin, result.Error);
+        await _dockAdminRepo.DidNotReceive().UpdateTableOrdersAsync(Arg.Any<IReadOnlyList<(Guid, int)>>(), Arg.Any<CancellationToken>());
     }
 }

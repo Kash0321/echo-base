@@ -12,14 +12,17 @@ public sealed record DockAdminDto(
     string Code,
     string Location,
     string Equipment,
-    Guid? DockZoneId);
+    Guid DockTableId,
+    DockSide Side);
 
-/// <summary>DTO de una mesa lógica para la vista de administración.</summary>
+/// <summary>DTO de una mesa física para la vista de administración. Incluye sus puestos de trabajo.</summary>
 public sealed record DockTableAdminDto(
     Guid Id,
     string TableKey,
     string? Locator,
-    Guid DockZoneId);
+    Guid DockZoneId,
+    int Order,
+    IReadOnlyList<DockAdminDto> Docks);
 
 /// <summary>DTO de una zona de trabajo completa para la vista de administración.</summary>
 public sealed record DockZoneAdminDto(
@@ -27,7 +30,7 @@ public sealed record DockZoneAdminDto(
     string Name,
     string? Description,
     ZoneOrientation Orientation,
-    IReadOnlyList<DockAdminDto> Docks,
+    int Order,
     IReadOnlyList<DockTableAdminDto> Tables);
 
 // ── Query y handler ───────────────────────────────────────────────────────────
@@ -55,8 +58,15 @@ public sealed class GetDockAdminDataHandler(IDockAdminRepository dockAdminReposi
             z.Name,
             z.Description,
             z.Orientation,
-            z.Docks.Select(d => new DockAdminDto(d.Id, d.Code, d.Location, d.Equipment, d.DockZoneId)).ToList(),
-            z.Tables.Select(t => new DockTableAdminDto(t.Id, t.TableKey, t.Locator, t.DockZoneId)).ToList()
+            z.Order,
+            z.Tables.OrderBy(t => t.Order).ThenBy(t => t.TableKey).Select(t => new DockTableAdminDto(
+                t.Id,
+                t.TableKey,
+                t.Locator,
+                t.DockZoneId,
+                t.Order,
+                t.Docks.Select(d => new DockAdminDto(d.Id, d.Code, d.Location, d.Equipment, d.DockTableId, d.Side)).ToList()
+            )).ToList()
         )).ToList();
     }
 }

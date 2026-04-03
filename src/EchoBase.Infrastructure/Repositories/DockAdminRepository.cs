@@ -17,17 +17,17 @@ internal sealed class DockAdminRepository(EchoBaseDbContext context) : IDockAdmi
     /// <inheritdoc />
     public Task<List<DockZone>> GetAllZonesWithDetailsAsync(CancellationToken ct = default) =>
         context.DockZones
-            .Include(z => z.Docks)
             .Include(z => z.Tables)
+                .ThenInclude(t => t.Docks)
             .AsNoTracking()
-            .OrderBy(z => z.Name)
+            .OrderBy(z => z.Order).ThenBy(z => z.Name)
             .ToListAsync(ct);
 
     /// <inheritdoc />
     public Task<DockZone?> GetZoneByIdAsync(Guid id, CancellationToken ct = default) =>
         context.DockZones
-            .Include(z => z.Docks)
             .Include(z => z.Tables)
+                .ThenInclude(t => t.Docks)
             .FirstOrDefaultAsync(z => z.Id == id, ct);
 
     /// <inheritdoc />
@@ -50,6 +50,17 @@ internal sealed class DockAdminRepository(EchoBaseDbContext context) : IDockAdmi
                 .SetProperty(z => z.Name,        name)
                 .SetProperty(z => z.Description, description)
                 .SetProperty(z => z.Orientation, orientation), ct);
+    }
+
+    /// <inheritdoc />
+    public async Task UpdateZoneOrdersAsync(IReadOnlyList<(Guid Id, int Order)> items, CancellationToken ct = default)
+    {
+        foreach (var (id, order) in items)
+        {
+            await context.DockZones
+                .Where(z => z.Id == id)
+                .ExecuteUpdateAsync(setters => setters.SetProperty(z => z.Order, order), ct);
+        }
     }
 
     /// <inheritdoc />
@@ -152,13 +163,29 @@ internal sealed class DockAdminRepository(EchoBaseDbContext context) : IDockAdmi
     }
 
     /// <inheritdoc />
-    public async Task UpdateTableLocatorAsync(Guid id, string? locator, CancellationToken ct = default)
+    public async Task UpdateTableAsync(Guid id, string tableKey, string? locator, CancellationToken ct = default)
     {
         await context.DockTables
             .Where(t => t.Id == id)
             .ExecuteUpdateAsync(setters => setters
-                .SetProperty(t => t.Locator, locator), ct);
+                .SetProperty(t => t.TableKey, tableKey)
+                .SetProperty(t => t.Locator,  locator), ct);
     }
+
+    /// <inheritdoc />
+    public async Task UpdateTableOrdersAsync(IReadOnlyList<(Guid Id, int Order)> items, CancellationToken ct = default)
+    {
+        foreach (var (id, order) in items)
+        {
+            await context.DockTables
+                .Where(t => t.Id == id)
+                .ExecuteUpdateAsync(setters => setters.SetProperty(t => t.Order, order), ct);
+        }
+    }
+
+    /// <inheritdoc />
+    public Task<bool> TableHasDocksAsync(Guid tableId, CancellationToken ct = default) =>
+        context.Docks.AnyAsync(d => d.DockTableId == tableId, ct);
 
     /// <inheritdoc />
     public async Task DeleteTableAsync(DockTable table, CancellationToken ct = default)

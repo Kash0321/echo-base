@@ -1,4 +1,5 @@
 using EchoBase.Core.Entities;
+using EchoBase.Core.Entities.Enums;
 using EchoBase.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -7,7 +8,7 @@ namespace EchoBase.Infrastructure.Data.Configurations;
 
 /// <summary>
 /// Configuración Fluent API de <see cref="Dock"/> para EF Core.
-/// Define la tabla, restricciones de columnas, índices (incluido el de <c>DockZoneId</c>)
+/// Define la tabla, restricciones de columnas, índices (incluido el de <c>DockTableId</c>)
 /// y la relación 1:N con <see cref="Reservation"/>.
 /// </summary>
 internal sealed class DockConfiguration : IEntityTypeConfiguration<Dock>
@@ -38,7 +39,11 @@ internal sealed class DockConfiguration : IEntityTypeConfiguration<Dock>
             .IsRequired()
             .HasMaxLength(500);
 
-        builder.HasIndex(d => d.DockZoneId);
+        builder.Property(d => d.Side)
+            .HasConversion<int>()
+            .HasDefaultValue(DockSide.A);
+
+        builder.HasIndex(d => d.DockTableId);
 
         builder.HasMany(d => d.Reservations)
             .WithOne(r => r.Dock)

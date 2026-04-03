@@ -7,22 +7,23 @@ using MediatR;
 namespace EchoBase.Core.DockAdmin.Commands;
 
 /// <summary>
-/// Comando para actualizar el localizador (texto visible en el mapa) de una mesa lógica existente.
+/// Comando para actualizar la clave y el localizador de una mesa lógica existente.
 /// Solo los usuarios con rol <c>SystemAdmin</c> pueden ejecutar esta acción.
 /// </summary>
 /// <param name="AdminUserId">Identificador del SystemAdmin que realiza la actualización.</param>
 /// <param name="TableId">Identificador de la mesa lógica a actualizar.</param>
+/// <param name="TableKey">Nueva clave lógica de la mesa (debe ser única dentro de la zona).</param>
 /// <param name="Locator">Nuevo texto de localización (puede ser <see langword="null"/> para usar el nombre inferido).</param>
 public sealed record UpdateDockTableCommand(
     Guid AdminUserId,
     Guid TableId,
+    string TableKey,
     string? Locator) : IRequest<Result>, IAuditableRequest
 {
-    internal string? ResolvedTableKey { get; set; }
     Guid? IAuditableRequest.PerformedByUserId => AdminUserId;
     AuditAction IAuditableRequest.AuditAction => AuditAction.DockTableUpdated;
     string IAuditableRequest.BuildAuditDetails() =>
-        $"Mesa actualizada: clave '{ResolvedTableKey ?? TableId.ToString()}'" +
+        $"Mesa actualizada: clave '{TableKey}'" +
         (Locator is not null ? $" — localizador: '{Locator}'" : " — localizador eliminado");
 }
 
@@ -48,11 +49,18 @@ public sealed class UpdateDockTableHandler(
         if (table is null)
             return Result.Failure(DockAdminErrors.TableNotFound);
 
-        request.ResolvedTableKey = table.TableKey;
+        // 3. La clave no puede estar vacía
+        if (string.IsNullOrWhiteSpace(request.TableKey))
+            return Result.Failure(DockAdminErrors.TableKeyRequired);
 
-        // 3. Actualizar el localizador
-        await dockAdminRepository.UpdateTableLocatorAsync(
-            request.TableId, request.Locator?.Trim(), cancellationToken);
+        // 4. La clave debe ser única dentro de la zona (excluyendo esta mesa)
+        if (await dockAdminRepository.TableKeyExistsInZoneAsync(
+                request.TableKey.Trim(), table.DockZoneId, request.TableId, cancellationToken))
+            return Result.Failure(DockAdminErrors.TableKeyAlreadyExists);
+
+        // 5. Aplicar la actualización
+        await dockAdminRepository.UpdateTableAsync(
+            request.TableId, request.TableKey.Trim(), request.Locator?.Trim(), cancellationToken);
 
         return Result.Success();
     }

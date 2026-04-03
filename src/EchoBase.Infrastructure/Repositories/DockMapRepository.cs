@@ -14,9 +14,10 @@ internal sealed class DockMapRepository(EchoBaseDbContext context) : IDockMapRep
     /// <inheritdoc />
     public Task<List<DockZone>> GetAllZonesWithDocksAsync(CancellationToken ct = default) =>
         context.DockZones
-            .Include(z => z.Docks)
             .Include(z => z.Tables)
+                .ThenInclude(t => t.Docks)
             .AsNoTracking()
+            .OrderBy(z => z.Order).ThenBy(z => z.Name)
             .ToListAsync(ct);
 
     /// <inheritdoc />

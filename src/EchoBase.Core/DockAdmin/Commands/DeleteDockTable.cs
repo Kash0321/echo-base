@@ -45,9 +45,13 @@ public sealed class DeleteDockTableHandler(
         if (table is null)
             return Result.Failure(DockAdminErrors.TableNotFound);
 
+        // 3. La mesa no puede tener puestos asignados
+        if (await dockAdminRepository.TableHasDocksAsync(request.TableId, cancellationToken))
+            return Result.Failure(DockAdminErrors.TableHasDocks);
+
         request.ResolvedTableKey = table.TableKey;
 
-        // 3. Eliminar la mesa
+        // 4. Eliminar la mesa
         await dockAdminRepository.DeleteTableAsync(table, cancellationToken);
 
         return Result.Success();

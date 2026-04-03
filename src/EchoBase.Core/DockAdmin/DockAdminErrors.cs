@@ -35,6 +35,9 @@ public static class DockAdminErrors
     /// <summary>Ya existe una mesa con la misma clave en la zona indicada.</summary>
     public const string TableKeyAlreadyExists = "TABLE_KEY_ALREADY_EXISTS";
 
+    /// <summary>No se puede eliminar la mesa porque contiene puestos asignados.</summary>
+    public const string TableHasDocks = "TABLE_HAS_DOCKS";
+
     /// <summary>La clave de mesa no puede estar vacía.</summary>
     public const string TableKeyRequired = "TABLE_KEY_REQUIRED";
 }

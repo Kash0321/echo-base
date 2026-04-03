@@ -229,19 +229,20 @@ Puesto de trabajo físico reservable.
 | Propiedad | Tipo | Descripción |
 |---|---|---|
 | `Id` | `Guid` (UUID v7) | Identificador único |
-| `Code` | `string` | Código alfanumérico (ej.: `A-01`) |
+| `Code` | `string` | Código alfanumérico (ej.: `N-A01`) |
 | `Location` | `string` | Descripción de la ubicación física |
 | `Equipment` | `string` | Equipamiento disponible (texto libre) |
-| `DockZoneId` | `Guid?` | FK de la zona a la que pertenece el puesto |
-| `DockZone` | nav. → `DockZone` | Zona a la que pertenece el puesto |
+| `DockTableId` | `Guid` | FK de la mesa física a la que pertenece el puesto |
+| `DockTable` | nav. → `DockTable` | Mesa física a la que pertenece el puesto |
+| `Side` | `DockSide` (enum) | Lado de la mesa: `A` (0) o `B` (1) |
 | `Reservations` | nav. → `Reservation` | Reservas realizadas sobre este puesto |
 
-> **Nota:** El equipamiento se almacena como texto libre en `Dock.Equipment`; no existe una entidad `DockEquipment` separada.
+> **Nota:** La zona a la que pertenece un puesto se accede a través de la navegación `Dock.DockTable.DockZone`; no existe un `DockZoneId` directo en `Dock`.
 
 ---
 
 #### `DockZone` — Zona de trabajo
-Agrupa un conjunto de puestos bajo una misma zona física de la oficina.
+Agrupa un conjunto de mesas físicas bajo una misma zona de la oficina.
 
 | Propiedad | Tipo | Descripción |
 |---|---|---|
@@ -249,23 +250,25 @@ Agrupa un conjunto de puestos bajo una misma zona física de la oficina.
 | `Name` | `string` | Nombre de la zona (`Nostromo`, `Derelict`) |
 | `Description` | `string?` | Descripción opcional de la zona |
 | `Orientation` | `ZoneOrientation` (enum) | Distribución visual de las mesas: `Horizontal` (en fila, por defecto) o `Vertical` (apiladas en columna) |
-| `Docks` | nav. → `Dock` | Puestos de trabajo incluidos en la zona |
-| `Tables` | nav. → `DockTable` | Metadatos de mesas lógicas de la zona |
+| `Order` | `int` | Posición de la zona en el mapa. Menor valor = aparece antes. Por defecto `0`. |
+| `Tables` | nav. → `DockTable` | Mesas físicas que componen la zona |
 
-> **Nota:** La asignación puesto-zona se gestiona mediante la FK `Dock.DockZoneId`; no existe una entidad `DockZoneAssignment` separada.
+> **Nota:** La jerarquía es `DockZone (1) → (M) DockTable (1) → (M) Dock`. Los puestos se acceden siempre a través de las mesas de la zona.
 
 ---
 
-#### `DockTable` — Mesa lógica de zona
-Entidad que asocia la clave lógica de una mesa (derivada del prefijo del código de puesto) con un texto de localización opcional visible en el mapa.
+#### `DockTable` — Mesa física
+Representa una mesa física dentro de una zona, agrupa sus puestos de trabajo en dos lados (A y B).
 
 | Propiedad | Tipo | Descripción |
 |---|---|---|
 | `Id` | `Guid` (UUID v7) | Identificador único |
-| `TableKey` | `string` | Clave lógica de la mesa (ej.: `"N"`, `"D-1"`, `"D-2"`), máx. 20 caracteres. Única por zona. |
-| `Locator` | `string?` | Texto de localización opcional que aparece sobre el bloque de mesa en el mapa. Si es `null`, se muestra el nombre inferido (ej.: «Mesa 1»). Máx. 100 caracteres. |
+| `TableKey` | `string` | Clave de la mesa (ej.: `"N"`, `"D-1"`, `"D-2"`), máx. 20 caracteres. Única por zona. Editable por SystemAdmin. |
+| `Locator` | `string?` | Texto de localización opcional que aparece sobre el bloque de mesa en el mapa. Si es `null`, se muestra el nombre generado automáticamente (ej.: «Mesa 1»). Máx. 100 caracteres. |
+| `Order` | `int` | Posición de la mesa dentro de la zona. Menor valor = aparece antes. Por defecto `0`. |
 | `DockZoneId` | `Guid` | FK de la zona a la que pertenece la mesa |
 | `DockZone` | nav. → `DockZone` | Zona propietaria |
+| `Docks` | nav. → `Dock` | Puestos de trabajo que pertenecen a esta mesa |
 
 Semillas de BD (`DbSeeder`):
 
@@ -274,6 +277,7 @@ Semillas de BD (`DbSeeder`):
 | Nostromo | `"N"` | `e0000000-0000-0000-0000-000000000001` |
 | Derelict 1 | `"D-1"` | `e0000000-0000-0000-0000-000000000002` |
 | Derelict 2 | `"D-2"` | `e0000000-0000-0000-0000-000000000003` |
+| Derelict 3 | `"D-3"` | `e0000000-0000-0000-0000-000000000004` |
 
 ---
 
@@ -363,6 +367,8 @@ Valores del enum `AuditAction`:
 | `DockTableCreated` | Mesa lógica creada |
 | `DockTableUpdated` | Mesa lógica actualizada |
 | `DockTableDeleted` | Mesa lógica eliminada |
+| `DockZonesReordered` | Orden de visualización de zonas modificado |
+| `DockTablesReordered` | Orden de visualización de mesas de una zona modificado |
 
 ---
 
@@ -467,6 +473,8 @@ Integración con Azure AD (tennant de nuestra compañía) para autenticación y 
 ## 🏗️ Funcionalidad 5: Configuración del Zonas, Mesas y Puestos de trabajo [Implementada]
 - El SystemAdmin puede configurar (crear, editar y eliminar) las zonas de trabajo, asignar puestos a cada zona y definir la orientación de las mesas (horizontal o vertical) para cada zona desde el cuadro de mando de administración.
 - El SystemAdmin puede definir metadatos de localización para cada mesa (por ejemplo, "Mesa 1", "Mesa 2") que se muestran en el mapa de puestos de trabajo como parte del bloque visual de cada zona. Si no se define un localizador para una mesa, se muestra un nombre inferido basado en la clave lógica (ejemplo: "Mesa N" para la mesa con clave "N").
+- El SystemAdmin puede editar la `TableKey` (clave de agrupación) de una mesa existente desde el formulario de edición inline. La clave debe ser única dentro de la zona.
+- El SystemAdmin puede reordenar las zonas y las mesas dentro de cada zona mediante arrastrar y soltar (*drag-and-drop*) con iconos de agarre (`bi-grip-vertical`) en las tarjetas de zona y en las filas de mesas. El nuevo orden se persiste inmediatamente en la base de datos y se refleja en el mapa de reservas de todos los usuarios.
 - El SystemAdmin puede editar la información de cada puesto de trabajo, incluyendo su código, ubicación y equipamiento disponible, para mantener la información actualizada y precisa para los usuarios al hacer sus reservas.
 - El SystemAdmin puede eliminar puestos de trabajo obsoletos o que ya no estén disponibles, lo que los retirará del mapa de reservas y cancelará automáticamente cualquier reserva futura asociada a esos puestos, notificando a los usuarios afectados sobre la cancelación y el motivo.
 
@@ -485,6 +493,8 @@ Integración con Azure AD (tennant de nuestra compañía) para autenticación y 
 | `DockTableCreated` (16) | Mesa lógica creada |
 | `DockTableUpdated` (17) | Mesa lógica actualizada |
 | `DockTableDeleted` (18) | Mesa lógica eliminada |
+| `DockZonesReordered` (19) | Orden de visualización de zonas modificado |
+| `DockTablesReordered` (20) | Orden de visualización de mesas de una zona modificado |
 
 #### Comandos y queries implementados
 
@@ -497,8 +507,10 @@ Integración con Azure AD (tennant de nuestra compañía) para autenticación y 
 | `UpdateDockCommand` | `EchoBase.Core/DockAdmin/Commands/` |
 | `DeleteDockCommand` | `EchoBase.Core/DockAdmin/Commands/` |
 | `CreateDockTableCommand` | `EchoBase.Core/DockAdmin/Commands/` |
-| `UpdateDockTableCommand` | `EchoBase.Core/DockAdmin/Commands/` |
+| `UpdateDockTableCommand` | `EchoBase.Core/DockAdmin/Commands/` — parámetros: `AdminUserId`, `TableId`, `TableKey` (requerido, único en la zona), `Locator?` |
 | `DeleteDockTableCommand` | `EchoBase.Core/DockAdmin/Commands/` |
+| `ReorderDockZonesCommand` | `EchoBase.Core/DockAdmin/Commands/` — parámetros: `AdminUserId`, `OrderedZoneIds` (lista de IDs en el nuevo orden) |
+| `ReorderDockTablesCommand` | `EchoBase.Core/DockAdmin/Commands/` — parámetros: `AdminUserId`, `ZoneId`, `OrderedTableIds` (lista de IDs en el nuevo orden) |
 | `GetDockAdminDataQuery` | `EchoBase.Core/DockAdmin/Queries/` |
 | `DockAdminErrors` | `EchoBase.Core/DockAdmin/` |
 | `IDockAdminRepository` | `EchoBase.Core/Interfaces/` |
@@ -509,8 +521,8 @@ Se añadió la pestaña **«Zonas y puestos»** (`Tab.DockConfig`) en `/system-a
 
 | Sección | Descripción |
 |---|---|
-| Lista de zonas | Una tarjeta por zona con badge de orientación, botón editar (formulario inline), botón eliminar (modal de confirmación) |
-| Mesas por zona | Tabla con clave y localizador; edición inline del localizador; formulario de nueva mesa |
+| Lista de zonas | Una tarjeta por zona con badge de orientación, botón editar (formulario inline), botón eliminar (modal de confirmación). Las zonas tienen un icono de agarre (`bi-grip-vertical`) que permite reordenarlas mediante drag-and-drop. |
+| Mesas por zona | Tabla con clave (`TableKey`) y localizador; edición inline de ambos campos (`TableKey` + `Locator`); formulario de nueva mesa. Las filas de mesa tienen un icono de agarre para reordenarlas dentro de la zona mediante drag-and-drop. |
 | Puestos por zona | Tabla con código, ubicación y equipamiento; edición inline; eliminación con aviso de cancelación de reservas |
 | Crear zona | Formulario al pie con campos nombre, descripción, orientación (btn-check Horizontal/Vertical) |
 | Modales | Confirmación antes de eliminar zona, mesa o puesto (el de puesto advierte sobre cancelación de reservas futuras) |
@@ -619,6 +631,8 @@ Valores del enum `AuditAction`:
 | `DockTableCreated` | Mesa lógica creada |
 | `DockTableUpdated` | Mesa lógica actualizada |
 | `DockTableDeleted` | Mesa lógica eliminada |
+| `DockZonesReordered` | Orden de visualización de zonas modificado |
+| `DockTablesReordered` | Orden de visualización de mesas de una zona modificado |
 
 #### Comandos y queries implementados
 

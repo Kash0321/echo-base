@@ -35,6 +35,12 @@ public interface IDockAdminRepository
     /// </summary>
     Task UpdateZoneAsync(Guid id, string name, string? description, ZoneOrientation orientation, CancellationToken ct = default);
 
+    /// <summary>Actualiza el campo <c>Order</c> de varias zonas en bloque (para drag-and-drop).</summary>
+    Task UpdateZoneOrdersAsync(IReadOnlyList<(Guid Id, int Order)> items, CancellationToken ct = default);
+
+    /// <summary>Actualiza el campo <c>Order</c> de varias mesas en bloque (para drag-and-drop).</summary>
+    Task UpdateTableOrdersAsync(IReadOnlyList<(Guid Id, int Order)> items, CancellationToken ct = default);
+
     /// <summary>Elimina una zona (sin puestos) del contexto de persistencia y persiste.</summary>
     Task DeleteZoneAsync(DockZone zone, CancellationToken ct = default);
 
@@ -94,8 +100,11 @@ public interface IDockAdminRepository
     /// <summary>Agrega una nueva mesa lógica al contexto de persistencia.</summary>
     Task AddTableAsync(DockTable table, CancellationToken ct = default);
 
-    /// <summary>Actualiza via SQL directo el localizador de una mesa lógica.</summary>
-    Task UpdateTableLocatorAsync(Guid id, string? locator, CancellationToken ct = default);
+    /// <summary>Actualiza via SQL directo la clave y localizador de una mesa lógica.</summary>
+    Task UpdateTableAsync(Guid id, string tableKey, string? locator, CancellationToken ct = default);
+
+    /// <summary>Comprueba si la mesa contiene puestos de trabajo asignados.</summary>
+    Task<bool> TableHasDocksAsync(Guid tableId, CancellationToken ct = default);
 
     /// <summary>Elimina una mesa lógica del contexto de persistencia y persiste.</summary>
     Task DeleteTableAsync(DockTable table, CancellationToken ct = default);

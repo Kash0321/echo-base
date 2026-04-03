@@ -96,12 +96,9 @@ public sealed record GetDockMapQuery(DateOnly Date) : IRequest<DockMapDto>;
 /// Obtiene el estado de todos los puestos de trabajo agrupados por zona y mesa.
 /// </summary>
 /// <remarks>
-/// La estructura de mesas se infiere del código del puesto:
-/// <list type="bullet">
-///   <item><c>N-A</c> / <c>N-B</c> → Nostromo, mesa única, lados A y B</item>
-///   <item><c>D-1A</c> / <c>D-1B</c> → Derelict, mesa 1, lados A y B</item>
-///   <item><c>D-2A</c> / <c>D-2B</c> → Derelict, mesa 2, lados A y B</item>
-/// </list>
+/// La estructura de mesas se obtiene directamente de la jerarquía <see cref="Entities.DockZone"/>
+/// → <see cref="Entities.DockTable"/> → <see cref="Entities.Dock"/>. El lado (A/B) de cada
+/// puesto se lee de la propiedad <see cref="Entities.Dock.Side"/>.
 /// </remarks>
 internal sealed class GetDockMapHandler(IDockMapRepository repository)
     : IRequestHandler<GetDockMapQuery, DockMapDto>
@@ -118,7 +115,7 @@ internal sealed class GetDockMapHandler(IDockMapRepository repository)
             .ToDictionary(g => g.Key, g => g.ToList());
 
         var zoneDtos = zones
-            .OrderByDescending(z => z.Name)
+            .OrderBy(z => z.Order).ThenBy(z => z.Name)
             .Select(z => BuildZoneDto(z, blockedMap, reservationsByDock))
             .ToList();
 
@@ -130,36 +127,26 @@ internal sealed class GetDockMapHandler(IDockMapRepository repository)
         Dictionary<Guid, Entities.BlockedDock> blockedMap,
         Dictionary<Guid, List<Entities.Reservation>> reservationsByDock)
     {
-        // Agrupar puestos por mesa y lado según el patrón de código
-        var docksByTable = zone.Docks
-            .GroupBy(d => ParseTableKey(d.Code))
-            .OrderBy(g => g.Key)
+        var tables = zone.Tables
+            .OrderBy(t => t.Order).ThenBy(t => t.TableKey)
+            .Select(t =>
+            {
+                var sideA = t.Docks
+                    .Where(d => d.Side == DockSide.A)
+                    .OrderBy(d => d.Code)
+                    .Select(d => BuildSeatDto(d, blockedMap, reservationsByDock))
+                    .ToList();
+
+                var sideB = t.Docks
+                    .Where(d => d.Side == DockSide.B)
+                    .OrderBy(d => d.Code)
+                    .Select(d => BuildSeatDto(d, blockedMap, reservationsByDock))
+                    .ToList();
+
+                var tableName = BuildTableName(zone.Name, t.TableKey);
+                return new DockTableDto(tableName, t.Locator, sideA, sideB);
+            })
             .ToList();
-
-        var tables = new List<DockTableDto>();
-
-        // Construir lookup de localizadores por clave de mesa
-        var locatorByKey = zone.Tables
-            .ToDictionary(t => t.TableKey, t => t.Locator);
-
-        foreach (var tableGroup in docksByTable)
-        {
-            var bySide = tableGroup
-                .GroupBy(d => ParseSide(d.Code))
-                .ToDictionary(g => g.Key, g => g.OrderBy(d => d.Code).ToList());
-
-            var sideA = bySide.GetValueOrDefault("A", [])
-                .Select(d => BuildSeatDto(d, blockedMap, reservationsByDock))
-                .ToList();
-
-            var sideB = bySide.GetValueOrDefault("B", [])
-                .Select(d => BuildSeatDto(d, blockedMap, reservationsByDock))
-                .ToList();
-
-            var tableName = BuildTableName(zone.Name, tableGroup.Key);
-            var locator   = locatorByKey.GetValueOrDefault(tableGroup.Key);
-            tables.Add(new DockTableDto(tableName, locator, sideA, sideB));
-        }
 
         return new DockZoneMapDto(zone.Id, zone.Name, zone.Description, zone.Orientation, tables);
     }
@@ -200,52 +187,12 @@ internal sealed class GetDockMapHandler(IDockMapRepository repository)
         return new DockSeatDto(dock.Id, dock.Code, DockStatus.PartiallyBooked, bookedSlot, morningName, afternoonName);
     }
 
-    /// <summary>
-    /// Extrae la clave de mesa del código del puesto.
-    /// <c>N-A01</c> → <c>N</c>, <c>D-1A01</c> → <c>D-1</c>, <c>D-2B03</c> → <c>D-2</c>.
-    /// </summary>
-    internal static string ParseTableKey(string code)
-    {
-        // Códigos: N-A01, N-B01, D-1A01, D-1B01, D-2A01, D-2B01
-        var dashIndex = code.IndexOf('-');
-        if (dashIndex < 0) return code;
-
-        var afterDash = code[(dashIndex + 1)..];
-
-        // Si empieza con dígito (D-1A01, D-2B03) → prefijo + dígito
-        if (afterDash.Length > 0 && char.IsDigit(afterDash[0]))
-            return $"{code[..dashIndex]}-{afterDash[0]}";
-
-        // Si empieza con letra (N-A01, N-B01) → solo prefijo
-        return code[..dashIndex];
-    }
-
-    /// <summary>
-    /// Extrae el lado (A/B) del código del puesto.
-    /// <c>N-A01</c> → <c>A</c>, <c>D-1B03</c> → <c>B</c>.
-    /// </summary>
-    internal static string ParseSide(string code)
-    {
-        var dashIndex = code.IndexOf('-');
-        if (dashIndex < 0) return "A";
-
-        var afterDash = code[(dashIndex + 1)..];
-
-        // D-1A01 → afterDash = "1A01" → side en posición 1
-        if (afterDash.Length > 1 && char.IsDigit(afterDash[0]))
-            return afterDash[1].ToString();
-
-        // N-A01 → afterDash = "A01" → side en posición 0
-        return afterDash[0].ToString();
-    }
-
     private static string BuildTableName(string zoneName, string tableKey)
     {
-        // N → "Nostromo" (una sola mesa)
+        // "N" → nombre de la zona (mesa única), "D-1" → "Mesa 1", "D-2" → "Mesa 2"
         if (!tableKey.Contains('-'))
             return zoneName;
 
-        // D-1 → "Mesa 1", D-2 → "Mesa 2"
         var tableNumber = tableKey[(tableKey.IndexOf('-') + 1)..];
         return $"Mesa {tableNumber}";
     }

@@ -29,10 +29,9 @@ public sealed class DockZone(Guid id) : EntityBase
     /// </summary>
     public ZoneOrientation Orientation { get; init; } = ZoneOrientation.Horizontal;
 
-    /// <summary>Puestos de trabajo que pertenecen a esta zona.</summary>
-    public ICollection<Dock> Docks { get; } = new List<Dock>();
+    /// <summary>Orden de visualización de la zona en el mapa de puestos. Menor valor = aparece antes.</summary>
+    public int Order { get; init; }
 
-    /// <summary>Mesas físicas configuradas en esta zona, con sus localizadores opcionales.</summary>
+    /// <summary>Mesas físicas configuradas en esta zona. Los puestos de trabajo se acceden a través de cada mesa.</summary>
     public ICollection<DockTable> Tables { get; } = new List<DockTable>();
-
 }

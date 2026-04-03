@@ -53,7 +53,7 @@ public class GetDockMapHandlerTests
     }
 
     [Fact]
-    public async Task Handle_ReturnsTwoZonesOrderedDescendingByName()
+    public async Task Handle_ReturnsTwoZonesOrderedByOrder()
     {
         var result = await _handler.Handle(Query(), CancellationToken.None);
 
@@ -335,30 +335,6 @@ public class GetDockMapHandlerTests
     }
 
     // ──────────────────────────────────────────────────────────
-    // ParseTableKey tests
-    // ──────────────────────────────────────────────────────────
-
-    [Theory]
-    [InlineData("N-A01", "N")]
-    [InlineData("N-B06", "N")]
-    [InlineData("D-1A01", "D-1")]
-    [InlineData("D-1B03", "D-1")]
-    [InlineData("D-2A01", "D-2")]
-    [InlineData("D-2B03", "D-2")]
-    public void ParseTableKey_ReturnsExpectedKey(string code, string expected) =>
-        Assert.Equal(expected, GetDockMapHandler.ParseTableKey(code));
-
-    [Theory]
-    [InlineData("N-A01", "A")]
-    [InlineData("N-B06", "B")]
-    [InlineData("D-1A01", "A")]
-    [InlineData("D-1B03", "B")]
-    [InlineData("D-2A01", "A")]
-    [InlineData("D-2B03", "B")]
-    public void ParseSide_ReturnsExpectedSide(string code, string expected) =>
-        Assert.Equal(expected, GetDockMapHandler.ParseSide(code));
-
-    // ──────────────────────────────────────────────────────────
     // Helpers
     // ──────────────────────────────────────────────────────────
 
@@ -391,23 +367,33 @@ public class GetDockMapHandlerTests
 
     private static List<DockZone> BuildZones()
     {
-        var nostromo = new DockZone(NostromoZoneId) { Name = "Nostromo", Description = "6+6" };
-        var derelict = new DockZone(DerelictZoneId) { Name = "Derelict", Description = "3+3 · 3+3" };
+        var nostromo = new DockZone(NostromoZoneId) { Name = "Nostromo", Description = "6+6", Order = 0 };
+        var derelict = new DockZone(DerelictZoneId) { Name = "Derelict", Description = "3+3 · 3+3", Order = 1 };
 
-        AddDock(nostromo, DockNA01, "N-A01");
-        AddDock(nostromo, DockNA02, "N-A02");
-        AddDock(nostromo, DockNB01, "N-B01");
-        AddDock(nostromo, DockNB02, "N-B02");
+        var nostromoTable = new DockTable(Guid.NewGuid()) { TableKey = "N" };
+        nostromoTable.AssignToZone(nostromo);
+        AddDockToTable(nostromoTable, DockNA01,  "N-A01",  DockSide.A);
+        AddDockToTable(nostromoTable, DockNA02,  "N-A02",  DockSide.A);
+        AddDockToTable(nostromoTable, DockNB01,  "N-B01",  DockSide.B);
+        AddDockToTable(nostromoTable, DockNB02,  "N-B02",  DockSide.B);
+        ((List<DockTable>)nostromo.Tables).Add(nostromoTable);
 
-        AddDock(derelict, DockD1A01, "D-1A01");
-        AddDock(derelict, DockD1B01, "D-1B01");
-        AddDock(derelict, DockD2A01, "D-2A01");
-        AddDock(derelict, DockD2B01, "D-2B01");
+        var derelictTable1 = new DockTable(Guid.NewGuid()) { TableKey = "D-1" };
+        derelictTable1.AssignToZone(derelict);
+        AddDockToTable(derelictTable1, DockD1A01, "D-1A01", DockSide.A);
+        AddDockToTable(derelictTable1, DockD1B01, "D-1B01", DockSide.B);
+        ((List<DockTable>)derelict.Tables).Add(derelictTable1);
+
+        var derelictTable2 = new DockTable(Guid.NewGuid()) { TableKey = "D-2" };
+        derelictTable2.AssignToZone(derelict);
+        AddDockToTable(derelictTable2, DockD2A01, "D-2A01", DockSide.A);
+        AddDockToTable(derelictTable2, DockD2B01, "D-2B01", DockSide.B);
+        ((List<DockTable>)derelict.Tables).Add(derelictTable2);
 
         return [nostromo, derelict];
     }
 
-    private static void AddDock(DockZone zone, Guid id, string code)
+    private static void AddDockToTable(DockTable table, Guid id, string code, DockSide side)
     {
         var dock = new Dock(id)
         {
@@ -415,15 +401,8 @@ public class GetDockMapHandlerTests
             Location = $"Test - {code}",
             Equipment = "Monitor doble"
         };
-        dock.AssignToZone(zone);
-        zone.Docks.Add(dock);
-    }
-
-    private static void AddTable(DockZone zone, Guid id, string tableKey, string? locator = null)
-    {
-        var table = new DockTable(id) { TableKey = tableKey, Locator = locator };
-        table.AssignToZone(zone);
-        zone.Tables.Add(table);
+        dock.AssignToTable(table, side);
+        ((List<Dock>)table.Docks).Add(dock);
     }
 
     // ──────────────────────────────────────────────────────────
@@ -447,7 +426,10 @@ public class GetDockMapHandlerTests
             Name = "VerticalZone",
             Orientation = ZoneOrientation.Vertical
         };
-        AddDock(verticalZone, Guid.NewGuid(), "N-A01");
+        var table = new DockTable(Guid.NewGuid()) { TableKey = "N" };
+        table.AssignToZone(verticalZone);
+        AddDockToTable(table, Guid.NewGuid(), "N-A01", DockSide.A);
+        ((List<DockTable>)verticalZone.Tables).Add(table);
 
         _repository.GetAllZonesWithDocksAsync(Arg.Any<CancellationToken>())
             .Returns([verticalZone]);
@@ -465,9 +447,11 @@ public class GetDockMapHandlerTests
     public async Task Handle_TableWithLocator_DtoContainsLocator()
     {
         var zone = new DockZone(Guid.NewGuid()) { Name = "Nostromo" };
-        AddDock(zone, Guid.NewGuid(), "N-A01");
-        AddDock(zone, Guid.NewGuid(), "N-B01");
-        AddTable(zone, Guid.NewGuid(), tableKey: "N", locator: "Mesa Ventana");
+        var table = new DockTable(Guid.NewGuid()) { TableKey = "N", Locator = "Mesa Ventana" };
+        table.AssignToZone(zone);
+        AddDockToTable(table, Guid.NewGuid(), "N-A01", DockSide.A);
+        AddDockToTable(table, Guid.NewGuid(), "N-B01", DockSide.B);
+        ((List<DockTable>)zone.Tables).Add(table);
 
         _repository.GetAllZonesWithDocksAsync(Arg.Any<CancellationToken>())
             .Returns([zone]);

@@ -127,53 +127,58 @@ public static class DbSeeder
         {
             Name = "Nostromo",
             Description = "Mesa corrida con 6 puestos a cada lado (6+6)",
-            Orientation = ZoneOrientation.Horizontal
+            Orientation = ZoneOrientation.Horizontal,
+            Order = 0
         };
 
         var derelict = new DockZone(DerelictZoneId)
         {
             Name = "Derelict",
             Description = "Tres mesas corridas con 3 puestos a cada lado en cada mesa (3+3, 3+3 y 3+3)",
-            Orientation = ZoneOrientation.Vertical
+            Orientation = ZoneOrientation.Vertical,
+            Order = 1
         };
 
         context.DockZones.AddRange(nostromo, derelict);
 
         // ── Mesas (DockTable) ─────────────────────────────────────
-        AddTable(context, NostromoTableId,  tableKey: "N",   locator: "Mesa única 12 puestos", nostromo);
-        AddTable(context, DerelictTable1Id, tableKey: "D-1", locator: "Mesa AiQube",           derelict);
-        AddTable(context, DerelictTable2Id, tableKey: "D-2", locator: "Mesa central",          derelict);
-        AddTable(context, DerelictTable3Id, tableKey: "D-3", locator: "Mesa ventanal",         derelict);
+        var nostromoTable  = AddTable(context, NostromoTableId,  tableKey: "N",   locator: "Mesa única 12 puestos", order: 0, nostromo);
+        var derelictTable1 = AddTable(context, DerelictTable1Id, tableKey: "D-1", locator: "Mesa AiQube",           order: 0, derelict);
+        var derelictTable2 = AddTable(context, DerelictTable2Id, tableKey: "D-2", locator: "Mesa central",          order: 1, derelict);
+        var derelictTable3 = AddTable(context, DerelictTable3Id, tableKey: "D-3", locator: "Mesa ventanal",         order: 2, derelict);
 
         // ── Nostromo ──────────────────────────────────────────────
-        AddDocks(context, NostromoSideA, "N-A", "Nostromo · Lado A · Posición {0}", nostromo);
-        AddDocks(context, NostromoSideB, "N-B", "Nostromo · Lado B · Posición {0}", nostromo);
+        AddDocks(context, NostromoSideA, "N-A", "Nostromo · Lado A · Posición {0}", nostromoTable,  DockSide.A);
+        AddDocks(context, NostromoSideB, "N-B", "Nostromo · Lado B · Posición {0}", nostromoTable,  DockSide.B);
 
         // ── Derelict ──────────────────────────────────────────────
-        AddDocks(context, DerelictTable1SideA, "D-1A", "Derelict · Mesa 1 · Lado A · Posición {0}", derelict);
-        AddDocks(context, DerelictTable1SideB, "D-1B", "Derelict · Mesa 1 · Lado B · Posición {0}", derelict);
-        AddDocks(context, DerelictTable2SideA, "D-2A", "Derelict · Mesa 2 · Lado A · Posición {0}", derelict);
-        AddDocks(context, DerelictTable2SideB, "D-2B", "Derelict · Mesa 2 · Lado B · Posición {0}", derelict);
-        AddDocks(context, DerelictTable3SideA, "D-3A", "Derelict · Mesa 3 · Lado A · Posición {0}", derelict);
-        AddDocks(context, DerelictTable3SideB, "D-3B", "Derelict · Mesa 3 · Lado B · Posición {0}", derelict);
+        AddDocks(context, DerelictTable1SideA, "D-1A", "Derelict · Mesa 1 · Lado A · Posición {0}", derelictTable1, DockSide.A);
+        AddDocks(context, DerelictTable1SideB, "D-1B", "Derelict · Mesa 1 · Lado B · Posición {0}", derelictTable1, DockSide.B);
+        AddDocks(context, DerelictTable2SideA, "D-2A", "Derelict · Mesa 2 · Lado A · Posición {0}", derelictTable2, DockSide.A);
+        AddDocks(context, DerelictTable2SideB, "D-2B", "Derelict · Mesa 2 · Lado B · Posición {0}", derelictTable2, DockSide.B);
+        AddDocks(context, DerelictTable3SideA, "D-3A", "Derelict · Mesa 3 · Lado A · Posición {0}", derelictTable3, DockSide.A);
+        AddDocks(context, DerelictTable3SideB, "D-3B", "Derelict · Mesa 3 · Lado B · Posición {0}", derelictTable3, DockSide.B);
 
         await context.SaveChangesAsync();
     }
 
-    private static void AddTable(
+    private static DockTable AddTable(
         EchoBaseDbContext context,
         Guid id,
         string tableKey,
         string? locator,
+        int order,
         DockZone zone)
     {
         var table = new DockTable(id)
         {
             TableKey = tableKey,
-            Locator  = locator
+            Locator  = locator,
+            Order    = order
         };
         table.AssignToZone(zone);
         context.DockTables.Add(table);
+        return table;
     }
 
     private static void AddDocks(
@@ -181,7 +186,8 @@ public static class DbSeeder
         Guid[] ids,
         string codePrefix,
         string locationTemplate,
-        DockZone zone)
+        DockTable table,
+        DockSide side)
     {
         for (int i = 0; i < ids.Length; i++)
         {
@@ -193,7 +199,7 @@ public static class DbSeeder
                 Equipment = DefaultEquipment
             };
 
-            dock.AssignToZone(zone);
+            dock.AssignToTable(table, side);
             context.Docks.Add(dock);
         }
     }

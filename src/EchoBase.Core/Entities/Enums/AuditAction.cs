@@ -60,4 +60,10 @@ public enum AuditAction
 
     /// <summary>Un SystemAdmin eliminó una mesa lógica de una zona.</summary>
     DockTableDeleted = 18,
+
+    /// <summary>Un SystemAdmin reordenó las zonas de trabajo.</summary>
+    DockZonesReordered = 19,
+
+    /// <summary>Un SystemAdmin reordenó las mesas de una zona.</summary>
+    DockTablesReordered = 20,
 }

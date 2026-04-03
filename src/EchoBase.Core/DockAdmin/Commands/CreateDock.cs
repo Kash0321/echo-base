@@ -8,17 +8,19 @@ using MediatR;
 namespace EchoBase.Core.DockAdmin.Commands;
 
 /// <summary>
-/// Comando para crear un nuevo puesto de trabajo y asignarlo a una zona.
+/// Comando para crear un nuevo puesto de trabajo y asignarlo a una mesa.
 /// Solo los usuarios con rol <c>SystemAdmin</c> pueden ejecutar esta acción.
 /// </summary>
 /// <param name="AdminUserId">Identificador del SystemAdmin que realiza la creación.</param>
-/// <param name="ZoneId">Identificador de la zona a la que se asignará el puesto.</param>
+/// <param name="TableId">Identificador de la mesa física a la que se asignará el puesto.</param>
+/// <param name="Side">Lado de la mesa al que pertenece el puesto (A o B).</param>
 /// <param name="Code">Código alfanumérico único del puesto (ej.: <c>N-A07</c>).</param>
 /// <param name="Location">Descripción de la ubicación física del puesto.</param>
 /// <param name="Equipment">Equipamiento disponible en el puesto (texto libre).</param>
 public sealed record CreateDockCommand(
     Guid AdminUserId,
-    Guid ZoneId,
+    Guid TableId,
+    DockSide Side,
     string Code,
     string Location,
     string Equipment) : IRequest<Result<Guid>>, IAuditableRequest
@@ -26,7 +28,7 @@ public sealed record CreateDockCommand(
     Guid? IAuditableRequest.PerformedByUserId => AdminUserId;
     AuditAction IAuditableRequest.AuditAction => AuditAction.DockCreated;
     string IAuditableRequest.BuildAuditDetails() =>
-        $"Puesto creado: '{Code}' en zona {ZoneId}";
+        $"Puesto creado: '{Code}' en mesa {TableId} (lado {Side})";
 }
 
 /// <summary>
@@ -54,10 +56,10 @@ public sealed class CreateDockHandler(
         if (await dockAdminRepository.DockCodeExistsAsync(request.Code, excludeId: null, cancellationToken))
             return Result<Guid>.Failure(DockAdminErrors.DockCodeAlreadyExists);
 
-        // 4. La zona debe existir
-        var zone = await dockAdminRepository.GetZoneByIdAsync(request.ZoneId, cancellationToken);
-        if (zone is null)
-            return Result<Guid>.Failure(DockAdminErrors.ZoneNotFound);
+        // 4. La mesa debe existir
+        var table = await dockAdminRepository.GetTableByIdAsync(request.TableId, cancellationToken);
+        if (table is null)
+            return Result<Guid>.Failure(DockAdminErrors.TableNotFound);
 
         // 5. Crear el puesto
         var dockId = Guid.CreateVersion7();
@@ -67,7 +69,7 @@ public sealed class CreateDockHandler(
             Location  = request.Location,
             Equipment = request.Equipment
         };
-        dock.AssignToZone(zone);
+        dock.AssignToTable(table, request.Side);
 
         await dockAdminRepository.AddDockAsync(dock, cancellationToken);
         await dockAdminRepository.SaveChangesAsync(cancellationToken);

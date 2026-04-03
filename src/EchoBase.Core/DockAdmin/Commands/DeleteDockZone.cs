@@ -45,8 +45,8 @@ public sealed class DeleteDockZoneHandler(
         if (zone is null)
             return Result.Failure(DockAdminErrors.ZoneNotFound);
 
-        // 3. La zona no puede tener puestos asignados
-        if (zone.Docks.Count > 0)
+        // 3. La zona no puede tener puestos asignados (en ninguna de sus mesas)
+        if (zone.Tables.Any(t => t.Docks.Count > 0))
             return Result.Failure(DockAdminErrors.ZoneHasDocks);
 
         request.ResolvedZoneName = zone.Name;
