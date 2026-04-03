@@ -39,6 +39,9 @@ public sealed class EchoBaseDbContext(DbContextOptions<EchoBaseDbContext> option
     /// <summary>Configuraciones de sistema (pares clave-valor persistidos).</summary>
     public DbSet<SystemSetting> SystemSettings => Set<SystemSetting>();
 
+    /// <summary>Reportes de incidencias en puestos de trabajo.</summary>
+    public DbSet<IncidenceReport> IncidenceReports => Set<IncidenceReport>();
+
     /// <inheritdoc />
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

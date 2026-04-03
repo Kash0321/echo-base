@@ -1,0 +1,368 @@
+@page "/incidencias"
+@attribute [Authorize]
+@rendermode InteractiveServer
+
+@using EchoBase.Core.Entities.Enums
+@using EchoBase.Core.Incidences
+@using EchoBase.Core.Incidences.Commands
+@using EchoBase.Core.Incidences.Queries
+@using EchoBase.Core.Interfaces
+@using EchoBase.Core.Reservations.Queries
+@using EchoBase.Web.Services
+@using MediatR
+
+@inject IMediator Mediator
+@inject BlazorCurrentUserService CurrentUser
+
+<PageTitle>Incidencias — Echo Base</PageTitle>
+
+<!-- ═══════════════════════════════════════════════════
+     CABECERA DE PÁGINA
+═══════════════════════════════════════════════════ -->
+<div class="eb-page-header text-white py-2 mb-3">
+    <div class="container-fluid px-3">
+        <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+            <div>
+                <p class="eb-page-eyebrow text-uppercase fw-semibold mb-0">Echo Base</p>
+                <h1 class="h4 fw-bold mb-0">
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i>Incidencias en puestos de trabajo
+                </h1>
+                <p class="small text-white-50 mb-0 mt-1">Reporta problemas de equipamiento, limpieza u otros en los puestos</p>
+            </div>
+            <div class="d-flex align-items-center gap-2 pb-1">
+                <span class="eb-legend-dot bg-secondary"></span><span class="small text-white-50">Abierta</span>
+                <span class="eb-legend-dot bg-warning"></span><span class="small text-white-50">En revisión</span>
+                <span class="eb-legend-dot bg-success"></span><span class="small text-white-50">Resuelta</span>
+                <span class="eb-legend-dot bg-danger"></span><span class="small text-white-50">Rechazada</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container-fluid px-3">
+
+<!-- Texto de ayuda -->
+<p class="text-info small mb-3">
+    <i class="bi bi-info-circle me-1"></i>
+    <strong>¿Cómo reportar?</strong>
+    Haz clic sobre cualquier puesto del mapa para abrir el formulario de reporte.
+    Describe la incidencia con el mayor detalle posible para que los responsables puedan atenderla.
+</p>
+
+<!-- ═══════════════════════════════════════════════════
+     MAPA DE PUESTOS (modo incidencias: todos clicables)
+═══════════════════════════════════════════════════ -->
+@if (_loadingMap)
+{
+    <div class="d-flex justify-content-center py-5">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Cargando...</span>
+        </div>
+    </div>
+}
+else if (_dockMap is not null)
+{
+    <div class="row g-3 mb-4">
+        @foreach (var zone in _dockMap.Zones)
+        {
+            <div class="col-12">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-header eb-zone-header d-flex align-items-center gap-2 py-2">
+                        <i class="bi bi-grid-3x3 text-primary fs-5"></i>
+                        <div>
+                            <span class="fw-semibold">@zone.Name</span>
+                            @if (!string.IsNullOrEmpty(zone.Description))
+                            {
+                                <span class="text-muted small ms-2">— @zone.Description</span>
+                            }
+                        </div>
+                    </div>
+                    <div class="card-body py-2 px-3">
+                        <div class="d-flex @GetZoneFlexClass(zone) gap-3">
+                            @foreach (var table in zone.Tables)
+                            {
+                                <div class="eb-table-block">
+                                    <p class="text-muted small fw-semibold mb-1">@(table.Locator ?? table.Name)</p>
+                                    <div class="eb-dock-table">
+                                        <div class="d-flex gap-2 mb-1">
+                                            @foreach (var seat in table.SideA)
+                                            {
+                                                <button class="btn btn-outline-primary eb-dock-seat"
+                                                        title="Reportar incidencia en @seat.Code"
+                                                        @onclick="() => OpenReportModal(seat.Id, seat.Code)">
+                                                    @seat.Code
+                                                </button>
+                                            }
+                                        </div>
+                                        <hr class="eb-dock-divider my-1" />
+                                        <div class="d-flex gap-2">
+                                            @foreach (var seat in table.SideB)
+                                            {
+                                                <button class="btn btn-outline-primary eb-dock-seat"
+                                                        title="Reportar incidencia en @seat.Code"
+                                                        @onclick="() => OpenReportModal(seat.Id, seat.Code)">
+                                                    @seat.Code
+                                                </button>
+                                            }
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+}
+
+<!-- ═══════════════════════════════════════════════════
+     MIS INCIDENCIAS
+═══════════════════════════════════════════════════ -->
+<h2 class="h5 fw-semibold mb-3 mt-2">
+    <i class="bi bi-clock-history me-2 text-primary"></i>Mis incidencias
+</h2>
+
+@if (_loadingIncidences)
+{
+    <div class="d-flex justify-content-center py-3">
+        <div class="spinner-border spinner-border-sm text-primary" role="status">
+            <span class="visually-hidden">Cargando...</span>
+        </div>
+    </div>
+}
+else if (_myIncidences is null || _myIncidences.Count == 0)
+{
+    <div class="alert alert-light border d-flex align-items-center gap-2 py-2">
+        <i class="bi bi-check-circle text-success flex-shrink-0"></i>
+        <span>No tienes ningún reporte de incidencia registrado aún.</span>
+    </div>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table table-hover table-sm align-middle mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Puesto</th>
+                    <th>Descripción</th>
+                    <th>Estado</th>
+                    <th>Fecha</th>
+                    <th>Comentario del responsable</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var inc in _myIncidences)
+                {
+                    <tr>
+                        <td><span class="badge bg-dark">@inc.DockCode</span></td>
+                        <td>
+                            <span class="text-truncate d-inline-block" style="max-width:22rem;" title="@inc.Description">
+                                @inc.Description
+                            </span>
+                            @if (!string.IsNullOrEmpty(inc.DockLocation))
+                            {
+                                <br /><small class="text-muted">@inc.DockLocation</small>
+                            }
+                        </td>
+                        <td>@StatusBadge(inc.Status)</td>
+                        <td><span class="text-nowrap small">@inc.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</span></td>
+                        <td>
+                            @if (!string.IsNullOrEmpty(inc.ManagerComment))
+                            {
+                                <small class="text-muted fst-italic">@inc.ManagerComment</small>
+                            }
+                            else
+                            {
+                                <span class="text-muted small">—</span>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+</div>
+
+<!-- ═══════════════════════════════════════════════════
+     MODAL DE REPORTE DE INCIDENCIA
+═══════════════════════════════════════════════════ -->
+@if (_reportDockId is not null)
+{
+    <div class="modal d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);" @onclick="CloseModal">
+        <div class="modal-dialog modal-dialog-centered" @onclick:stopPropagation>
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header eb-modal-header">
+                    <div>
+                        <p class="eb-page-eyebrow text-uppercase fw-semibold text-white-50 mb-0" style="font-size:.65rem;letter-spacing:.15em;">Reportar incidencia</p>
+                        <h5 class="modal-title text-white fw-bold mb-0">
+                            <i class="bi bi-exclamation-triangle-fill me-2"></i>Puesto @_reportDockCode
+                        </h5>
+                    </div>
+                    <button type="button" class="btn-close btn-close-white" @onclick="CloseModal"></button>
+                </div>
+                <div class="modal-body">
+                    <label class="form-label fw-semibold" for="incidenceDescription">
+                        Descripción de la incidencia <span class="text-danger">*</span>
+                    </label>
+                    <textarea id="incidenceDescription"
+                              class="form-control form-control-sm"
+                              rows="4"
+                              placeholder="Describe el problema (equipamiento estropeado, falta de componentes, limpieza, mal uso…)"
+                              maxlength="2000"
+                              @bind="_reportDescription"
+                              @bind:event="oninput"></textarea>
+                    <div class="d-flex justify-content-end mt-1">
+                        <small class="text-muted">@(_reportDescription?.Length ?? 0)/2000</small>
+                    </div>
+
+                    @if (_reportError is not null)
+                    {
+                        <div class="alert alert-danger d-flex align-items-center gap-2 py-2 mt-3">
+                            <i class="bi bi-x-circle-fill flex-shrink-0"></i>
+                            <span>@_reportError</span>
+                        </div>
+                    }
+                    @if (_reportSuccess)
+                    {
+                        <div class="alert alert-success d-flex align-items-center gap-2 py-2 mt-3">
+                            <i class="bi bi-check-circle-fill flex-shrink-0"></i>
+                            <span>Incidencia registrada correctamente. Los responsables han sido notificados.</span>
+                        </div>
+                    }
+                </div>
+                <div class="modal-footer border-0 pt-0">
+                    <button type="button" class="btn btn-outline-secondary btn-sm" @onclick="CloseModal">
+                        <i class="bi bi-x me-1"></i>Cerrar
+                    </button>
+                    @if (!_reportSuccess)
+                    {
+                        <button type="button" class="btn btn-warning btn-sm"
+                                disabled="@(string.IsNullOrWhiteSpace(_reportDescription) || _submitting)"
+                                @onclick="SubmitReport">
+                            @if (_submitting)
+                            {
+                                <span class="spinner-border spinner-border-sm me-1"></span>
+                            }
+                            else
+                            {
+                                <i class="bi bi-send me-1"></i>
+                            }
+                            Enviar reporte
+                        </button>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    // Mapa
+    private DockMapDto? _dockMap;
+    private bool _loadingMap = true;
+
+    // Mis incidencias
+    private List<IncidenceReportDto>? _myIncidences;
+    private bool _loadingIncidences = true;
+
+    // Modal de reporte
+    private Guid? _reportDockId;
+    private string? _reportDockCode;
+    private string? _reportDescription;
+    private string? _reportError;
+    private bool _reportSuccess;
+    private bool _submitting;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CurrentUser.InitializeAsync();
+        await Task.WhenAll(LoadMapAsync(), LoadMyIncidencesAsync());
+    }
+
+    private async Task LoadMapAsync()
+    {
+        _loadingMap = true;
+        _dockMap = await Mediator.Send(new GetDockMapQuery(DateOnly.FromDateTime(DateTime.UtcNow)));
+        _loadingMap = false;
+    }
+
+    private async Task LoadMyIncidencesAsync()
+    {
+        _loadingIncidences = true;
+        var result = await Mediator.Send(new GetUserIncidencesQuery(CurrentUser.UserId));
+        _myIncidences = result.ToList();
+        _loadingIncidences = false;
+    }
+
+    private void OpenReportModal(Guid dockId, string dockCode)
+    {
+        _reportDockId = dockId;
+        _reportDockCode = dockCode;
+        _reportDescription = null;
+        _reportError = null;
+        _reportSuccess = false;
+    }
+
+    private void CloseModal()
+    {
+        if (_reportSuccess)
+        {
+            // Recargar la lista de incidencias antes de cerrar
+            _ = LoadMyIncidencesAsync();
+        }
+        _reportDockId = null;
+        _reportDockCode = null;
+        _reportDescription = null;
+        _reportError = null;
+        _reportSuccess = false;
+    }
+
+    private async Task SubmitReport()
+    {
+        if (_reportDockId is null || string.IsNullOrWhiteSpace(_reportDescription)) return;
+
+        _submitting = true;
+        _reportError = null;
+
+        var command = new ReportIncidenceCommand(
+            CurrentUser.UserId,
+            _reportDockId.Value,
+            _reportDescription.Trim());
+
+        var result = await Mediator.Send(command);
+
+        if (result.IsSuccess)
+        {
+            _reportSuccess = true;
+            await LoadMyIncidencesAsync();
+        }
+        else
+        {
+            _reportError = MapError(result.Error!);
+        }
+
+        _submitting = false;
+    }
+
+    private static string GetZoneFlexClass(DockZoneMapDto zone) =>
+        zone.Orientation == ZoneOrientation.Vertical ? "flex-column align-items-start" : "flex-row flex-wrap";
+
+    private static string MapError(string error) => error switch
+    {
+        IncidenceErrors.DockNotFound        => "No se encontró el puesto de trabajo seleccionado.",
+        IncidenceErrors.DescriptionRequired => "La descripción es obligatoria.",
+        _                                   => "Se produjo un error al enviar el reporte. Por favor, inténtalo de nuevo."
+    };
+
+    private static RenderFragment StatusBadge(IncidenceStatus status) => status switch
+    {
+        IncidenceStatus.Open        => @<span class="badge bg-secondary">Abierta</span>,
+        IncidenceStatus.UnderReview => @<span class="badge bg-warning text-dark">En revisión</span>,
+        IncidenceStatus.Resolved    => @<span class="badge bg-success">Resuelta</span>,
+        IncidenceStatus.Rejected    => @<span class="badge bg-danger">Rechazada</span>,
+        _                           => @<span class="badge bg-light text-dark">@status</span>
+    };
+}

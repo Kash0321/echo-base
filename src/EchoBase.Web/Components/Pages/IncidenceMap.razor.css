@@ -10,7 +10,21 @@
     opacity: .6;
 }
 
-/* ── Mesa de puestos (scoped para AdminDashboard) ──────── */
+/* ── Leyenda ───────────────────────────────────────────── */
+.eb-legend-dot {
+    display: inline-block;
+    width: .65rem;
+    height: .65rem;
+    border-radius: 50%;
+}
+
+/* ── Zona / card header ────────────────────────────────── */
+.eb-zone-header {
+    background: rgba(23, 35, 60, .04);
+    border-bottom: 1px solid rgba(0,0,0,.07);
+}
+
+/* ── Mesa de puestos ───────────────────────────────────── */
 .eb-table-block {
     display: inline-flex;
     flex-direction: column;
@@ -32,18 +46,12 @@
     transition: transform .1s ease;
 }
 
-.eb-dock-seat:not(:disabled):hover {
+.eb-dock-seat:hover {
     transform: translateY(-2px);
 }
 
 .eb-dock-divider {
     border-top: 3px solid #adb5bd;
-}
-
-/* ── Zona / card header ────────────────────────────────── */
-.eb-zone-header {
-    background: rgba(23, 35, 60, .04);
-    border-bottom: 1px solid rgba(0,0,0,.07);
 }
 
 /* ── Modal ─────────────────────────────────────────────── */

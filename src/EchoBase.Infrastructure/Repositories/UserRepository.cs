@@ -88,4 +88,15 @@ internal sealed class UserRepository(EchoBaseDbContext context) : IUserRepositor
         return await context.Roles
             .FirstOrDefaultAsync(r => r.Name == roleName, ct);
     }
+
+    /// <inheritdoc />
+    public async Task<List<UserContactInfo>> GetManagerContactsAsync(CancellationToken ct = default)
+    {
+        return await context.Users
+            .AsNoTracking()
+            .Include(u => u.Roles)
+            .Where(u => u.Roles.Any(r => r.Name == "Manager"))
+            .Select(u => new UserContactInfo(u.Email, u.Name))
+            .ToListAsync(ct);
+    }
 }

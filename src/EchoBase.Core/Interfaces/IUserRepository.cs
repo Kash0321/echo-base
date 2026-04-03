@@ -69,4 +69,10 @@ public interface IUserRepository
     /// Obtiene un rol por su nombre.
     /// </summary>
     Task<Role?> GetRoleByNameAsync(string roleName, CancellationToken ct = default);
+
+    /// <summary>
+    /// Obtiene la información de contacto de todos los usuarios con rol <c>Manager</c>.
+    /// Utilizado para notificar a los Managers cuando se reporta una nueva incidencia.
+    /// </summary>
+    Task<List<UserContactInfo>> GetManagerContactsAsync(CancellationToken ct = default);
 }

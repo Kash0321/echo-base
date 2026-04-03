@@ -82,6 +82,7 @@ public abstract class IntegrationTestBase : IAsyncLifetime
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IAuditLogRepository, AuditLogRepository>();
         services.AddScoped<ISystemSettingRepository, SystemSettingRepository>();
+        services.AddScoped<IIncidenceRepository, IncidenceRepository>();
 
         // MediatR: handlers de Core (negocio) + Infrastructure (notificaciones)
         services.AddMediatR(cfg =>

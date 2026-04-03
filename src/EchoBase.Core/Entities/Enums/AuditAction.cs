@@ -66,4 +66,12 @@ public enum AuditAction
 
     /// <summary>Un SystemAdmin reordenó las mesas de una zona.</summary>
     DockTablesReordered = 20,
+
+    // ── Funcionalidad 7: Reporte de incidencias ────────────────────────────────
+
+    /// <summary>Un usuario reportó una incidencia en un puesto de trabajo.</summary>
+    IncidenceReported = 21,
+
+    /// <summary>Un Manager actualizó el estado de un reporte de incidencia.</summary>
+    IncidenceStatusUpdated = 22,
 }

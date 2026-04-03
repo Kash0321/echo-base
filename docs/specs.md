@@ -17,7 +17,7 @@
 - [🗓️ Funcionalidad 4: Gestión de reservas](#️-funcionalidad-4-gestión-de-reservas-implementada)
 - [🏗️ Funcionalidad 5: Configuración de Zonas, Mesas y Puestos de trabajo](#️-funcionalidad-5-configuración-del-zonas-mesas-y-puestos-de-trabajo-implementada)
 - [📊 Funcionalidad 6: Reportes y estadísticas](#-funcionalidad-6-reportes-y-estadísticas-pendiente-de-implementación)
-- [🔧 Funcionalidad 7: Reporte de incidencias](#-funcionalidad-7-reporte-de-incidencias-en-los-puestos-de-trabajo-pendiente-de-implementación)
+- [✅ Funcionalidad 7: Reporte de incidencias](#-funcionalidad-7-reporte-de-incidencias-en-los-puestos-de-trabajo-implementada)
 - [🚩 Funcionalidad 8: Feature Flags de sistema](#-funcionalidad-8-feature-flags-de-sistema-implementada)
   - [🔔 Flag: TeamsNotificationsEnabled](#-flag-featuresteamsnotificationsenabled)
 - [🛠️ Funcionalidad 9: Funciones de administración del sistema](#️-funcionalidad-9-funciones-de-administración-del-sistema-implementada)
@@ -495,11 +495,73 @@ Se añadió la pestaña **«Zonas y puestos»** (`Tab.DockConfig`) en `/system-a
 - El Manager puede exportar los datos de reservas en formato CSV para análisis adicionales.
 - El sistema genera alertas automáticas para el Manager si se detecta un patrón de reservas inusuales, como un aumento repentino en la demanda de ciertos puestos de trabajo o una alta tasa de cancelaciones.
 
-## 🔧 Funcionalidad 7: Reporte de incidencias en los puestos de trabajo [Pendiente de implementación]
-- El usuario puede reportar incidencias relacionadas con los puestos de trabajo (por ejemplo, problemas de equipamiento o limpieza) a través de la aplicación.
-- El usuario selecciona el puesto de trabajo afectado y describe la incidencia en un formulario.
-- El sistema registra la incidencia y notifica a los usuarios con rol de Manager para que puedan tomar medidas correctivas. El usuario recibe una confirmación de que su reporte ha sido registrado y se le informa sobre el proceso de seguimiento de la incidencia.
-- El usuario puede hacer seguimiento del estado de su reporte de incidencia desde su perfil de usuario, recibiendo notificaciones sobre el progreso y la resolución de la incidencia.
+## ✅ Funcionalidad 7: Reporte de incidencias en los puestos de trabajo [Implementada]
+- El usuario puede reportar incidencias relacionadas con los puestos de trabajo (por ejemplo, problemas de equipamiento, falta de componentes, mal uso de los mismos, componentes estropeados o limpieza) a través de la aplicación.
+- El usuario, en una nueva pantalla de incidencias (`/incidencias`), con un DockMap igual que el de reservas, selecciona el puesto de trabajo afectado (todos los puestos son clicables independientemente de su estado) y describe la incidencia en un formulario modal.
+- El sistema registra la incidencia y notifica por email a todos los usuarios con rol de Manager. El usuario recibe una confirmación visual inmediata de que su reporte ha sido registrado.
+- Los usuarios con rol de Manager pueden gestionar incidencias desde el panel de administración (`/admin`): ver todos los reportes paginados, actualizar el estado de cada incidencia (`Abierta`, `En revisión`, `Resuelta`, `Rechazada`) y añadir comentarios mediante modal.
+- El sistema genera registros de auditoría para cada reporte de incidencia y cada cambio de estado, incluyendo quién realizó la acción, el puesto afectado y los detalles relevantes.
+- El usuario puede hacer seguimiento del estado de su reporte desde la propia pantalla de incidencias, en un listado bajo el DockMap con badges de color por estado y el comentario del Manager.
+- Cuando el Manager actualiza el estado, el usuario que reportó la incidencia recibe una notificación por email con el nuevo estado y el comentario.
+
+### Detalles de implementación
+
+#### Entidad `IncidenceReport`
+- Ubicación: `EchoBase.Core/Entities/IncidenceReport.cs`
+- Constructor primario: `(Guid id, Guid dockId, Guid reportedByUserId, DateTimeOffset createdAt)`
+- Propiedades inmutables: `Id`, `DockId`, `ReportedByUserId`, `CreatedAt`
+- Propiedades mutables (solo via `UpdateStatus`): `Status`, `UpdatedAt`, `UpdatedByUserId`, `ManagerComment`
+- Propiedad de solo inicialización: `Description` (declarada `required`)
+- Navegación: `Dock?`, `ReportedByUser?`
+- Método de dominio: `UpdateStatus(IncidenceStatus newStatus, Guid managerId, DateTimeOffset updatedAt, string? comment)`
+
+#### Enum `IncidenceStatus`
+- Ubicación: `EchoBase.Core/Entities/Enums/IncidenceStatus.cs`
+- Valores: `Open = 1`, `UnderReview = 2`, `Resolved = 3`, `Rejected = 4`
+
+#### Enum `AuditAction` — valores añadidos
+
+| Valor | Descripción |
+|---|---|
+| `IncidenceReported = 21` | Incidencia reportada por un usuario |
+| `IncidenceStatusUpdated = 22` | Estado de incidencia actualizado por un Manager |
+
+#### Errores (`IncidenceErrors`)
+- Ubicación: `EchoBase.Core/Incidences/IncidenceErrors.cs`
+- Constantes: `DockNotFound`, `DescriptionRequired`, `IncidenceNotFound`, `NotManager`
+
+#### Interfaz `IIncidenceRepository` y DTOs
+- Ubicación: `EchoBase.Core/Interfaces/IIncidenceRepository.cs`
+- DTOs definidos en el mismo archivo:
+  - `IncidenceReportDto` — vista de usuario (sus propias incidencias)
+  - `IncidenceReportManagerDto` — vista de Manager (incluye `ReporterName`, `ReporterEmail`)
+- Métodos: `GetByIdAsync`, `AddAsync`, `DockExistsAsync`, `GetDockCodeAsync`, `GetUserIncidencesAsync`, `GetAllIncidencesAsync(page, pageSize)` → `(List<IncidenceReport>, int TotalCount)`, `SaveChangesAsync`
+
+#### Comandos y queries implementados
+
+| Artefacto | Ubicación | Descripción |
+|---|---|---|
+| `ReportIncidenceCommand` | `EchoBase.Core/Incidences/Commands/` | Cualquier usuario autenticado. Valida descripción y existencia del puesto. Crea entidad, publica notificación, registra auditoría. |
+| `UpdateIncidenceStatusCommand` | `EchoBase.Core/Incidences/Commands/` | Solo Manager. Valida rol y existencia de incidencia. Llama `UpdateStatus`, publica notificación, registra auditoría. |
+| `GetUserIncidencesQuery` | `EchoBase.Core/Incidences/Queries/` | Sin restricción. Devuelve `IReadOnlyList<IncidenceReportDto>` del usuario. |
+| `GetAllIncidencesQuery` | `EchoBase.Core/Incidences/Queries/` | Solo Manager. Devuelve `Result<PagedResult<IncidenceReportManagerDto>>` paginado. |
+
+#### Notificaciones
+- Ubicación: `EchoBase.Core/Incidences/Notifications/IncidenceNotifications.cs`
+- `IncidenceReportedNotification` → manejado por `IncidenceReportedEmailHandler` (email a todos los Managers)
+- `IncidenceStatusUpdatedNotification` → manejado por `IncidenceStatusUpdatedEmailHandler` (email al usuario reportador)
+- Handlers en: `EchoBase.Infrastructure/Notifications/EmailNotificationHandlers.cs`
+
+#### Infraestructura
+- `IncidenceReportConfiguration.cs`: tabla `IncidenceReports`, `Description` y `ManagerComment` con `MaxLength(2000)`, índices en `ReportedByUserId` y `DockId`, FKs con `OnDelete.Restrict`.
+- `IncidenceRepository.cs`: ordenación por `Id` descendente (UUID v7 time-ordered, compatible con SQLite).
+- `ServiceCollectionExtensions`: registrado `IIncidenceRepository → IncidenceRepository` como `Scoped`.
+- Migración EF Core: `AddIncidenceReport` (generada el 2026-04-03).
+
+#### UI
+- **`/incidencias`** (`IncidenceMap.razor`): mapa completo de puestos con todos los asientos clicables (sin filtros de estado), modal de reporte con textarea y contador de caracteres, lista de incidencias propias (debajo del mapa) con badges de estado y comentario del Manager.
+- **`/admin`** (`AdminDashboard.razor`): nueva sección «Incidencias en puestos» con tabla paginada enriquecida (puesto, reportado por, descripción, estado, fecha) y modal para actualizar estado y añadir comentario.  
+- `NavMenu.razor`: enlace «Incidencias» (icono `bi-exclamation-triangle`) disponible para todos los usuarios autenticados.
 
 ## 🚩 Funcionalidad 8: Feature Flags de sistema [Implementada]
 
@@ -915,3 +977,38 @@ Cada instancia de clase de tests obtiene su propia base de datos en memoria, por
 | IT-DM-01 | `GetDockMapQuery` → zonas retornadas con `Orientation` correcta desde BD (`Nostromo = Horizontal`, `Derelict = Vertical`) |
 | IT-DM-02 | `GetDockMapQuery` → tablas retornadas con `Locator` correcto procedente de los registros `DockTable` sembrados |
 | IT-DM-03 | `GetDockMapQuery` → `DockMapDto.Date` es la fecha de la query |
+
+#### ✅ Cobertura actual — Funcionalidad 7: Reporte de incidencias en los puestos de trabajo
+
+**Pruebas unitarias**
+
+**`IncidenceCommandTests`** (10 casos — `EchoBase.Tests.Unit/Incidences/`):
+
+| ID | Caso |
+|---|---|
+| UT-IR-01 | `ReportIncidence` → solicitud válida → `Result.Success(Guid)` no vacío; `AddAsync` y `SaveChangesAsync` llamados |
+| UT-IR-02 | `ReportIncidence` → descripción vacía `""` → `DescriptionRequired`; `AddAsync` no llamado |
+| UT-IR-03 | `ReportIncidence` → descripción solo espacios `"   "` → `DescriptionRequired`; `AddAsync` no llamado |
+| UT-IR-04 | `ReportIncidence` → puesto desconocido → `DockNotFound`; `AddAsync` no llamado |
+| UT-IR-05 | `ReportIncidence` → solicitud válida → publica `IncidenceReportedNotification` con `DockCode` y `UserId` correctos |
+| UT-IR-06 | `UpdateIncidenceStatus` → Manager + incidencia existente → `Result.Success`; `Status`, `UpdatedByUserId` y `ManagerComment` actualizados en la entidad |
+| UT-IR-07 | `UpdateIncidenceStatus` → usuario sin rol Manager → `NotManager`; `SaveChangesAsync` no llamado |
+| UT-IR-08 | `UpdateIncidenceStatus` → incidencia inexistente → `IncidenceNotFound`; `SaveChangesAsync` no llamado |
+| UT-IR-09 | `UpdateIncidenceStatus` → actualización válida → publica `IncidenceStatusUpdatedNotification` con estado y comentario correctos |
+| UT-IR-10 | `GetAllIncidences` → usuario sin rol Manager → `NotManager` |
+
+**Pruebas de integración**
+
+**`IncidenceIntegrationTests`** (9 casos — `EchoBase.Tests.Integration/Incidences/`):
+
+| ID | Caso |
+|---|---|
+| IT-IR-01 | `ReportIncidence` → incidencia persistida en BD con `UserId`, `DockId`, `Description` correctos; estado inicial `Open`; `UpdatedAt` nulo |
+| IT-IR-02 | `ReportIncidence` → descripción vacía → `DescriptionRequired`; ninguna entrada en BD |
+| IT-IR-03 | `ReportIncidence` → puesto inexistente → `DockNotFound`; ninguna entrada en BD |
+| IT-IR-04 | `UpdateIncidenceStatus` → Manager actualiza estado → `Status`, `UpdatedByUserId` y `ManagerComment` persistidos; `UpdatedAt` no nulo |
+| IT-IR-05 | `UpdateIncidenceStatus` → usuario regular (sin Manager) → `NotManager`; estado no cambia en BD |
+| IT-IR-06 | `UpdateIncidenceStatus` → incidencia inexistente → `IncidenceNotFound` |
+| IT-IR-07 | `GetUserIncidences` → devuelve exactamente las incidencias del usuario actual (2), sin las de otro usuario |
+| IT-IR-08 | `GetUserIncidences` → usuario sin incidencias → lista vacía |
+| IT-IR-09 | `GetAllIncidences` → Manager ve todas las incidencias (2) con `DockCode`, `ReporterName` y `ReporterEmail` no vacíos |

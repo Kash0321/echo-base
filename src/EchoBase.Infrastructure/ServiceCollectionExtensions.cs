@@ -75,6 +75,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IAuditLogRepository, AuditLogRepository>();
         services.AddScoped<ISystemSettingRepository, SystemSettingRepository>();
+        services.AddScoped<IIncidenceRepository, IncidenceRepository>();
         services.AddSingleton(TimeProvider.System);
 
         services.AddHostedService<ReservationReminderService>();

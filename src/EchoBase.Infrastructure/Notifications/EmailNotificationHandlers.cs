@@ -1,4 +1,5 @@
 using EchoBase.Core.Entities.Enums;
+using EchoBase.Core.Incidences.Notifications;
 using EchoBase.Core.Interfaces;
 using EchoBase.Core.Reservations.Notifications;
 using MediatR;
@@ -132,4 +133,87 @@ internal sealed class ReservationReminderEmailHandler(
         TimeSlot.Both => "Mañana y Tarde",
         _ => slot.ToString()
     };
+}
+
+// ── Funcionalidad 7: Notificaciones de incidencias ─────────────────────────
+
+/// <summary>
+/// Envía un correo electrónico a todos los Managers cuando se reporta una nueva incidencia.
+/// </summary>
+internal sealed class IncidenceReportedEmailHandler(
+    IEmailService emailService,
+    IUserRepository userRepository,
+    ILogger<IncidenceReportedEmailHandler> logger)
+    : INotificationHandler<IncidenceReportedNotification>
+{
+    public async Task Handle(IncidenceReportedNotification notification, CancellationToken cancellationToken)
+    {
+        var reporter = await userRepository.GetContactInfoAsync(notification.ReportedByUserId, cancellationToken);
+        var managers = await userRepository.GetManagerContactsAsync(cancellationToken);
+
+        if (managers.Count == 0)
+        {
+            logger.LogWarning("No se encontraron Managers para notificar la incidencia {IncidenceId}", notification.IncidenceId);
+            return;
+        }
+
+        var reporterName = reporter?.Name ?? "un usuario";
+        var subject = $"Nueva incidencia reportada — Puesto {notification.DockCode}";
+        var body = $"""
+            <h2>Nueva incidencia reportada</h2>
+            <p>Se ha reportado una nueva incidencia en el puesto <strong>{notification.DockCode}</strong>.</p>
+            <ul>
+                <li><strong>Reportada por:</strong> {reporterName}</li>
+                <li><strong>Descripcion:</strong> {notification.Description}</li>
+            </ul>
+            <p>Accede al cuadro de mando de administracion en EchoBase para revisar y gestionar esta incidencia.</p>
+            """;
+
+        foreach (var manager in managers)
+        {
+            await emailService.SendAsync(manager.Email, subject, body, cancellationToken);
+        }
+    }
+}
+
+/// <summary>
+/// Envía un correo electrónico al usuario cuando un Manager actualiza el estado de su incidencia.
+/// </summary>
+internal sealed class IncidenceStatusUpdatedEmailHandler(
+    IEmailService emailService,
+    IUserRepository userRepository,
+    ILogger<IncidenceStatusUpdatedEmailHandler> logger)
+    : INotificationHandler<IncidenceStatusUpdatedNotification>
+{
+    public async Task Handle(IncidenceStatusUpdatedNotification notification, CancellationToken cancellationToken)
+    {
+        var contact = await userRepository.GetContactInfoAsync(notification.ReportedByUserId, cancellationToken);
+        if (contact is null)
+        {
+            logger.LogWarning("No se encontro contacto para el usuario {UserId}", notification.ReportedByUserId);
+            return;
+        }
+
+        var statusLabel = notification.NewStatus switch
+        {
+            IncidenceStatus.Open        => "Abierta",
+            IncidenceStatus.UnderReview => "En revision",
+            IncidenceStatus.Resolved    => "Resuelta",
+            IncidenceStatus.Rejected    => "Rechazada",
+            _                           => notification.NewStatus.ToString()
+        };
+
+        var subject = $"Actualizacion de incidencia — Puesto {notification.DockCode}";
+        var body = $"""
+            <h2>Tu incidencia ha sido actualizada</h2>
+            <p>Hola {contact.Name},</p>
+            <p>El estado de tu incidencia en el puesto <strong>{notification.DockCode}</strong> ha sido actualizado:</p>
+            <ul>
+                <li><strong>Nuevo estado:</strong> {statusLabel}</li>
+            </ul>
+            <p>Puedes ver el estado de tu incidencia en la seccion <em>Incidencias</em> de EchoBase.</p>
+            """;
+
+        await emailService.SendAsync(contact.Email, subject, body, cancellationToken);
+    }
 }

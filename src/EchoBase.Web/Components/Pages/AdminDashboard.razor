@@ -5,7 +5,12 @@
 @using EchoBase.Core.BlockedDocks.Commands
 @using EchoBase.Core.BlockedDocks.Queries
 @using EchoBase.Core.Entities.Enums
+@using EchoBase.Core.Incidences
+@using EchoBase.Core.Incidences.Commands
+@using EchoBase.Core.Incidences.Queries
+@using EchoBase.Core.Interfaces
 @using EchoBase.Core.Reservations.Queries
+@using EchoBase.Core.SystemAdmin.Queries
 @using EchoBase.Web.Services
 @using MediatR
 
@@ -293,11 +298,216 @@ else
             </div>
         </div>
     </div>
+
+    <!-- ═══════════════════════ INCIDENCIAS ═══════════════════════ -->
+    <div class="row mt-3">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header eb-zone-header d-flex align-items-center gap-2 py-2">
+                    <i class="bi bi-exclamation-triangle text-warning fs-5"></i>
+                    <span class="fw-semibold">Incidencias en puestos</span>
+                    @if (_allIncidences is not null)
+                    {
+                        <span class="badge bg-secondary ms-auto">@_allIncidences.TotalCount</span>
+                    }
+                </div>
+                <div class="card-body p-0">
+                    @if (_loadingIncidences)
+                    {
+                        <div class="d-flex justify-content-center py-3">
+                            <div class="spinner-border spinner-border-sm text-primary" role="status">
+                                <span class="visually-hidden">Cargando...</span>
+                            </div>
+                        </div>
+                    }
+                    else if (_allIncidences is null || _allIncidences.TotalCount == 0)
+                    {
+                        <p class="text-muted small p-3 mb-0">
+                            <i class="bi bi-info-circle me-1"></i>No hay incidencias registradas actualmente.
+                        </p>
+                    }
+                    else
+                    {
+                        <div class="table-responsive">
+                            <table class="table table-sm table-hover align-middle mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th class="ps-3">Puesto</th>
+                                        <th>Reportado por</th>
+                                        <th>Descripción</th>
+                                        <th>Estado</th>
+                                        <th>Fecha</th>
+                                        <th class="pe-3 text-end">Acción</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var inc in _allIncidences.Items)
+                                    {
+                                        <tr>
+                                            <td class="ps-3">
+                                                <span class="badge bg-dark">@inc.DockCode</span>
+                                                @if (!string.IsNullOrEmpty(inc.DockLocation))
+                                                {
+                                                    <br /><small class="text-muted">@inc.DockLocation</small>
+                                                }
+                                            </td>
+                                            <td class="small">
+                                                @inc.ReporterName
+                                                <br /><span class="text-muted">@inc.ReporterEmail</span>
+                                            </td>
+                                            <td>
+                                                <span class="text-truncate d-inline-block" style="max-width:18rem;" title="@inc.Description">
+                                                    @inc.Description
+                                                </span>
+                                            </td>
+                                            <td>@IncidenceStatusBadge(inc.Status)</td>
+                                            <td><span class="text-nowrap small">@inc.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</span></td>
+                                            <td class="pe-3 text-end">
+                                                <button class="btn btn-outline-primary btn-sm"
+                                                        title="Actualizar estado"
+                                                        @onclick="() => OpenUpdateModal(inc)">
+                                                    <i class="bi bi-pencil-square"></i>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                        @if (IncidencesTotalPages > 1)
+                        {
+                            <div class="d-flex justify-content-between align-items-center px-3 py-2 border-top small text-muted">
+                                <span>Página @_incidencesPage de @IncidencesTotalPages</span>
+                                <div class="d-flex gap-1">
+                                    <button class="btn btn-outline-secondary btn-sm"
+                                            disabled="@(_incidencesPage == 1)"
+                                            @onclick="GoToPrevIncidencesPage">
+                                        <i class="bi bi-chevron-left"></i>
+                                    </button>
+                                    <button class="btn btn-outline-secondary btn-sm"
+                                            disabled="@(_incidencesPage == IncidencesTotalPages)"
+                                            @onclick="GoToNextIncidencesPage">
+                                        <i class="bi bi-chevron-right"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        }
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- ═══════════════════════════════════════════════════
+     MODAL ACTUALIZACIÓN DE ESTADO DE INCIDENCIA
+═══════════════════════════════════════════════════ -->
+@if (_updateIncidenceId is not null)
+{
+    <div class="modal d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);" @onclick="CloseUpdateModal">
+        <div class="modal-dialog modal-dialog-centered" @onclick:stopPropagation>
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header eb-modal-header">
+                    <div>
+                        <p class="eb-page-eyebrow text-uppercase fw-semibold text-white-50 mb-0" style="font-size:.65rem;letter-spacing:.15em;">Gestionar incidencia</p>
+                        <h5 class="modal-title text-white fw-bold mb-0">
+                            <i class="bi bi-exclamation-triangle-fill me-2"></i>Puesto @_updateDockCode
+                        </h5>
+                    </div>
+                    <button type="button" class="btn-close btn-close-white" @onclick="CloseUpdateModal"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="small text-muted fst-italic mb-3">@_updateDescription</p>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold form-label-sm">Nuevo estado</label>
+                        <select class="form-select form-select-sm" @bind="_updateNewStatus">
+                            <option value="@IncidenceStatus.Open">Abierta</option>
+                            <option value="@IncidenceStatus.UnderReview">En revisión</option>
+                            <option value="@IncidenceStatus.Resolved">Resuelta</option>
+                            <option value="@IncidenceStatus.Rejected">Rechazada</option>
+                        </select>
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label fw-semibold form-label-sm" for="managerComment">Comentario (opcional)</label>
+                        <textarea id="managerComment"
+                                  class="form-control form-control-sm"
+                                  rows="3"
+                                  placeholder="Indica qué acción se ha tomado o por qué se rechaza…"
+                                  maxlength="2000"
+                                  @bind="_updateComment"
+                                  @bind:event="oninput"></textarea>
+                        <div class="d-flex justify-content-end mt-1">
+                            <small class="text-muted">@(_updateComment?.Length ?? 0)/2000</small>
+                        </div>
+                    </div>
+
+                    @if (_updateError is not null)
+                    {
+                        <div class="alert alert-danger d-flex align-items-center gap-2 py-2 mt-2">
+                            <i class="bi bi-x-circle-fill flex-shrink-0"></i>
+                            <span class="small">@_updateError</span>
+                        </div>
+                    }
+                    @if (_updateSuccess)
+                    {
+                        <div class="alert alert-success d-flex align-items-center gap-2 py-2 mt-2">
+                            <i class="bi bi-check-circle-fill flex-shrink-0"></i>
+                            <span class="small">Estado actualizado correctamente.</span>
+                        </div>
+                    }
+                </div>
+                <div class="modal-footer border-0 pt-0">
+                    <button type="button" class="btn btn-outline-secondary btn-sm" @onclick="CloseUpdateModal">
+                        <i class="bi bi-x me-1"></i>Cerrar
+                    </button>
+                    @if (!_updateSuccess)
+                    {
+                        <button type="button" class="btn btn-primary btn-sm"
+                                disabled="@_updating"
+                                @onclick="SubmitStatusUpdate">
+                            @if (_updating)
+                            {
+                                <span class="spinner-border spinner-border-sm me-1"></span>
+                            }
+                            else
+                            {
+                                <i class="bi bi-check2 me-1"></i>
+                            }
+                            Guardar
+                        </button>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
 }
 
 </div>
 
 @code {
+    // ──────────────────────────────────────────────────────────────
+    // Estado: datos de incidencias (Manager view)
+    // ──────────────────────────────────────────────────────────────
+    private PagedResult<IncidenceReportManagerDto>? _allIncidences;
+    private bool _loadingIncidences = true;
+    private int _incidencesPage = 1;
+    private const int IncidencesPageSize = 20;
+    private int IncidencesTotalPages =>
+        _allIncidences is null ? 1 : (int)Math.Ceiling(_allIncidences.TotalCount / (double)IncidencesPageSize);
+
+    // ──────────────────────────────────────────────────────────────
+    // Estado: modal de actualización de estado de incidencia
+    // ──────────────────────────────────────────────────────────────
+    private Guid? _updateIncidenceId;
+    private string? _updateDockCode;
+    private string? _updateDescription;
+    private IncidenceStatus _updateNewStatus;
+    private string? _updateComment;
+    private string? _updateError;
+    private bool _updateSuccess;
+    private bool _updating;
+
     // ──────────────────────────────────────────────────────────────
     // Estado: fechas y formulario de bloqueo
     // ──────────────────────────────────────────────────────────────
@@ -351,6 +561,7 @@ else
         _activeBlocks = await Mediator.Send(new GetActiveBlocksQuery());
         _blocksPage = 1;
         _loading = false;
+        await LoadAllIncidencesAsync();
     }
 
     // ══════════════════════════════════════════════════════════════
@@ -517,5 +728,94 @@ else
         "DOCKS_NOT_FOUND"           => "Alguno de los puestos seleccionados no existe.",
         "OVERLAPPING_BLOCKS"        => "Ya existen bloqueos activos para alguno de los puestos en ese período.",
         _                           => $"Error inesperado: {error}"
+    };
+
+    // ══════════════════════════════════════════════════════════════
+    // Incidencias: carga y paginación
+    // ══════════════════════════════════════════════════════════════
+
+    private async Task LoadAllIncidencesAsync()
+    {
+        _loadingIncidences = true;
+        var result = await Mediator.Send(new GetAllIncidencesQuery(CurrentUser.UserId, _incidencesPage, IncidencesPageSize));
+        _allIncidences = result.IsSuccess ? result.Value : null;
+        _loadingIncidences = false;
+    }
+
+    private async Task GoToPrevIncidencesPage()
+    {
+        if (_incidencesPage > 1) { _incidencesPage--; await LoadAllIncidencesAsync(); }
+    }
+
+    private async Task GoToNextIncidencesPage()
+    {
+        if (_incidencesPage < IncidencesTotalPages) { _incidencesPage++; await LoadAllIncidencesAsync(); }
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // Incidencias: modal de actualización de estado
+    // ══════════════════════════════════════════════════════════════
+
+    private void OpenUpdateModal(IncidenceReportManagerDto inc)
+    {
+        _updateIncidenceId = inc.Id;
+        _updateDockCode    = inc.DockCode;
+        _updateDescription = inc.Description;
+        _updateNewStatus   = inc.Status;
+        _updateComment     = inc.ManagerComment;
+        _updateError       = null;
+        _updateSuccess     = false;
+    }
+
+    private void CloseUpdateModal()
+    {
+        _updateIncidenceId = null;
+        _updateDockCode    = null;
+        _updateDescription = null;
+        _updateComment     = null;
+        _updateError       = null;
+        _updateSuccess     = false;
+    }
+
+    private async Task SubmitStatusUpdate()
+    {
+        if (_updateIncidenceId is null) return;
+
+        _updating    = true;
+        _updateError = null;
+
+        var command = new UpdateIncidenceStatusCommand(
+            CurrentUser.UserId,
+            _updateIncidenceId.Value,
+            _updateNewStatus,
+            string.IsNullOrWhiteSpace(_updateComment) ? null : _updateComment.Trim());
+
+        var result = await Mediator.Send(command);
+
+        if (result.IsSuccess)
+        {
+            _updateSuccess = true;
+            await LoadAllIncidencesAsync();
+        }
+        else
+        {
+            _updateError = result.Error switch
+            {
+                IncidenceErrors.NotManager       => "No tienes permisos de Manager para actualizar incidencias.",
+                IncidenceErrors.IncidenceNotFound => "No se encontró la incidencia.",
+                _                                => "Error inesperado al actualizar el estado."
+            };
+        }
+
+        _updating = false;
+    }
+
+    private static RenderFragment IncidenceStatusBadge(IncidenceStatus status) => status switch
+    {
+        IncidenceStatus.Open        => @<span class="badge bg-secondary">Abierta</span>,
+        IncidenceStatus.UnderReview => @<span class="badge bg-warning text-dark">En revisión</span>,
+        IncidenceStatus.Resolved    => @<span class="badge bg-success">Resuelta</span>,
+        IncidenceStatus.Rejected    => @<span class="badge bg-danger">Rechazada</span>,
+        _                           => @<span class="badge bg-light text-dark">@status</span>
     };
 }
