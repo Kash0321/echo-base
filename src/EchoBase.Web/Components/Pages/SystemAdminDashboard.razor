@@ -742,14 +742,14 @@ else
                                            name="ori-@zone.Id" value="@ZoneOrientation.Horizontal"
                                            checked="@(_dcZoneOrientation == ZoneOrientation.Horizontal)"
                                            @onchange='() => _dcZoneOrientation = ZoneOrientation.Horizontal' />
-                                    <label class="btn btn-outline-secondary btn-sm" for="ori-h-@zone.Id">
+                                    <label class="btn btn-outline-secondary btn-sm" for="ori-h-@zone.Id" title="Orientación horizontal (mesas una al lado de la otra)">
                                         <i class="bi bi-arrow-right"></i> H
                                     </label>
                                     <input type="radio" class="btn-check" id="ori-v-@zone.Id"
                                            name="ori-@zone.Id" value="@ZoneOrientation.Vertical"
                                            checked="@(_dcZoneOrientation == ZoneOrientation.Vertical)"
                                            @onchange='() => _dcZoneOrientation = ZoneOrientation.Vertical' />
-                                    <label class="btn btn-outline-secondary btn-sm" for="ori-v-@zone.Id">
+                                    <label class="btn btn-outline-secondary btn-sm" for="ori-v-@zone.Id" title="Orientación vertical (mesas una debajo de la otra)">
                                         <i class="bi bi-arrow-down"></i> V
                                     </label>
                                 </div>
@@ -823,21 +823,26 @@ else
                                                 <td class="font-monospace small">@tbl.TableKey</td>
                                                 @if (_dcEditingTableId == tbl.Id)
                                                 {
-                                                    <td>
-                                                        <input class="form-control form-control-sm"
-                                                               style="max-width:220px;"
-                                                               placeholder="Localizador (opcional)"
-                                                               @bind="_dcTableLocator" />
-                                                    </td>
-                                                    <td class="text-end">
-                                                        <button class="btn btn-success btn-sm"
-                                                                disabled="@_dcSaving"
-                                                                @onclick="() => SaveEditTableAsync(tbl.Id)">
-                                                            @if (_dcSaving) { <span class="spinner-border spinner-border-sm me-1"></span> }
-                                                            Guardar
-                                                        </button>
-                                                        <button class="btn btn-outline-secondary btn-sm"
-                                                                @onclick="CancelEditTable">Cancelar</button>
+                                                    <td colspan="2" class="py-1">
+                                                        <div class="d-flex flex-wrap gap-2 align-items-center">
+                                                            <div class="input-group input-group-sm" style="flex:1 1 180px; min-width:180px;">
+                                                                <input class="form-control" placeholder="Localizador (opcional)"
+                                                                       @bind="_dcTableLocator" />
+                                                                <button class="btn btn-outline-secondary" type="button" title="Limpiar"
+                                                                        @onclick='() => _dcTableLocator = string.Empty'>
+                                                                    <i class="bi bi-x-lg" style="font-size:.7rem;"></i>
+                                                                </button>
+                                                            </div>
+                                                            <div class="d-flex gap-1 flex-shrink-0">
+                                                                <button class="btn btn-success btn-sm" disabled="@_dcSaving"
+                                                                        @onclick="() => SaveEditTableAsync(tbl.Id)">
+                                                                    @if (_dcSaving) { <span class="spinner-border spinner-border-sm me-1"></span> }
+                                                                    Guardar
+                                                                </button>
+                                                                <button class="btn btn-outline-secondary btn-sm"
+                                                                        @onclick="CancelEditTable">Cancelar</button>
+                                                            </div>
+                                                        </div>
                                                     </td>
                                                 }
                                                 else
@@ -866,18 +871,30 @@ else
                         <!-- Formulario nueva mesa -->
                         @if (_dcNewTableZoneId == zone.Id)
                         {
-                            <div class="d-flex gap-2 align-items-center mb-2 flex-wrap">
-                                <input class="form-control form-control-sm" style="max-width:150px;"
-                                       placeholder="Clave (ej: N)" @bind="_dcNewTableKey" />
-                                <input class="form-control form-control-sm" style="max-width:220px;"
-                                       placeholder="Localizador (opcional)" @bind="_dcNewTableLocator" />
-                                <button class="btn btn-success btn-sm" disabled="@_dcSaving"
-                                        @onclick="() => CreateTableAsync(zone.Id)">
-                                    @if (_dcSaving) { <span class="spinner-border spinner-border-sm me-1"></span> }
-                                    <i class="bi bi-plus me-1"></i>Añadir
-                                </button>
-                                <button class="btn btn-outline-secondary btn-sm"
-                                        @onclick="CancelNewTable">Cancelar</button>
+                            <div class="d-flex flex-wrap gap-2 align-items-center mb-2">
+                                <div class="input-group input-group-sm" style="flex:0 1 150px; min-width:110px;">
+                                    <input class="form-control" placeholder="Clave (ej: N)" @bind="_dcNewTableKey" />
+                                    <button class="btn btn-outline-secondary" type="button" title="Limpiar"
+                                            @onclick='() => _dcNewTableKey = string.Empty'>
+                                        <i class="bi bi-x-lg" style="font-size:.7rem;"></i>
+                                    </button>
+                                </div>
+                                <div class="input-group input-group-sm" style="flex:1 1 200px; min-width:160px;">
+                                    <input class="form-control" placeholder="Localizador (opcional)" @bind="_dcNewTableLocator" />
+                                    <button class="btn btn-outline-secondary" type="button" title="Limpiar"
+                                            @onclick='() => _dcNewTableLocator = string.Empty'>
+                                        <i class="bi bi-x-lg" style="font-size:.7rem;"></i>
+                                    </button>
+                                </div>
+                                <div class="d-flex gap-1 flex-shrink-0">
+                                    <button class="btn btn-success btn-sm" disabled="@_dcSaving"
+                                            @onclick="() => CreateTableAsync(zone.Id)">
+                                        @if (_dcSaving) { <span class="spinner-border spinner-border-sm me-1"></span> }
+                                        <i class="bi bi-plus me-1"></i>Añadir
+                                    </button>
+                                    <button class="btn btn-outline-secondary btn-sm"
+                                            @onclick="CancelNewTable">Cancelar</button>
+                                </div>
                             </div>
                         }
                         else
@@ -918,33 +935,43 @@ else
                                             <tr>
                                                 @if (_dcEditingDockId == dock.Id)
                                                 {
-                                                    <td>
-                                                        <input class="form-control form-control-sm"
-                                                               style="max-width:90px;"
-                                                               placeholder="A-01"
-                                                               @bind="_dcDockCode" />
-                                                    </td>
-                                                    <td>
-                                                        <input class="form-control form-control-sm"
-                                                               style="max-width:180px;"
-                                                               placeholder="Ubicación"
-                                                               @bind="_dcDockLocation" />
-                                                    </td>
-                                                    <td>
-                                                        <input class="form-control form-control-sm"
-                                                               style="max-width:200px;"
-                                                               placeholder="Equipamiento"
-                                                               @bind="_dcDockEquipment" />
-                                                    </td>
-                                                    <td class="text-end">
-                                                        <button class="btn btn-success btn-sm"
-                                                                disabled="@_dcSaving"
-                                                                @onclick="() => SaveEditDockAsync(dock.Id)">
-                                                            @if (_dcSaving) { <span class="spinner-border spinner-border-sm me-1"></span> }
-                                                            Guardar
-                                                        </button>
-                                                        <button class="btn btn-outline-secondary btn-sm"
-                                                                @onclick="CancelEditDock">Cancelar</button>
+                                                    <td colspan="4" class="py-1">
+                                                        <div class="d-flex flex-wrap gap-2 align-items-center">
+                                                            <div class="input-group input-group-sm" style="flex:0 1 110px; min-width:90px;">
+                                                                <input class="form-control" placeholder="Código"
+                                                                       @bind="_dcDockCode" />
+                                                                <button class="btn btn-outline-secondary" type="button" title="Limpiar"
+                                                                        @onclick='() => _dcDockCode = string.Empty'>
+                                                                    <i class="bi bi-x-lg" style="font-size:.7rem;"></i>
+                                                                </button>
+                                                            </div>
+                                                            <div class="input-group input-group-sm" style="flex:1 1 160px; min-width:140px;">
+                                                                <input class="form-control" placeholder="Ubicación"
+                                                                       @bind="_dcDockLocation" />
+                                                                <button class="btn btn-outline-secondary" type="button" title="Limpiar"
+                                                                        @onclick='() => _dcDockLocation = string.Empty'>
+                                                                    <i class="bi bi-x-lg" style="font-size:.7rem;"></i>
+                                                                </button>
+                                                            </div>
+                                                            <div class="input-group input-group-sm" style="flex:2 1 180px; min-width:160px;">
+                                                                <input class="form-control" placeholder="Equipamiento"
+                                                                       @bind="_dcDockEquipment" />
+                                                                <button class="btn btn-outline-secondary" type="button" title="Limpiar"
+                                                                        @onclick='() => _dcDockEquipment = string.Empty'>
+                                                                    <i class="bi bi-x-lg" style="font-size:.7rem;"></i>
+                                                                </button>
+                                                            </div>
+                                                            <div class="d-flex gap-1 flex-shrink-0">
+                                                                <button class="btn btn-success btn-sm"
+                                                                        disabled="@_dcSaving"
+                                                                        @onclick="() => SaveEditDockAsync(dock.Id)">
+                                                                    @if (_dcSaving) { <span class="spinner-border spinner-border-sm me-1"></span> }
+                                                                    Guardar
+                                                                </button>
+                                                                <button class="btn btn-outline-secondary btn-sm"
+                                                                        @onclick="CancelEditDock">Cancelar</button>
+                                                            </div>
+                                                        </div>
                                                     </td>
                                                 }
                                                 else
@@ -975,20 +1002,37 @@ else
                         <!-- Formulario nuevo puesto -->
                         @if (_dcNewDockZoneId == zone.Id)
                         {
-                            <div class="d-flex gap-2 align-items-center mb-2 flex-wrap">
-                                <input class="form-control form-control-sm" style="max-width:90px;"
-                                       placeholder="Código" @bind="_dcNewDockCode" />
-                                <input class="form-control form-control-sm" style="max-width:180px;"
-                                       placeholder="Ubicación" @bind="_dcNewDockLocation" />
-                                <input class="form-control form-control-sm" style="max-width:200px;"
-                                       placeholder="Equipamiento" @bind="_dcNewDockEquipment" />
-                                <button class="btn btn-success btn-sm" disabled="@_dcSaving"
-                                        @onclick="() => CreateDockAsync(zone.Id)">
-                                    @if (_dcSaving) { <span class="spinner-border spinner-border-sm me-1"></span> }
-                                    <i class="bi bi-plus me-1"></i>Añadir
-                                </button>
-                                <button class="btn btn-outline-secondary btn-sm"
-                                        @onclick="CancelNewDock">Cancelar</button>
+                            <div class="d-flex flex-wrap gap-2 align-items-center mb-2">
+                                <div class="input-group input-group-sm" style="flex:0 1 110px; min-width:90px;">
+                                    <input class="form-control" placeholder="Código" @bind="_dcNewDockCode" />
+                                    <button class="btn btn-outline-secondary" type="button" title="Limpiar"
+                                            @onclick='() => _dcNewDockCode = string.Empty'>
+                                        <i class="bi bi-x-lg" style="font-size:.7rem;"></i>
+                                    </button>
+                                </div>
+                                <div class="input-group input-group-sm" style="flex:1 1 160px; min-width:140px;">
+                                    <input class="form-control" placeholder="Ubicación" @bind="_dcNewDockLocation" />
+                                    <button class="btn btn-outline-secondary" type="button" title="Limpiar"
+                                            @onclick='() => _dcNewDockLocation = string.Empty'>
+                                        <i class="bi bi-x-lg" style="font-size:.7rem;"></i>
+                                    </button>
+                                </div>
+                                <div class="input-group input-group-sm" style="flex:2 1 180px; min-width:160px;">
+                                    <input class="form-control" placeholder="Equipamiento" @bind="_dcNewDockEquipment" />
+                                    <button class="btn btn-outline-secondary" type="button" title="Limpiar"
+                                            @onclick='() => _dcNewDockEquipment = string.Empty'>
+                                        <i class="bi bi-x-lg" style="font-size:.7rem;"></i>
+                                    </button>
+                                </div>
+                                <div class="d-flex gap-1 flex-shrink-0">
+                                    <button class="btn btn-success btn-sm" disabled="@_dcSaving"
+                                            @onclick="() => CreateDockAsync(zone.Id)">
+                                        @if (_dcSaving) { <span class="spinner-border spinner-border-sm me-1"></span> }
+                                        <i class="bi bi-plus me-1"></i>Añadir
+                                    </button>
+                                    <button class="btn btn-outline-secondary btn-sm"
+                                            @onclick="CancelNewDock">Cancelar</button>
+                                </div>
                             </div>
                         }
                         else
@@ -1009,35 +1053,38 @@ else
                     <h6 class="fw-semibold mb-3">
                         <i class="bi bi-plus-circle text-primary me-1"></i>Nueva zona
                     </h6>
-                    <div class="row g-2 align-items-end">
-                        <div class="col-sm-6 col-md-3">
-                            <label class="form-label form-label-sm fw-semibold">Nombre</label>
-                            <input class="form-control form-control-sm"
-                                   placeholder="Ej: Nostromo" @bind="_dcNewZoneName" />
+                    <div class="d-flex flex-wrap gap-2 align-items-center">
+                        <div class="input-group input-group-sm" style="flex:1 1 160px; min-width:130px;">
+                            <span class="input-group-text">Nombre</span>
+                            <input class="form-control" placeholder="Ej: Nostromo" @bind="_dcNewZoneName" />
+                            <button class="btn btn-outline-secondary" type="button" title="Limpiar"
+                                    @onclick='() => _dcNewZoneName = string.Empty'>
+                                <i class="bi bi-x-lg" style="font-size:.7rem;"></i>
+                            </button>
                         </div>
-                        <div class="col-sm-6 col-md-4">
-                            <label class="form-label form-label-sm fw-semibold">Descripción</label>
-                            <input class="form-control form-control-sm"
-                                   placeholder="Opcional" @bind="_dcNewZoneDescription" />
+                        <div class="input-group input-group-sm" style="flex:2 1 200px; min-width:160px;">
+                            <span class="input-group-text">Descripción</span>
+                            <input class="form-control" placeholder="Opcional" @bind="_dcNewZoneDescription" />
+                            <button class="btn btn-outline-secondary" type="button" title="Limpiar"
+                                    @onclick='() => _dcNewZoneDescription = string.Empty'>
+                                <i class="bi bi-x-lg" style="font-size:.7rem;"></i>
+                            </button>
                         </div>
-                        <div class="col-auto">
-                            <label class="form-label form-label-sm fw-semibold d-block">Orientación</label>
-                            <div class="d-flex gap-1">
-                                <input type="radio" class="btn-check" id="new-ori-h"
-                                       checked="@(_dcNewZoneOrientation == ZoneOrientation.Horizontal)"
-                                       @onchange='() => _dcNewZoneOrientation = ZoneOrientation.Horizontal' />
-                                <label class="btn btn-outline-secondary btn-sm" for="new-ori-h">
-                                    <i class="bi bi-arrow-right me-1"></i>Horizontal
-                                </label>
-                                <input type="radio" class="btn-check" id="new-ori-v"
-                                       checked="@(_dcNewZoneOrientation == ZoneOrientation.Vertical)"
-                                       @onchange='() => _dcNewZoneOrientation = ZoneOrientation.Vertical' />
-                                <label class="btn btn-outline-secondary btn-sm" for="new-ori-v">
-                                    <i class="bi bi-arrow-down me-1"></i>Vertical
-                                </label>
-                            </div>
+                        <div class="d-flex gap-1" role="group">
+                            <input type="radio" class="btn-check" id="new-ori-h"
+                                   checked="@(_dcNewZoneOrientation == ZoneOrientation.Horizontal)"
+                                   @onchange='() => _dcNewZoneOrientation = ZoneOrientation.Horizontal' />
+                            <label class="btn btn-outline-secondary btn-sm" for="new-ori-h" title="Orientación horizontal (mesas una al lado de la otra)">
+                                <i class="bi bi-arrow-right me-1"></i>H
+                            </label>
+                            <input type="radio" class="btn-check" id="new-ori-v"
+                                   checked="@(_dcNewZoneOrientation == ZoneOrientation.Vertical)"
+                                   @onchange='() => _dcNewZoneOrientation = ZoneOrientation.Vertical' />
+                            <label class="btn btn-outline-secondary btn-sm" for="new-ori-v" title="Orientación vertical (mesas una debajo de la otra)">
+                                <i class="bi bi-arrow-down me-1"></i>V
+                            </label>
                         </div>
-                        <div class="col-auto">
+                        <div class="d-flex gap-1 flex-shrink-0">
                             <button class="btn btn-primary btn-sm" disabled="@_dcSaving"
                                     @onclick="CreateZoneAsync">
                                 @if (_dcSaving) { <span class="spinner-border spinner-border-sm me-1"></span> }

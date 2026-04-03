@@ -74,6 +74,13 @@ Para mantener coherencia en el rediseño y ampliaciones futuras de Echo Base, se
    - **Interacciones enriquecidas (Formularios/Modales)**: Uso moderno de entradas, por ejemplo, convirtiendo opciones en botones (`.btn-check` + `.btn-outline-primary`) en lugar de radio buttons clásicos para mejorar las áreas táctiles en móviles y darle un look moderno.
    - **Datos históricos**: Manejo diferenciado visualmente. Los elementos cancelados o pasados bajan su opacidad y tienen efecto tachado sobre los listados.
    - **Formularios de perfil**: Separación clara entre datos corporativos de solo lectura (gestionados por Azure AD) y datos editables del usuario (línea de negocio, teléfono y preferencias), usando tarjetas diferenciadas, campos compactos y switches visuales para preferencias booleanas.
+   - **Controles de edición y creación inline (patrón establecido en `SystemAdminDashboard`)**: Tanto el modo de edición de un registro existente como el formulario de creación de uno nuevo siguen el mismo patrón visual, aplicado en la pestaña "Zonas y puestos" para Zonas, Mesas y Puestos de trabajo:
+     - Todos los campos se agrupan en **una única línea flex fluida** (`d-flex flex-wrap gap-2 align-items-center`) que ocupa todo el ancho disponible, sin columnas de cuadrícula ni etiquetas encima.
+     - Cada campo de texto usa `input-group input-group-sm` con un botón `<button type="button">` al final que muestra `<i class="bi bi-x-lg" style="font-size:.7rem;">` y borra el contenido del campo al hacer clic (`title="Limpiar"`). En formularios de creación con muchos campos, el label del campo se integra como `<span class="input-group-text">` en lugar de una etiqueta flotante.
+     - Cada campo se dimensiona con `flex` inline (ej. `style="flex:1 1 180px; min-width:160px;"`) para ajustarse fluidamente sin anchos máximos fijos que fragmenten la UI en resoluciones pequeñas.
+     - Los botones de acción (Guardar/Cancelar o Añadir/Cancelar) se agrupan **al final** en `<div class="d-flex gap-1 flex-shrink-0">`, garantizando que no se separen de los campos.
+     - En modo de **edición de fila de tabla**, se usa `<td colspan="N" class="py-1">` para que el contenedor flex ocupe todas las columnas sin celdas vacías.
+     - En modo de **edición de `card-header`**, los campos siguen la misma lógica dentro de un `<div class="d-flex flex-wrap gap-2 align-items-center flex-grow-1">` con los botones de acción en un `<div class="d-flex gap-1 flex-shrink-0">` al extremo derecho del header.
 
 ### 🎨 Paleta de Colores (Design Tokens)
 
