@@ -12,6 +12,7 @@ public class GetDockMapHandlerTests
     private static readonly Guid DerelictZoneId = Guid.NewGuid();
 
     private readonly IDockMapRepository _repository = Substitute.For<IDockMapRepository>();
+    private readonly IIncidenceRepository _incidenceRepository = Substitute.For<IIncidenceRepository>();
     private readonly GetDockMapHandler _handler;
 
     public GetDockMapHandlerTests()
@@ -23,7 +24,10 @@ public class GetDockMapHandlerTests
         _repository.GetBlockedDocksForDateAsync(Arg.Any<DateOnly>(), Arg.Any<CancellationToken>())
             .Returns([]);
 
-        _handler = new(_repository);
+        _incidenceRepository.GetIncidenceCountsByDockAsync(Arg.Any<CancellationToken>())
+            .Returns(new Dictionary<Guid, Dictionary<IncidenceStatus, int>>());
+
+        _handler = new(_repository, _incidenceRepository);
     }
 
     private static readonly DateOnly TestDate = new(2026, 3, 28);

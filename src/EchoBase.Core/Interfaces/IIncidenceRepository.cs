@@ -79,6 +79,12 @@ public interface IIncidenceRepository
     /// </summary>
     Task<(List<IncidenceReport> Items, int TotalCount)> GetAllIncidencesAsync(int page, int pageSize, CancellationToken ct = default);
 
+    /// <summary>
+    /// Obtiene el conteo de incidencias agrupadas por puesto de trabajo y estado.
+    /// Devuelve un diccionario donde la clave es el DockId y el valor es otro diccionario con IncidenceStatus como clave y conteo como valor.
+    /// </summary>
+    Task<Dictionary<Guid, Dictionary<IncidenceStatus, int>>> GetIncidenceCountsByDockAsync(CancellationToken ct = default);
+
     /// <summary>Persiste los cambios pendientes en la unidad de trabajo.</summary>
     Task SaveChangesAsync(CancellationToken ct = default);
 }

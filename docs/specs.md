@@ -545,6 +545,7 @@ Se añadió la pestaña **«Zonas y puestos»** (`Tab.DockConfig`) en `/system-a
 | `UpdateIncidenceStatusCommand` | `EchoBase.Core/Incidences/Commands/` | Solo Manager. Valida rol y existencia de incidencia. Llama `UpdateStatus`, publica notificación, registra auditoría. |
 | `GetUserIncidencesQuery` | `EchoBase.Core/Incidences/Queries/` | Sin restricción. Devuelve `IReadOnlyList<IncidenceReportDto>` del usuario. |
 | `GetAllIncidencesQuery` | `EchoBase.Core/Incidences/Queries/` | Solo Manager. Devuelve `Result<PagedResult<IncidenceReportManagerDto>>` paginado. |
+| `GetDockMapQuery` | `EchoBase.Core/Reservations/Queries/` | Devuelve el mapa de puestos con información de reservas y conteos de incidencias por estado para cada puesto. |
 
 #### Notificaciones
 - Ubicación: `EchoBase.Core/Incidences/Notifications/IncidenceNotifications.cs`
@@ -560,6 +561,7 @@ Se añadió la pestaña **«Zonas y puestos»** (`Tab.DockConfig`) en `/system-a
 
 #### UI
 - **`/incidencias`** (`IncidenceMap.razor`): mapa completo de puestos con todos los asientos clicables (sin filtros de estado), modal de reporte con textarea y contador de caracteres, lista de incidencias propias (debajo del mapa) con badges de estado y comentario del Manager.
+  - **Indicadores visuales de incidencias activas**: Cada puesto muestra badges encima del botón con el número de incidencias por estado (Abierta: gris, En revisión: amarillo, Resuelta: verde, Rechazada: rojo). Los badges solo aparecen si hay al menos una incidencia en ese estado, permitiendo a los usuarios identificar rápidamente puestos con problemas reportados antes de intentar reportar uno nuevo.
 - **`/admin`** (`AdminDashboard.razor`): nueva sección «Incidencias en puestos» con tabla paginada enriquecida (puesto, reportado por, descripción, estado, fecha) y modal para actualizar estado y añadir comentario.  
 - `NavMenu.razor`: enlace «Incidencias» (icono `bi-exclamation-triangle`) disponible para todos los usuarios autenticados.
 

@@ -62,6 +62,22 @@ internal sealed class IncidenceRepository(EchoBaseDbContext context) : IIncidenc
     }
 
     /// <inheritdoc/>
+    public async Task<Dictionary<Guid, Dictionary<EchoBase.Core.Entities.Enums.IncidenceStatus, int>>> GetIncidenceCountsByDockAsync(CancellationToken ct = default)
+    {
+        // Flat GROUP BY (DockId, Status) — SQLite-compatible, no APPLY needed
+        var rows = await context.IncidenceReports
+            .GroupBy(r => new { r.DockId, r.Status })
+            .Select(g => new { g.Key.DockId, g.Key.Status, Count = g.Count() })
+            .ToListAsync(ct);
+
+        return rows
+            .GroupBy(x => x.DockId)
+            .ToDictionary(
+                g => g.Key,
+                g => g.ToDictionary(x => x.Status, x => x.Count));
+    }
+
+    /// <inheritdoc/>
     public Task SaveChangesAsync(CancellationToken ct = default) =>
         context.SaveChangesAsync(ct);
 }
