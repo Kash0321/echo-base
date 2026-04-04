@@ -20,10 +20,12 @@ public sealed record ReorderDockTablesCommand(
     Guid ZoneId,
     IReadOnlyList<Guid> OrderedTableIds) : IRequest<Result>, IAuditableRequest
 {
+    internal IReadOnlyList<string>? ResolvedTableNames { get; set; }
+    internal string? ResolvedZoneName { get; set; }
     Guid? IAuditableRequest.PerformedByUserId => AdminUserId;
     AuditAction IAuditableRequest.AuditAction => AuditAction.DockTablesReordered;
     string IAuditableRequest.BuildAuditDetails() =>
-        $"Mesas reordenadas en zona {ZoneId}: {string.Join(", ", OrderedTableIds.Select((id, i) => $"{id}→{i}"))}";
+        $"Mesas reordenadas en zona {(ResolvedZoneName ?? ZoneId.ToString())}: {string.Join(", ", ResolvedTableNames?.Select((name, i) => $"{name}→{i}") ?? OrderedTableIds.Select((id, i) => $"{id}→{i}"))}";
 }
 
 /// <summary>
@@ -43,7 +45,14 @@ public sealed class ReorderDockTablesHandler(
         if (!await blockedDockRepository.UserHasRoleAsync(request.AdminUserId, SystemAdminRole, cancellationToken))
             return Result.Failure(SystemAdminErrors.NotSystemAdmin);
 
-        // 2. Asignar Order = índice para cada mesa
+        // 2. Resolver nombres para auditoría
+        var zone = await dockAdminRepository.GetZoneByIdAsync(request.ZoneId, cancellationToken);
+        request.ResolvedZoneName = zone?.Name ?? "Desconocida";
+
+        var tables = await Task.WhenAll(request.OrderedTableIds.Select(id => dockAdminRepository.GetTableByIdAsync(id, cancellationToken)));
+        request.ResolvedTableNames = tables.Select(t => t?.TableKey ?? "Desconocida").ToList();
+
+        // 3. Asignar Order = índice para cada mesa
         var items = request.OrderedTableIds
             .Select((id, idx) => (Id: id, Order: idx))
             .ToList();

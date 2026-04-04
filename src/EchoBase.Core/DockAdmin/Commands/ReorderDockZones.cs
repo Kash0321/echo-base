@@ -18,10 +18,11 @@ public sealed record ReorderDockZonesCommand(
     Guid AdminUserId,
     IReadOnlyList<Guid> OrderedZoneIds) : IRequest<Result>, IAuditableRequest
 {
+    internal IReadOnlyList<string>? ResolvedZoneNames { get; set; }
     Guid? IAuditableRequest.PerformedByUserId => AdminUserId;
     AuditAction IAuditableRequest.AuditAction => AuditAction.DockZonesReordered;
     string IAuditableRequest.BuildAuditDetails() =>
-        $"Zonas reordenadas: {string.Join(", ", OrderedZoneIds.Select((id, i) => $"{id}→{i}"))}";
+        $"Zonas reordenadas: {string.Join(", ", ResolvedZoneNames?.Select((name, i) => $"{name}→{i}") ?? OrderedZoneIds.Select((id, i) => $"{id}→{i}"))}";
 }
 
 /// <summary>
@@ -41,7 +42,11 @@ public sealed class ReorderDockZonesHandler(
         if (!await blockedDockRepository.UserHasRoleAsync(request.AdminUserId, SystemAdminRole, cancellationToken))
             return Result.Failure(SystemAdminErrors.NotSystemAdmin);
 
-        // 2. Asignar Order = índice para cada zona
+        // 2. Resolver nombres de zonas para auditoría
+        var zones = await Task.WhenAll(request.OrderedZoneIds.Select(id => dockAdminRepository.GetZoneByIdAsync(id, cancellationToken)));
+        request.ResolvedZoneNames = zones.Select(z => z?.Name ?? "Desconocida").ToList();
+
+        // 3. Asignar Order = índice para cada zona
         var items = request.OrderedZoneIds
             .Select((id, idx) => (Id: id, Order: idx))
             .ToList();
