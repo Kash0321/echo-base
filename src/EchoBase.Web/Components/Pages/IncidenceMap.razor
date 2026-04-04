@@ -379,7 +379,7 @@
         if (result.IsSuccess)
         {
             _reportSuccess = true;
-            await LoadMyIncidencesAsync();
+            await Task.WhenAll(LoadMapAsync(), LoadMyIncidencesAsync());
         }
         else
         {
