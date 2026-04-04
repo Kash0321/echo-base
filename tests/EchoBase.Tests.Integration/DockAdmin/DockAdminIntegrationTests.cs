@@ -339,8 +339,8 @@ public sealed class DockAdminIntegrationTests : IntegrationTestBase
     [Fact]
     public async Task CreateDockTable_DuplicateKeyInZone_ReturnsError()
     {
-        // "N" ya existe en Nostromo (DbSeeder)
-        var result = await Mediator.Send(new CreateDockTableCommand(AdminUserId, NostromoZoneId, "N", null));
+        // "Nostromo" ya existe en Nostromo (DbSeeder)
+        var result = await Mediator.Send(new CreateDockTableCommand(AdminUserId, NostromoZoneId, "Nostromo", null));
 
         Assert.False(result.IsSuccess);
         Assert.Equal("TABLE_KEY_ALREADY_EXISTS", result.Error);
