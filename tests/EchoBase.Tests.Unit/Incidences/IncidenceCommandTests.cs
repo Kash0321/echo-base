@@ -213,6 +213,78 @@ public class IncidenceCommandTests
     // ─────────────────────────────────────────────────────────────
     // Helper: crea una incidencia de prueba ya persistida
     // ─────────────────────────────────────────────────────────────
+    // UT-IR-10  GetDockIncidences: devuelve lista paginada
+    // ─────────────────────────────────────────────────────────────
+    [Fact]
+    public async Task GetDockIncidences_ActiveOnlyFalse_DelegatesToRepositoryWithNullFilter()
+    {
+        _incidenceRepo.GetDockIncidencesAsync(
+            DockId, null, 1, 5, Arg.Any<CancellationToken>())
+            .Returns((new List<IncidenceReport> { MakeIncidence() }, 1));
+
+        var handler = new GetDockIncidencesHandler(_incidenceRepo);
+        var query = new GetDockIncidencesQuery(DockId, ActiveOnly: false, Page: 1, PageSize: 5);
+
+        var result = await handler.Handle(query, CancellationToken.None);
+
+        Assert.Equal(1, result.TotalCount);
+        Assert.Single(result.Items);
+        await _incidenceRepo.Received(1).GetDockIncidencesAsync(
+            DockId, null, 1, 5, Arg.Any<CancellationToken>());
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // UT-IR-11  GetDockIncidences: filtro activas pasa los estados correctos
+    // ─────────────────────────────────────────────────────────────
+    [Fact]
+    public async Task GetDockIncidences_ActiveOnlyTrue_DelegatesToRepositoryWithActiveStatuses()
+    {
+        _incidenceRepo.GetDockIncidencesAsync(
+            DockId,
+            Arg.Is<IncidenceStatus[]?>(s => s != null && s.Contains(IncidenceStatus.Open) && s.Contains(IncidenceStatus.UnderReview) && s.Length == 2),
+            1, 5, Arg.Any<CancellationToken>())
+            .Returns((new List<IncidenceReport>(), 0));
+
+        var handler = new GetDockIncidencesHandler(_incidenceRepo);
+        var query = new GetDockIncidencesQuery(DockId, ActiveOnly: true, Page: 1, PageSize: 5);
+
+        var result = await handler.Handle(query, CancellationToken.None);
+
+        Assert.Equal(0, result.TotalCount);
+        Assert.Empty(result.Items);
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // UT-IR-12  GetDockIncidences: mapea correctamente el DTO
+    // ─────────────────────────────────────────────────────────────
+    [Fact]
+    public async Task GetDockIncidences_WithResults_MapsDtoFieldsCorrectly()
+    {
+        var incidence = MakeIncidence();
+
+        _incidenceRepo.GetDockIncidencesAsync(
+            DockId, null, 1, 5, Arg.Any<CancellationToken>())
+            .Returns((new List<IncidenceReport> { incidence }, 1));
+
+        var handler = new GetDockIncidencesHandler(_incidenceRepo);
+        var query = new GetDockIncidencesQuery(DockId, ActiveOnly: false, Page: 1, PageSize: 5);
+
+        var result = await handler.Handle(query, CancellationToken.None);
+
+        var dto = Assert.Single(result.Items);
+        // Dock nav. property no cargado → valores por defecto del mapper
+        Assert.Equal(string.Empty, dto.DockCode);
+        Assert.Equal(string.Empty, dto.DockLocation);
+        Assert.Equal("Monitor parpadeante", dto.Description);
+        Assert.Equal(IncidenceStatus.Open, dto.Status);
+        Assert.Equal(1, result.Page);
+        Assert.Equal(5, result.PageSize);
+        Assert.Equal(1, result.TotalCount);
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // Helper: crea una incidencia de prueba ya persistida
+    // ─────────────────────────────────────────────────────────────
     private static IncidenceReport MakeIncidence() =>
         new(Guid.CreateVersion7(), DockId, UserId, Now)
         {

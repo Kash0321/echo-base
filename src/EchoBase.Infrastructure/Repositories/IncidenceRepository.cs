@@ -62,6 +62,32 @@ internal sealed class IncidenceRepository(EchoBaseDbContext context) : IIncidenc
     }
 
     /// <inheritdoc/>
+    public async Task<(List<IncidenceReport> Items, int TotalCount)> GetDockIncidencesAsync(
+        Guid dockId,
+        EchoBase.Core.Entities.Enums.IncidenceStatus[]? statusFilter,
+        int page,
+        int pageSize,
+        CancellationToken ct = default)
+    {
+        var query = context.IncidenceReports
+            .Include(r => r.Dock)
+            .Where(r => r.DockId == dockId);
+
+        if (statusFilter is { Length: > 0 })
+            query = query.Where(r => statusFilter.Contains(r.Status));
+
+        var orderedQuery = query.OrderByDescending(r => r.Id).AsNoTracking();
+
+        var total = await orderedQuery.CountAsync(ct);
+        var items = await orderedQuery
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(ct);
+
+        return (items, total);
+    }
+
+    /// <inheritdoc/>
     public async Task<Dictionary<Guid, Dictionary<EchoBase.Core.Entities.Enums.IncidenceStatus, int>>> GetIncidenceCountsByDockAsync(CancellationToken ct = default)
     {
         // Flat GROUP BY (DockId, Status) — SQLite-compatible, no APPLY needed

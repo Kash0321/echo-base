@@ -169,4 +169,69 @@ public sealed class IncidenceIntegrationTests : IntegrationTestBase
             Assert.NotEmpty(dto.ReporterEmail);
         });
     }
+
+    // ── IT-IR-10  GetDockIncidences: devuelve solo las del puesto indicado ────
+    [Fact]
+    public async Task GetDockIncidences_ReturnsOnlyIncidencesForSpecifiedDock()
+    {
+        await Mediator.Send(new ReportIncidenceCommand(TestUserId,    DockNA01, "Monitor roto"));
+        await Mediator.Send(new ReportIncidenceCommand(AnotherUserId, DockNA01, "Ratón sin cable"));
+        await Mediator.Send(new ReportIncidenceCommand(TestUserId,    DockNA02, "Silla rota"));
+
+        var query  = new GetDockIncidencesQuery(DockNA01, ActiveOnly: false, Page: 1, PageSize: 5);
+        var result = await Mediator.Send(query);
+
+        Assert.Equal(2, result.TotalCount);
+        Assert.All(result.Items, dto => Assert.Equal("N-A01", dto.DockCode));
+    }
+
+    // ── IT-IR-11  GetDockIncidences: filtro activas excluye resueltas y rechazadas ─
+    [Fact]
+    public async Task GetDockIncidences_ActiveOnly_ExcludesResolvedAndRejected()
+    {
+        var r1 = await Mediator.Send(new ReportIncidenceCommand(TestUserId, DockNA01, "Abierta"));
+        var r2 = await Mediator.Send(new ReportIncidenceCommand(TestUserId, DockNA01, "En revisión"));
+        var r3 = await Mediator.Send(new ReportIncidenceCommand(TestUserId, DockNA01, "Resuelta"));
+        var r4 = await Mediator.Send(new ReportIncidenceCommand(TestUserId, DockNA01, "Rechazada"));
+
+        Assert.True(r1.IsSuccess); Assert.True(r2.IsSuccess); Assert.True(r3.IsSuccess); Assert.True(r4.IsSuccess);
+
+        await Mediator.Send(new UpdateIncidenceStatusCommand(ManagerUserId, r2.Value, IncidenceStatus.UnderReview, null));
+        await Mediator.Send(new UpdateIncidenceStatusCommand(ManagerUserId, r3.Value, IncidenceStatus.Resolved, "Arreglado"));
+        await Mediator.Send(new UpdateIncidenceStatusCommand(ManagerUserId, r4.Value, IncidenceStatus.Rejected, "Duplicada"));
+
+        var query  = new GetDockIncidencesQuery(DockNA01, ActiveOnly: true, Page: 1, PageSize: 5);
+        var result = await Mediator.Send(query);
+
+        Assert.Equal(2, result.TotalCount);
+        Assert.All(result.Items, dto =>
+            Assert.True(dto.Status == IncidenceStatus.Open || dto.Status == IncidenceStatus.UnderReview));
+    }
+
+    // ── IT-IR-12  GetDockIncidences: paginación funciona correctamente ────────
+    [Fact]
+    public async Task GetDockIncidences_Pagination_ReturnsCorrectPage()
+    {
+        for (var i = 1; i <= 7; i++)
+            await Mediator.Send(new ReportIncidenceCommand(TestUserId, DockNA01, $"Incidencia {i}"));
+
+        var page1 = await Mediator.Send(new GetDockIncidencesQuery(DockNA01, ActiveOnly: false, Page: 1, PageSize: 5));
+        var page2 = await Mediator.Send(new GetDockIncidencesQuery(DockNA01, ActiveOnly: false, Page: 2, PageSize: 5));
+
+        Assert.Equal(7, page1.TotalCount);
+        Assert.Equal(5, page1.Items.Count);
+        Assert.Equal(7, page2.TotalCount);
+        Assert.Equal(2, page2.Items.Count);
+    }
+
+    // ── IT-IR-13  GetDockIncidences: puesto sin incidencias → lista vacía ────
+    [Fact]
+    public async Task GetDockIncidences_NoDockIncidences_ReturnsEmptyResult()
+    {
+        var query  = new GetDockIncidencesQuery(DockNA01, ActiveOnly: false, Page: 1, PageSize: 5);
+        var result = await Mediator.Send(query);
+
+        Assert.Equal(0, result.TotalCount);
+        Assert.Empty(result.Items);
+    }
 }

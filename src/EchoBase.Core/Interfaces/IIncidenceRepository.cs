@@ -80,6 +80,21 @@ public interface IIncidenceRepository
     Task<(List<IncidenceReport> Items, int TotalCount)> GetAllIncidencesAsync(int page, int pageSize, CancellationToken ct = default);
 
     /// <summary>
+    /// Obtiene las incidencias de un puesto de trabajo, paginadas y ordenadas de más reciente a más antiguo.
+    /// </summary>
+    /// <param name="dockId">Identificador del puesto de trabajo.</param>
+    /// <param name="statusFilter">Filtro de estados. <see langword="null"/> devuelve todas.</param>
+    /// <param name="page">Número de página (base 1).</param>
+    /// <param name="pageSize">Tamaño de página.</param>
+    /// <param name="ct">Token de cancelación.</param>
+    Task<(List<IncidenceReport> Items, int TotalCount)> GetDockIncidencesAsync(
+        Guid dockId,
+        IncidenceStatus[]? statusFilter,
+        int page,
+        int pageSize,
+        CancellationToken ct = default);
+
+    /// <summary>
     /// Obtiene el conteo de incidencias agrupadas por puesto de trabajo y estado.
     /// Devuelve un diccionario donde la clave es el DockId y el valor es otro diccionario con IncidenceStatus como clave y conteo como valor.
     /// </summary>

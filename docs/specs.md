@@ -535,7 +535,7 @@ Se añadió la pestaña **«Zonas y puestos»** (`Tab.DockConfig`) en `/system-a
 - DTOs definidos en el mismo archivo:
   - `IncidenceReportDto` — vista de usuario (sus propias incidencias)
   - `IncidenceReportManagerDto` — vista de Manager (incluye `ReporterName`, `ReporterEmail`)
-- Métodos: `GetByIdAsync`, `AddAsync`, `DockExistsAsync`, `GetDockCodeAsync`, `GetUserIncidencesAsync`, `GetAllIncidencesAsync(page, pageSize)` → `(List<IncidenceReport>, int TotalCount)`, `SaveChangesAsync`
+- Métodos: `GetByIdAsync`, `AddAsync`, `DockExistsAsync`, `GetDockCodeAsync`, `GetUserIncidencesAsync`, `GetAllIncidencesAsync(page, pageSize)` → `(List<IncidenceReport>, int TotalCount)`, `GetDockIncidencesAsync(dockId, statusFilter?, page, pageSize)` → `(List<IncidenceReport>, int TotalCount)`, `SaveChangesAsync`
 
 #### Comandos y queries implementados
 
@@ -545,6 +545,7 @@ Se añadió la pestaña **«Zonas y puestos»** (`Tab.DockConfig`) en `/system-a
 | `UpdateIncidenceStatusCommand` | `EchoBase.Core/Incidences/Commands/` | Solo Manager. Valida rol y existencia de incidencia. Llama `UpdateStatus`, publica notificación, registra auditoría. |
 | `GetUserIncidencesQuery` | `EchoBase.Core/Incidences/Queries/` | Sin restricción. Devuelve `IReadOnlyList<IncidenceReportDto>` del usuario. |
 | `GetAllIncidencesQuery` | `EchoBase.Core/Incidences/Queries/` | Solo Manager. Devuelve `Result<PagedResult<IncidenceReportManagerDto>>` paginado. |
+| `GetDockIncidencesQuery` | `EchoBase.Core/Incidences/Queries/` | Sin restricción. Acepta `DockId`, `ActiveOnly` (filtra Open/UnderReview), `Page` y `PageSize=5`. Devuelve `PagedResult<IncidenceReportDto>` ordenado por Id descendente. |
 | `GetDockMapQuery` | `EchoBase.Core/Reservations/Queries/` | Devuelve el mapa de puestos con información de reservas y conteos de incidencias por estado para cada puesto. |
 
 #### Notificaciones
@@ -562,6 +563,9 @@ Se añadió la pestaña **«Zonas y puestos»** (`Tab.DockConfig`) en `/system-a
 #### UI
 - **`/incidencias`** (`IncidenceMap.razor`): mapa completo de puestos con todos los asientos clicables (sin filtros de estado), modal de reporte con textarea y contador de caracteres, lista de incidencias propias (debajo del mapa) con badges de estado y comentario del Manager.
   - **Indicadores visuales de incidencias activas**: Cada puesto muestra badges encima del botón con el número de incidencias por estado (Abierta: gris, En revisión: amarillo, Resuelta: verde, Rechazada: rojo). Los badges solo aparecen si hay al menos una incidencia en ese estado, permitiendo a los usuarios identificar rápidamente puestos con problemas reportados antes de intentar reportar uno nuevo.
+  - **Modal ampliado con dos pestañas**: Al abrir el modal de reporte (clic sobre un puesto del mapa), el usuario dispone de dos pestañas:
+    - **«Nuevo reporte»**: formulario existente con textarea, contador de caracteres y botón de envío.
+    - **«Incidencias del puesto»**: listado paginado (5 por página) de las incidencias del puesto seleccionado, con el mismo estilo visual de tabla que la sección «Mis incidencias». Incluye un filtro con dos opciones: «Activas» (Open + UnderReview, por defecto) e «Historial completo». La paginación muestra indicador de página actual/total y botones de anterior/siguiente. El badge del contador en la pestaña refleja el total de incidencias del puesto. La modal usa `modal-lg` para facilitar la visualización del listado.
 - **`/admin`** (`AdminDashboard.razor`): nueva sección «Incidencias en puestos» con tabla paginada enriquecida (puesto, reportado por, descripción, estado, fecha) y modal para actualizar estado y añadir comentario.  
 - `NavMenu.razor`: enlace «Incidencias» (icono `bi-exclamation-triangle`) disponible para todos los usuarios autenticados.
 
@@ -984,7 +988,7 @@ Cada instancia de clase de tests obtiene su propia base de datos en memoria, por
 
 **Pruebas unitarias**
 
-**`IncidenceCommandTests`** (10 casos — `EchoBase.Tests.Unit/Incidences/`):
+**`IncidenceCommandTests`** (13 casos — `EchoBase.Tests.Unit/Incidences/`):
 
 | ID | Caso |
 |---|---|
@@ -998,10 +1002,13 @@ Cada instancia de clase de tests obtiene su propia base de datos en memoria, por
 | UT-IR-08 | `UpdateIncidenceStatus` → incidencia inexistente → `IncidenceNotFound`; `SaveChangesAsync` no llamado |
 | UT-IR-09 | `UpdateIncidenceStatus` → actualización válida → publica `IncidenceStatusUpdatedNotification` con estado y comentario correctos |
 | UT-IR-10 | `GetAllIncidences` → usuario sin rol Manager → `NotManager` |
+| UT-IR-11 | `GetDockIncidences` → `ActiveOnly=false` → repositorio llamado con `statusFilter=null` |
+| UT-IR-12 | `GetDockIncidences` → `ActiveOnly=true` → repositorio llamado con filtro de estados `[Open, UnderReview]` |
+| UT-IR-13 | `GetDockIncidences` → mapea correctamente los campos del DTO y la paginación |
 
 **Pruebas de integración**
 
-**`IncidenceIntegrationTests`** (9 casos — `EchoBase.Tests.Integration/Incidences/`):
+**`IncidenceIntegrationTests`** (13 casos — `EchoBase.Tests.Integration/Incidences/`):
 
 | ID | Caso |
 |---|---|
@@ -1014,3 +1021,7 @@ Cada instancia de clase de tests obtiene su propia base de datos en memoria, por
 | IT-IR-07 | `GetUserIncidences` → devuelve exactamente las incidencias del usuario actual (2), sin las de otro usuario |
 | IT-IR-08 | `GetUserIncidences` → usuario sin incidencias → lista vacía |
 | IT-IR-09 | `GetAllIncidences` → Manager ve todas las incidencias (2) con `DockCode`, `ReporterName` y `ReporterEmail` no vacíos |
+| IT-IR-10 | `GetDockIncidences` → devuelve solo las incidencias del puesto indicado (2 de 3 totales) |
+| IT-IR-11 | `GetDockIncidences` → `ActiveOnly=true` → excluye las incidencias en estado `Resolved` y `Rejected`; devuelve solo 2 activas |
+| IT-IR-12 | `GetDockIncidences` → paginación correcta: 7 incidencias → página 1 con 5, página 2 con 2 |
+| IT-IR-13 | `GetDockIncidences` → puesto sin incidencias → `TotalCount=0` y `Items` vacío |
