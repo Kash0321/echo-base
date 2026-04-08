@@ -129,6 +129,9 @@ Este manual está dividido en tres secciones:
 - Esta vista permite ver el mapa de puestos con información ampliada sobre reservas y bloqueos.
 - Las zonas y puestos muestran tooltips con quién reservó cada franja o si están bloqueados.
 
+![Cuadro de mando de Manager](./img/manual/07-AdminDashboard_01.png.png)
+<p align="center"><sub>Cuadro de mando de Manager</sub></p>
+
 #### Captura recomendada
 - Captura el dashboard de Manager con varias zonas y tooltips abiertos, mostrando el estado de reservas y bloqueos.
 - Etiqueta: “Cuadro de mando de Manager”.
