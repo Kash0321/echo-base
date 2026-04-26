@@ -1,0 +1,38 @@
+schema: spec-driven
+context: |
+  Idioma: Español
+  Todos los artefactos deben escribirse en español, pero:
+    - Los identificadores de código (nombres de clases, métodos, variables, etc.) deben estar en inglés siguiendo las convenciones de estilo de C#.
+    - Los comentarios y documentación deben estar en español para facilitar la comprensión por parte de los desarrolladores.
+    - Mantén los términos técnicos como "API", "REST", "GraphQL" en inglés.
+    - Los ejemplos de código y las rutas de archivos permanecen en inglés.  
+  Objetivo: App interna para que múltiples empleados reserven sobre un conjunto limitado de puestos físicos, permitiendo cada puesto dos franjas horarias, mañana o tarde.
+  Reglas de negocio generales:
+    - Un usuario solo puede reservar 1 puesto por día, y puede indicar la franja o franjas horarias en la que va a usar el puesto (mañanas hasta las 14 y tardes de 14 fin de jornada), de modo que otro empleado pueda reservar el puesto en una franja horaria diferente el mismo día si está disponible, pero un empleado puede reservar como máximo dos franjas horarias en el mismo puesto de trabajo o en dos puestos de trabajo distintos.
+    - Las reservas se abren con 7 días de antelación.
+    - Capacidad máxima: no hay una capacidad máxima global, pero cada puesto de trabajo tiene una capacidad de 2 reservas por día (mañana y tarde). El sistema debe validar que no se exceda esta capacidad al crear reservas.
+    - Interfaz visual: Mapa de puestos de trabajo, agrupados en zonas, cada zona con su propio bloque visual, que dispone mesas con una orientación específica (vertical u horizontal). Cada puesto muestra su estado (libre, reservado mañana, reservado tarde, reservado ambas franjas, bloqueado) y quién tiene la reserva o el bloqueo.
+    - Existirá un cuadro de mando para usuarios con privilegios de administración, que permitirá bloquear varios puestos de trabajo en un día o un período de días más largo, lo que bloqueará (impedirá reservar) esos puestos de trabajo para su reserva al resto de usuarios con privilegios normales.
+  Stack tecnológico: 
+    - Framework: ".NET 10"
+    - Frontend: "Blazor Web App (Interactive Server)"
+    - Estilo: "Bootstrap 5 + Bootstrap Icons + CSS scoped por componente"
+    - Persistencia: "Entity Framework Core con SQLite (Local) / Azure SQL (Prod)"
+  Especificaciones iniciales: "docs/initial_specs.md", que no debe actualizarse, mantiene la versión original de las especificaciones iniciales para referencia histórica, y consulta a la hora de preparar nuevas especificaciones.
+  Convenciones de implementación:
+    - Usa Clean Code y sigue las convenciones de estilo de C#.
+    - Aplica principios SOLID y patrones de diseño cuando sea apropiado.
+    - Documenta con XML comments y mantén el código legible.
+    - Escribe tests para cada nueva funcionalidad o cambio significativo.
+    - Clean Architecture: Mantén una separación clara entre las capas de dominio, infraestructura y presentación para facilitar la mantenibilidad y escalabilidad del proyecto.
+    - Usa Microsoft.Identity.Web para Blazor Server y Blazor WebAssembly para implementar autenticación y autorización con Azure AD, asegurando que solo los usuarios autorizados puedan acceder a la aplicación y sus funcionalidades.
+    - Usa el patrón Mediator para manejar la lógica de negocio y las interacciones entre componentes, promoviendo un código más limpio y desacoplado. Esto facilitará la gestión de comandos y consultas, así como la implementación de nuevas funcionalidades sin afectar otras partes del sistema. Usa la librería MediatR para facilitar la implementación de este patrón en toda la aplicación.
+    - Para la capa de acceso a datos, implementa el patrón Repository para abstraer la lógica de acceso a la base de datos y facilitar la gestión de entidades. Esto permitirá una mayor flexibilidad y mantenibilidad del código, ya que las operaciones de acceso a datos estarán centralizadas y desacopladas del resto de la aplicación.
+    - Identificadores de entidad: Todos los identificadores de entidades de dominio son `Guid` generados como UUID v7 mediante `Guid.CreateVersion7()` (disponible de forma nativa desde .NET 9). Los UUID v7 incorporan un prefijo de marca de tiempo de 48 bits que los hace ordenables cronológicamente, reduciendo la fragmentación de índices B-tree. La generación se realiza en la capa de aplicación (handlers y behavior de auditoría); EF Core está configurado con `UuidV7ValueGenerator` en las configuraciones Fluent API de cada entidad como mecanismo de fallback. Las entidades de datos maestros con GUIDs determinísticos (`DbSeeder`) quedan excluidas de este mecanismo. `SystemSetting` también queda excluida por tener PK de tipo `string`.
+    - Diseño y UX (UI Guidelines): Para la aplicación Blazor, se seguirán las pautas señaladas en docs/uxuiguidelines_blazor.md, asegurando una experiencia de usuario coherente y accesible.  
+    - Modelo de autenticación y autorización
+      - Autenticación: Azure AD (Single Sign-On)
+      - Roles/Claims: BasicUser (puede reservar), Manager (puede reservar de modo normal y bloquear puestos)
+      - Integración con Azure AD: Tenant de nuestra compañía para autenticación y autorización basada en roles. Los usuarios con rol "Manager" tendrán acceso a funcionalidades adicionales para bloquear puestos de trabajo.
+    - Modelo de datos: Definido y debe actualizarse por cada cambio en el documento docs/datamodel.md, que es la fuente de verdad para el diseño de la base de datos y las entidades del dominio.
+    - Estrategia de pruebas: Se siguen las pautas detalladas en docs/testingstrategy.md, que es la fuente de verdad para la estrategia de pruebas del proyecto, incluyendo pruebas unitarias e integración, herramientas elegidas y patrones de aislamiento.

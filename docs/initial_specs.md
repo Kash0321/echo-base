@@ -26,6 +26,8 @@
   - [🔗 Pruebas de integración](#-pruebas-de-integración-echobasetestsintegration)
 
 ---
+## 📌 Descripción general de este documento
+Este documento (`inicial_specs.md`) contiene la especificación inicial del proyecto Echo Base, incluyendo el modelo de datos, las reglas de negocio, el stack tecnológico y las convenciones de implementación. Sirve como referencia para conocer los primeros pasos del desarrollo, pero actualmente el flujo de trabajo se ha adaptado a un enfoque de desarrollo iterativo e incremental, basado en [openspec.dev](https://openspec.dev/), mediante su workflow OPSX. Por lo tanto este documento no es necesario para el desarrollo actual, pero se mantiene como referencia de la planificación inicial y el diseño del sistema.
 
 ## 🎯 Objetivo
 App interna para que múltiples empleados reserven sobre un conjunto limitado de puestos físicos, permitiendo cada puesto dos franjas horarias, mañana o tarde.
