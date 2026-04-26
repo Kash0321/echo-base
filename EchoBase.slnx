@@ -1,5 +1,6 @@
 <Solution>
   <Folder Name="/src/">
+    <Project Path="src/EchoBase.Api/EchoBase.Api.csproj" />
     <Project Path="src/EchoBase.Core/EchoBase.Core.csproj" />
     <Project Path="src/EchoBase.Infrastructure/EchoBase.Infrastructure.csproj" />
     <Project Path="src/EchoBase.Web/EchoBase.Web.csproj" />

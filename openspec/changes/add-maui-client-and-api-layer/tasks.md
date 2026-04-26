@@ -1,49 +1,49 @@
 ## 1. Proyecto EchoBase.Api — Estructura y configuración
 
-- [ ] 1.1 Crear el proyecto `src/EchoBase.Api/EchoBase.Api.csproj` (ASP.NET Core, net10.0) y añadirlo a `EchoBase.slnx`
-- [ ] 1.2 Añadir referencias a `EchoBase.Infrastructure` y los paquetes NuGet: `Microsoft.Identity.Web`, `Microsoft.AspNetCore.Authentication.JwtBearer`, `Swashbuckle.AspNetCore`
-- [ ] 1.3 Crear `appsettings.json` y `appsettings.Development.json` con las secciones: `AzureAd`, `ConnectionStrings`, `Database`, `Smtp`, `MicrosoftGraph`, `Notifications`, `Authentication` y `Features`
-- [ ] 1.4 Crear `Program.cs` con el pipeline básico: registro de servicios de Infrastructure, autenticación Bearer (Azure AD), autorización por roles, Swagger (solo en Development) y mapeo de grupos de endpoints
+- [x] 1.1 Crear el proyecto `src/EchoBase.Api/EchoBase.Api.csproj` (ASP.NET Core, net10.0) y añadirlo a `EchoBase.slnx`
+- [x] 1.2 Añadir referencias a `EchoBase.Infrastructure` y los paquetes NuGet: `Microsoft.Identity.Web`, `Microsoft.AspNetCore.Authentication.JwtBearer`, `Swashbuckle.AspNetCore`
+- [x] 1.3 Crear `appsettings.json` y `appsettings.Development.json` con las secciones: `AzureAd`, `ConnectionStrings`, `Database`, `Smtp`, `MicrosoftGraph`, `Notifications`, `Authentication` y `Features`
+- [x] 1.4 Crear `Program.cs` con el pipeline básico: registro de servicios de Infrastructure, autenticación Bearer (Azure AD), autorización por roles, Swagger (solo en Development) y mapeo de grupos de endpoints
 
 ## 2. Autenticación y servicio de usuario en la API
 
-- [ ] 2.1 Crear `Services/ApiCurrentUserService.cs` que implemente `ICurrentUserService` leyendo claims del `HttpContext.User` (claim `oid` como `UserId`, `name` como `UserName`, `preferred_username` como `Email`) y llame a `IUserRepository.EnsureUserAsync`
-- [ ] 2.2 Crear `Services/DevApiAuthHandler.cs`, un `AuthenticationHandler` que, cuando `Authentication:UseDevelopmentStub` es `true`, auto-autentica un usuario simulado con roles configurables (equivalente al `DevAuthHandler` de Web)
-- [ ] 2.3 Registrar en `Program.cs` la lógica de selección de esquema de autenticación: Bearer JWT (producción) vs. `DevApiAuthHandler` (desarrollo)
-- [ ] 2.4 Registrar `ApiCurrentUserService` como `ICurrentUserService` con scope `Scoped` y como `IHttpContextAccessor`-aware
+- [x] 2.1 Crear `Services/ApiCurrentUserService.cs` que implemente `ICurrentUserService` leyendo claims del `HttpContext.User` (claim `oid` como `UserId`, `name` como `UserName`, `preferred_username` como `Email`) y llame a `IUserRepository.EnsureUserAsync`
+- [x] 2.2 Crear `Services/DevApiAuthHandler.cs`, un `AuthenticationHandler` que, cuando `Authentication:UseDevelopmentStub` es `true`, auto-autentica un usuario simulado con roles configurables (equivalente al `DevAuthHandler` de Web)
+- [x] 2.3 Registrar en `Program.cs` la lógica de selección de esquema de autenticación: Bearer JWT (producción) vs. `DevApiAuthHandler` (desarrollo)
+- [x] 2.4 Registrar `ApiCurrentUserService` como `ICurrentUserService` con scope `Scoped` y como `IHttpContextAccessor`-aware
 
 ## 3. Endpoints REST — Reservas
 
-- [ ] 3.1 Crear `Endpoints/ReservationsEndpoints.cs` con grupo `/api/v1/reservations`
-- [ ] 3.2 Implementar `GET /api/v1/docks/map` → `GetDockMapQuery`, requiere usuario autenticado
-- [ ] 3.3 Implementar `GET /api/v1/reservations` → `GetUserReservationsQuery` con `UserId` del usuario en sesión
-- [ ] 3.4 Implementar `POST /api/v1/reservations` → `CreateReservationCommand`; responde 201 con `id` o 422 con el error de dominio
-- [ ] 3.5 Implementar `DELETE /api/v1/reservations/{id}` → `CancelReservationCommand`; responde 204 o 403/422 según el error de dominio
-- [ ] 3.6 Añadir helper `ResultToHttpResult` que mapea `Result`/`Result<T>` a `IResult` HTTP (200/201/204/403/422)
+- [x] 3.1 Crear `Endpoints/ReservationsEndpoints.cs` con grupo `/api/v1/reservations`
+- [x] 3.2 Implementar `GET /api/v1/docks/map` → `GetDockMapQuery`, requiere usuario autenticado
+- [x] 3.3 Implementar `GET /api/v1/reservations` → `GetUserReservationsQuery` con `UserId` del usuario en sesión
+- [x] 3.4 Implementar `POST /api/v1/reservations` → `CreateReservationCommand`; responde 201 con `id` o 422 con el error de dominio
+- [x] 3.5 Implementar `DELETE /api/v1/reservations/{id}` → `CancelReservationCommand`; responde 204 o 403/422 según el error de dominio
+- [x] 3.6 Añadir helper `ResultToHttpResult` que mapea `Result`/`Result<T>` a `IResult` HTTP (200/201/204/403/422)
 
 ## 4. Endpoints REST — Incidencias
 
-- [ ] 4.1 Crear `Endpoints/IncidencesEndpoints.cs` con grupo `/api/v1/incidences`
-- [ ] 4.2 Implementar `POST /api/v1/incidences` → `ReportIncidenceCommand`; responde 201 con `id`
-- [ ] 4.3 Implementar `GET /api/v1/incidences/mine` → `GetUserIncidencesQuery` con `UserId` del usuario en sesión
+- [x] 4.1 Crear `Endpoints/IncidencesEndpoints.cs` con grupo `/api/v1/incidences`
+- [x] 4.2 Implementar `POST /api/v1/incidences` → `ReportIncidenceCommand`; responde 201 con `id`
+- [x] 4.3 Implementar `GET /api/v1/incidences/mine` → `GetUserIncidencesQuery` con `UserId` del usuario en sesión
 
 ## 5. Endpoints REST — Perfil de usuario
 
-- [ ] 5.1 Crear `Endpoints/UsersEndpoints.cs` con grupo `/api/v1/users`
-- [ ] 5.2 Implementar `GET /api/v1/users/me` → `GetUserProfileQuery`
-- [ ] 5.3 Implementar `PUT /api/v1/users/me` → `UpdateUserProfileCommand`; responde 204
+- [x] 5.1 Crear `Endpoints/UsersEndpoints.cs` con grupo `/api/v1/users`
+- [x] 5.2 Implementar `GET /api/v1/users/me` → `GetUserProfileQuery`
+- [x] 5.3 Implementar `PUT /api/v1/users/me` → `UpdateUserProfileCommand`; responde 204
 
 ## 6. Endpoints REST — Operaciones de Manager
 
-- [ ] 6.1 Crear `Endpoints/BlockedDocksEndpoints.cs` con grupo `/api/v1/blocked-docks`, restringido al rol `Manager`
-- [ ] 6.2 Implementar `POST /api/v1/blocked-docks` → `BlockDocksCommand`
-- [ ] 6.3 Implementar `DELETE /api/v1/blocked-docks` → `UnblockDocksCommand`
+- [x] 6.1 Crear `Endpoints/BlockedDocksEndpoints.cs` con grupo `/api/v1/blocked-docks`, restringido al rol `Manager`
+- [x] 6.2 Implementar `POST /api/v1/blocked-docks` → `BlockDocksCommand`
+- [x] 6.3 Implementar `DELETE /api/v1/blocked-docks` → `UnblockDocksCommand`
 
 ## 7. Verificación y smoke test de la API
 
-- [ ] 7.1 Verificar que la solución compila con `dotnet build` sin errores
-- [ ] 7.2 Ejecutar la API en local con el stub de desarrollo y comprobar que Swagger UI carga en `/swagger`
-- [ ] 7.3 Probar manualmente los endpoints principales desde Swagger UI con el usuario de desarrollo
+- [x] 7.1 Verificar que la solución compila con `dotnet build` sin errores
+- [x] 7.2 Ejecutar la API en local con el stub de desarrollo y comprobar que Swagger UI carga en `/swagger`
+- [x] 7.3 Probar manualmente los endpoints principales desde Swagger UI con el usuario de desarrollo
 
 ## 8. Proyecto EchoBase.Maui — Estructura y configuración
 
